@@ -1,0 +1,180 @@
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
+
+namespace GameSkill.Editor
+{
+    public static class PrototypeSceneBuilder
+    {
+        private const string ScenePath = "Assets/Scenes/Main.unity";
+        private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
+        private const string GroundMaterialPath = "Assets/Materials/PrototypeGround.mat";
+        private const string PlayerMaterialPath = "Assets/Materials/PrototypePlayer.mat";
+        private const string AccentMaterialPath = "Assets/Materials/PrototypeAccent.mat";
+
+        [MenuItem("Game Skill/Build Prototype Scene")]
+        public static void Build()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            RemoveExistingPrototypeRoots();
+
+            Material groundMaterial = GetOrCreateMaterial(
+                GroundMaterialPath,
+                new Color(0.16f, 0.2f, 0.24f));
+            Material playerMaterial = GetOrCreateMaterial(
+                PlayerMaterialPath,
+                new Color(0.15f, 0.65f, 0.95f));
+            Material accentMaterial = GetOrCreateMaterial(
+                AccentMaterialPath,
+                new Color(1f, 0.45f, 0.12f));
+
+            GameObject player = CreatePlayer(playerMaterial);
+            CreateGraybox(groundMaterial, accentMaterial);
+            ConfigureCamera(player);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.SaveAssets();
+
+            Debug.Log("Prototype Scene created: Assets/Scenes/Main.unity");
+        }
+
+        private static GameObject CreatePlayer(Material playerMaterial)
+        {
+            var player = new GameObject("Player");
+            player.transform.position = new Vector3(0f, 0.05f, 0f);
+
+            CharacterController controller = player.AddComponent<CharacterController>();
+            controller.center = new Vector3(0f, 0.9f, 0f);
+            controller.height = 1.8f;
+            controller.radius = 0.35f;
+            controller.stepOffset = 0.3f;
+
+            InputActionAsset inputActions =
+                AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
+            PlayerInput playerInput = player.AddComponent<PlayerInput>();
+            playerInput.actions = inputActions;
+            playerInput.defaultActionMap = "Player";
+            playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
+
+            player.AddComponent<ThirdPersonMotor>();
+
+            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            visual.name = "Visual";
+            visual.transform.SetParent(player.transform, false);
+            visual.transform.localPosition = new Vector3(0f, 0.9f, 0f);
+            visual.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
+            Object.DestroyImmediate(visual.GetComponent<Collider>());
+            visual.GetComponent<MeshRenderer>().sharedMaterial = playerMaterial;
+
+            return player;
+        }
+
+        private static void ConfigureCamera(GameObject player)
+        {
+            Camera camera = Camera.main;
+            if (camera == null)
+            {
+                var cameraObject = new GameObject("Main Camera");
+                cameraObject.tag = "MainCamera";
+                camera = cameraObject.AddComponent<Camera>();
+                cameraObject.AddComponent<AudioListener>();
+            }
+
+            ThirdPersonOrbitCamera orbitCamera =
+                camera.GetComponent<ThirdPersonOrbitCamera>()
+                ?? camera.gameObject.AddComponent<ThirdPersonOrbitCamera>();
+
+            var serializedCamera = new SerializedObject(orbitCamera);
+            serializedCamera.FindProperty("target").objectReferenceValue = player.transform;
+            serializedCamera.FindProperty("playerInput").objectReferenceValue =
+                player.GetComponent<PlayerInput>();
+            serializedCamera.ApplyModifiedPropertiesWithoutUndo();
+
+            camera.transform.SetPositionAndRotation(
+                new Vector3(0f, 3f, -5.5f),
+                Quaternion.Euler(15f, 0f, 0f));
+        }
+
+        private static void CreateGraybox(Material groundMaterial, Material accentMaterial)
+        {
+            var root = new GameObject("Graybox");
+
+            CreateBlock(
+                root.transform,
+                "Ground",
+                new Vector3(0f, -0.5f, 0f),
+                new Vector3(24f, 1f, 24f),
+                groundMaterial);
+            CreateBlock(
+                root.transform,
+                "Step_A",
+                new Vector3(3f, 0.5f, 2f),
+                new Vector3(3f, 1f, 3f),
+                groundMaterial);
+            CreateBlock(
+                root.transform,
+                "Step_B",
+                new Vector3(6f, 1.5f, 2f),
+                new Vector3(3f, 3f, 3f),
+                groundMaterial);
+            CreateBlock(
+                root.transform,
+                "High_Platform",
+                new Vector3(9f, 3f, 2f),
+                new Vector3(4f, 1f, 4f),
+                groundMaterial);
+            CreateBlock(
+                root.transform,
+                "Wall_Gate",
+                new Vector3(-4f, 2f, 6f),
+                new Vector3(5f, 4f, 0.5f),
+                accentMaterial);
+            CreateBlock(
+                root.transform,
+                "Backtrack_Reward",
+                new Vector3(-4f, 4.5f, 6f),
+                new Vector3(1f, 1f, 1f),
+                accentMaterial);
+        }
+
+        private static GameObject CreateBlock(
+            Transform parent,
+            string name,
+            Vector3 position,
+            Vector3 scale,
+            Material material)
+        {
+            GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            block.name = name;
+            block.transform.SetParent(parent);
+            block.transform.position = position;
+            block.transform.localScale = scale;
+            block.GetComponent<MeshRenderer>().sharedMaterial = material;
+            return block;
+        }
+
+        private static Material GetOrCreateMaterial(string path, Color color)
+        {
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Lit");
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+
+            material.color = color;
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        private static void RemoveExistingPrototypeRoots()
+        {
+            Object.DestroyImmediate(GameObject.Find("Player"));
+            Object.DestroyImmediate(GameObject.Find("Graybox"));
+        }
+    }
+}
