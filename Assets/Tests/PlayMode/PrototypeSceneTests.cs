@@ -19,16 +19,24 @@ namespace GameSkill.Tests
             Assert.That(player, Is.Not.Null);
             Assert.That(player.GetComponent<CharacterController>(), Is.Not.Null);
             Assert.That(player.GetComponent<PlayerInput>(), Is.Not.Null);
-            Assert.That(player.GetComponent<ThirdPersonMotor>(), Is.Not.Null);
+            SideScrollerMotor motor = player.GetComponent<SideScrollerMotor>();
+            Assert.That(motor, Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
-            Assert.That(player.GetComponentInChildren<Animator>(), Is.Not.Null);
+            Animator animator = player.GetComponentInChildren<Animator>();
+            Assert.That(animator, Is.Not.Null);
+            Assert.That(animator.avatar, Is.Not.Null);
+            Assert.That(animator.avatar.isValid, Is.True);
+            Assert.That(animator.avatar.isHuman, Is.True);
+            Assert.That(animator.runtimeAnimatorController, Is.Not.Null);
 
             Camera camera = Camera.main;
             Assert.That(camera, Is.Not.Null);
-            Assert.That(camera.GetComponent<ThirdPersonOrbitCamera>(), Is.Not.Null);
+            Assert.That(camera.GetComponent<SideScrollerCamera>(), Is.Not.Null);
+            Assert.That(camera.orthographic, Is.True);
 
-            Assert.That(GameObject.Find("Graybox"), Is.Not.Null);
+            Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
             Assert.That(GameObject.Find("Wall_Gate"), Is.Not.Null);
+            Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
         }
     }
 }

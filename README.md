@@ -1,7 +1,7 @@
 # game_skill
 
-Unity 기능을 작은 단위로 직접 구현하면서 완성하는 3D 메트로배니아 개인
-프로젝트입니다.
+Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스크롤 메트로배니아
+개인 프로젝트입니다.
 
 ## 개발 환경
 
@@ -26,10 +26,10 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 3D 메트�
 
 - [x] Git 및 Unity 프로젝트 기본 구조
 - [x] 개발 계획서
-- [x] 3D 메트로배니아 장르와 수직 슬라이스 범위 확정
+- [x] 2.5D 횡스크롤 메트로배니아 장르와 수직 슬라이스 범위 확정
 - [x] CC0 캐릭터 및 프로토타입 에셋
 - [x] URP Main Scene과 플레이어 이동 프로토타입
-- [x] 3인칭 카메라 프로토타입
+- [x] 횡스크롤 이동 및 측면 추적 카메라 프로토타입
 - [x] Kenney 캐릭터 및 이동·점프 애니메이션
 - [ ] 상호작용 및 체크포인트
 - [ ] 체력, 데미지 및 전투
@@ -52,15 +52,20 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 3D 메트�
 
 ## 현재 조작
 
-- 이동: `WASD` 또는 왼쪽 스틱
-- 시점: 마우스 또는 오른쪽 스틱
+- 이동: `A/D` 또는 왼쪽 스틱 좌우
 - 점프: `Space` 또는 게임패드 South 버튼
 - 달리기: `Left Shift` 또는 왼쪽 스틱 버튼
-- 마우스 잠금 해제: `Escape`
-- 마우스 다시 잠금: Game View 왼쪽 클릭
 
-현재 플레이어는 Kenney `character-oobi` 모델을 사용합니다. 이동 속도에 따라
-Idle, Walk, Sprint가 블렌딩되며 점프 중에는 Jump와 Fall 상태가 재생됩니다.
+현재 플레이어는 Quaternius의 사람 비율 Humanoid 모델을 사용합니다. 이동
+속도에 따라 Idle, Walk, Jog, Sprint가 블렌딩되며 점프 상태도 Humanoid
+애니메이션으로 재생됩니다. 이동은 X축, 점프는 Y축을 사용하며 깊이 Z축은
+고정됩니다.
+
+## 방향성 참고
+
+`ENDER MAGNOLIA: Bloom in the Mist`의 횡스크롤 탐색, 수직 동선과 능력 기반
+백트래킹을 참고합니다. 원작의 캐릭터, 세계관, 맵과 시각 자산은 복제하지 않고
+조작 감각과 레벨 설계 원칙만 연구합니다.
 
 ## 폴더 구조
 
@@ -95,10 +100,11 @@ ProjectSettings/
 - Kenney Blocky Characters 2.0: 애니메이션 캐릭터 18종
 - Kenney Prototype Kit 1.0: 테스트 레벨용 모델 145종
 - Kenney Platformer Kit 4.1: 플레이어 캐릭터와 이동·점프 애니메이션
+- Quaternius Universal Base Characters: 사람 비율 Humanoid 플레이어 모델
+- Quaternius Universal Animation Library: Humanoid 이동·점프 애니메이션
 
-세 에셋은 CC0 라이선스이며 원본 라이선스는
-[`Assets/Art/ThirdParty/Kenney`](Assets/Art/ThirdParty/Kenney) 아래에 보존합니다.
-FBX와 PNG 파일은 Git LFS로 관리합니다.
+외부 에셋은 CC0 라이선스이며 원본 라이선스는 `Assets/Art/ThirdParty` 아래에
+보존합니다. FBX와 PNG 파일은 Git LFS로 관리합니다.
 
 커밋 메시지 예시:
 

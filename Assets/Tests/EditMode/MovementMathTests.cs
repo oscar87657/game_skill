@@ -6,27 +6,35 @@ namespace GameSkill.Tests
     public sealed class MovementMathTests
     {
         [Test]
-        public void CameraRelativeDirection_UsesFlattenedCameraAxes()
+        public void HorizontalInput_UsesOnlyHorizontalAxis()
         {
-            Vector3 direction = MovementMath.CameraRelativeDirection(
-                Vector2.up,
-                new Vector3(0f, 1f, 1f),
-                Vector3.right);
+            float horizontal = MovementMath.HorizontalInput(
+                new Vector2(0.75f, 1f),
+                0.1f);
 
-            Assert.That(direction.x, Is.EqualTo(0f).Within(0.0001f));
-            Assert.That(direction.y, Is.EqualTo(0f).Within(0.0001f));
-            Assert.That(direction.z, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(horizontal, Is.EqualTo(0.75f).Within(0.0001f));
         }
 
         [Test]
-        public void CameraRelativeDirection_ClampsDiagonalInput()
+        public void HorizontalInput_AppliesDeadZone()
         {
-            Vector3 direction = MovementMath.CameraRelativeDirection(
-                Vector2.one,
-                Vector3.forward,
-                Vector3.right);
+            float horizontal = MovementMath.HorizontalInput(
+                new Vector2(0.05f, 0f),
+                0.1f);
 
-            Assert.That(direction.magnitude, Is.EqualTo(1f).Within(0.0001f));
+            Assert.That(horizontal, Is.Zero);
+        }
+
+        [TestCase(-1f, -90f)]
+        [TestCase(0f, 90f)]
+        [TestCase(1f, 90f)]
+        public void SideScrollerFacingYaw_ReturnsSideViewRotation(
+            float direction,
+            float expectedYaw)
+        {
+            Assert.That(
+                MovementMath.SideScrollerFacingYaw(direction),
+                Is.EqualTo(expectedYaw));
         }
 
         [Test]

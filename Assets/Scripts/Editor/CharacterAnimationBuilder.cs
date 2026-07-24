@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -13,13 +12,23 @@ namespace GameSkill.Editor
     {
         private const string ScenePath = "Assets/Scenes/Main.unity";
         private const string CharacterModelPath =
-            "Assets/Art/ThirdParty/Kenney/PlatformerCharacter/Models/character-oobi.fbx";
-        private const string CharacterTexturePath =
-            "Assets/Art/ThirdParty/Kenney/PlatformerCharacter/Models/Textures/colormap.png";
-        private const string CharacterMaterialPath =
-            "Assets/Materials/PlatformerCharacter.mat";
+            "Assets/Art/ThirdParty/Quaternius/UniversalBaseCharacter/Models/"
+            + "Superhero_Female_FullBody.fbx";
+        private const string AnimationSourcePath =
+            "Assets/Art/ThirdParty/Quaternius/UniversalAnimationLibrary/"
+            + "UAL1_Standard.fbx";
+        private const string CharacterBodyTexturePath =
+            "Assets/Art/ThirdParty/Quaternius/UniversalBaseCharacter/Textures/"
+            + "T_Superhero_Female_Light_BaseColor.png";
+        private const string CharacterEyeTexturePath =
+            "Assets/Art/ThirdParty/Quaternius/UniversalBaseCharacter/Textures/"
+            + "T_Eye_Brown.png";
+        private const string CharacterBodyMaterialPath =
+            "Assets/Materials/HumanoidCharacterBody.mat";
+        private const string CharacterEyeMaterialPath =
+            "Assets/Materials/HumanoidCharacterEyes.mat";
         private const string AnimatorControllerPath =
-            "Assets/Animations/Player.controller";
+            "Assets/Animations/HumanoidPlayer.controller";
 
         [InitializeOnLoadMethod]
         private static void BuildMissingCharacterSetup()
@@ -56,8 +65,13 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Build Character Animation")]
         public static void Build()
         {
-            ConfigureModelImporter();
-            Material material = GetOrCreateCharacterMaterial();
+            ConfigureModelImporters();
+            Material bodyMaterial = GetOrCreateCharacterMaterial(
+                CharacterBodyMaterialPath,
+                CharacterBodyTexturePath);
+            Material eyeMaterial = GetOrCreateCharacterMaterial(
+                CharacterEyeMaterialPath,
+                CharacterEyeTexturePath);
             AnimatorController controller = CreateAnimatorController();
 
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -68,7 +82,7 @@ namespace GameSkill.Editor
                     "Player가 없습니다. 먼저 Game Skill > Build Prototype Scene을 실행하세요.");
             }
 
-            ConfigurePlayerVisual(player, material, controller);
+            ConfigurePlayerVisual(player, bodyMaterial, eyeMaterial, controller);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -76,21 +90,27 @@ namespace GameSkill.Editor
 
             Selection.activeGameObject = player;
             Debug.Log(
-                "Kenney character and Idle/Walk/Sprint/Jump/Fall animations configured.");
+                "Quaternius Humanoid and side-scroller animations configured.");
         }
 
         public static void ConfigurePlayerVisual(GameObject player)
         {
-            ConfigureModelImporter();
+            ConfigureModelImporters();
             ConfigurePlayerVisual(
                 player,
-                GetOrCreateCharacterMaterial(),
+                GetOrCreateCharacterMaterial(
+                    CharacterBodyMaterialPath,
+                    CharacterBodyTexturePath),
+                GetOrCreateCharacterMaterial(
+                    CharacterEyeMaterialPath,
+                    CharacterEyeTexturePath),
                 CreateAnimatorController());
         }
 
         private static void ConfigurePlayerVisual(
             GameObject player,
-            Material material,
+            Material bodyMaterial,
+            Material eyeMaterial,
             RuntimeAnimatorController controller)
         {
             Transform existingVisual = player.transform.Find("Visual");
@@ -123,7 +143,14 @@ namespace GameSkill.Editor
                 var materials = new Material[renderer.sharedMaterials.Length];
                 for (int index = 0; index < materials.Length; index++)
                 {
-                    materials[index] = material;
+                    string sourceName = renderer.sharedMaterials[index] != null
+                        ? renderer.sharedMaterials[index].name
+                        : string.Empty;
+                    materials[index] = sourceName.Contains(
+                        "eye",
+                        StringComparison.OrdinalIgnoreCase)
+                        ? eyeMaterial
+                        : bodyMaterial;
                 }
 
                 renderer.sharedMaterials = materials;
@@ -147,32 +174,52 @@ namespace GameSkill.Editor
             EditorUtility.SetDirty(playerAnimator);
         }
 
-        private static void ConfigureModelImporter()
+        private static void ConfigureModelImporters()
         {
-            var importer = AssetImporter.GetAtPath(CharacterModelPath) as ModelImporter;
+            ConfigureModelImporter(CharacterModelPath, false);
+            ConfigureModelImporter(AnimationSourcePath, true);
+        }
+
+        private static void ConfigureModelImporter(string assetPath, bool importAnimations)
+        {
+            var importer = AssetImporter.GetAtPath(assetPath) as ModelImporter;
             if (importer == null)
             {
                 throw new MissingReferenceException(
-                    $"ModelImporter not found: {CharacterModelPath}");
+                    $"ModelImporter not found: {assetPath}");
             }
 
             bool needsReimport =
-                importer.animationType != ModelImporterAnimationType.Generic
-                || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel;
+                importer.animationType != ModelImporterAnimationType.Human
+                || importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel
+                || importer.importAnimation != importAnimations;
 
-            importer.animationType = ModelImporterAnimationType.Generic;
+            importer.animationType = ModelImporterAnimationType.Human;
             importer.avatarSetup = ModelImporterAvatarSetup.CreateFromThisModel;
+            importer.importAnimation = importAnimations;
+
+            if (!importAnimations)
+            {
+                if (needsReimport)
+                {
+                    importer.SaveAndReimport();
+                }
+
+                return;
+            }
 
             ModelImporterClipAnimation[] clips = importer.clipAnimations.Length > 0
                 ? importer.clipAnimations
                 : importer.defaultClipAnimations;
             foreach (ModelImporterClipAnimation clip in clips)
             {
-                bool shouldLoop =
-                    clip.name.Equals("idle", StringComparison.OrdinalIgnoreCase)
-                    || clip.name.Equals("walk", StringComparison.OrdinalIgnoreCase)
-                    || clip.name.Equals("sprint", StringComparison.OrdinalIgnoreCase)
-                    || clip.name.Equals("fall", StringComparison.OrdinalIgnoreCase);
+                string clipName = NormalizeClipName(clip.name);
+                bool shouldLoop = clipName is
+                    "Idle_Loop"
+                    or "Walk_Loop"
+                    or "Jog_Fwd_Loop"
+                    or "Sprint_Loop"
+                    or "Jump_Loop";
                 if (clip.loopTime != shouldLoop)
                 {
                     clip.loopTime = shouldLoop;
@@ -207,17 +254,19 @@ namespace GameSkill.Editor
             controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
             controller.AddParameter("VerticalSpeed", AnimatorControllerParameterType.Float);
 
-            Dictionary<string, AnimationClip> clips =
+            AnimationClip[] clips =
                 AssetDatabase.LoadAllAssetsAtPath(CharacterModelPath)
+                    .Concat(AssetDatabase.LoadAllAssetsAtPath(AnimationSourcePath))
                     .OfType<AnimationClip>()
                     .Where(clip => !clip.name.StartsWith("__preview__", StringComparison.Ordinal))
-                    .ToDictionary(clip => clip.name, StringComparer.OrdinalIgnoreCase);
+                    .ToArray();
 
-            AnimationClip idle = RequireClip(clips, "idle");
-            AnimationClip walk = RequireClip(clips, "walk");
-            AnimationClip sprint = RequireClip(clips, "sprint");
-            AnimationClip jump = RequireClip(clips, "jump");
-            AnimationClip fall = RequireClip(clips, "fall");
+            AnimationClip idle = RequireClip(clips, "Idle_Loop");
+            AnimationClip walk = RequireClip(clips, "Walk_Loop");
+            AnimationClip jog = RequireClip(clips, "Jog_Fwd_Loop");
+            AnimationClip sprint = RequireClip(clips, "Sprint_Loop");
+            AnimationClip jump = RequireClip(clips, "Jump_Start");
+            AnimationClip fall = RequireClip(clips, "Jump_Loop");
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             var locomotionTree = new BlendTree
@@ -229,7 +278,8 @@ namespace GameSkill.Editor
             };
             AssetDatabase.AddObjectToAsset(locomotionTree, controller);
             locomotionTree.AddChild(idle, 0f);
-            locomotionTree.AddChild(walk, 0.5f);
+            locomotionTree.AddChild(walk, 0.35f);
+            locomotionTree.AddChild(jog, 0.7f);
             locomotionTree.AddChild(sprint, 1f);
 
             AnimatorState locomotion = stateMachine.AddState("Locomotion");
@@ -288,29 +338,41 @@ namespace GameSkill.Editor
         }
 
         private static AnimationClip RequireClip(
-            IReadOnlyDictionary<string, AnimationClip> clips,
+            AnimationClip[] clips,
             string name)
         {
-            if (!clips.TryGetValue(name, out AnimationClip clip))
+            AnimationClip clip = clips.FirstOrDefault(
+                candidate => NormalizeClipName(candidate.name).Equals(
+                    name,
+                    StringComparison.OrdinalIgnoreCase));
+            if (clip == null)
             {
                 throw new MissingReferenceException(
-                    $"Animation clip '{name}' not found in {CharacterModelPath}");
+                    $"Animation clip '{name}' not found in {AnimationSourcePath}");
             }
 
             return clip;
         }
 
-        private static Material GetOrCreateCharacterMaterial()
+        private static string NormalizeClipName(string clipName)
         {
-            Material material = AssetDatabase.LoadAssetAtPath<Material>(CharacterMaterialPath);
+            int separatorIndex = clipName.LastIndexOf('|');
+            return separatorIndex >= 0 ? clipName[(separatorIndex + 1)..] : clipName;
+        }
+
+        private static Material GetOrCreateCharacterMaterial(
+            string materialPath,
+            string texturePath)
+        {
+            Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (material == null)
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Lit");
                 material = new Material(shader);
-                AssetDatabase.CreateAsset(material, CharacterMaterialPath);
+                AssetDatabase.CreateAsset(material, materialPath);
             }
 
-            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(CharacterTexturePath);
+            Texture2D texture = AssetDatabase.LoadAssetAtPath<Texture2D>(texturePath);
             material.SetTexture("_BaseMap", texture);
             material.SetColor("_BaseColor", Color.white);
             EditorUtility.SetDirty(material);

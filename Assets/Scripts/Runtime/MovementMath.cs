@@ -4,20 +4,17 @@ namespace GameSkill
 {
     public static class MovementMath
     {
-        public static Vector3 CameraRelativeDirection(
-            Vector2 input,
-            Vector3 cameraForward,
-            Vector3 cameraRight)
+        public static float HorizontalInput(Vector2 input, float deadZone)
         {
-            cameraForward.y = 0f;
-            cameraRight.y = 0f;
+            float clampedInput = Mathf.Clamp(input.x, -1f, 1f);
+            return Mathf.Abs(clampedInput) < Mathf.Clamp01(deadZone)
+                ? 0f
+                : clampedInput;
+        }
 
-            cameraForward.Normalize();
-            cameraRight.Normalize();
-
-            return Vector3.ClampMagnitude(
-                cameraForward * input.y + cameraRight * input.x,
-                1f);
+        public static float SideScrollerFacingYaw(float horizontalDirection)
+        {
+            return horizontalDirection < 0f ? -90f : 90f;
         }
 
         public static float JumpSpeed(float jumpHeight, float gravity)

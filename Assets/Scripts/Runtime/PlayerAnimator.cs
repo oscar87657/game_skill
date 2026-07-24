@@ -3,7 +3,7 @@ using UnityEngine;
 namespace GameSkill
 {
     [DefaultExecutionOrder(100)]
-    [RequireComponent(typeof(ThirdPersonMotor))]
+    [RequireComponent(typeof(SideScrollerMotor))]
     public sealed class PlayerAnimator : MonoBehaviour
     {
         private static readonly int SpeedId = Animator.StringToHash("Speed");
@@ -13,7 +13,7 @@ namespace GameSkill
         [SerializeField] private Animator animator;
         [SerializeField, Min(0f)] private float speedDamping = 0.1f;
 
-        private ThirdPersonMotor motor;
+        private SideScrollerMotor motor;
 
         public void Configure(Animator targetAnimator)
         {
@@ -22,7 +22,7 @@ namespace GameSkill
 
         private void Awake()
         {
-            motor = GetComponent<ThirdPersonMotor>();
+            motor = GetComponent<SideScrollerMotor>();
             animator ??= GetComponentInChildren<Animator>();
         }
 

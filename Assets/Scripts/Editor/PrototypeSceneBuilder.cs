@@ -9,11 +9,42 @@ namespace GameSkill.Editor
     public static class PrototypeSceneBuilder
     {
         private const string ScenePath = "Assets/Scenes/Main.unity";
+        private const string GrayboxRootName = "SideScrollerGraybox";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string GroundMaterialPath = "Assets/Materials/PrototypeGround.mat";
         private const string AccentMaterialPath = "Assets/Materials/PrototypeAccent.mat";
 
-        [MenuItem("Game Skill/Build Prototype Scene")]
+        [InitializeOnLoadMethod]
+        private static void ScheduleSideScrollerMigration()
+        {
+            EditorApplication.delayCall += TryMigrateOpenPrototype;
+            EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+        }
+
+        private static void TryMigrateOpenPrototype()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                return;
+            }
+
+            EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+            if (SceneManager.GetActiveScene().path == ScenePath
+                && GameObject.Find(GrayboxRootName) == null)
+            {
+                Build();
+            }
+        }
+
+        private static void HandlePlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                TryMigrateOpenPrototype();
+            }
+        }
+
+        [MenuItem("Game Skill/Build Side-Scroller Prototype")]
         public static void Build()
         {
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
@@ -34,7 +65,7 @@ namespace GameSkill.Editor
             EditorSceneManager.SaveScene(scene, ScenePath);
             AssetDatabase.SaveAssets();
 
-            Debug.Log("Prototype Scene created: Assets/Scenes/Main.unity");
+            Debug.Log("2.5D side-scroller prototype created: Assets/Scenes/Main.unity");
         }
 
         private static GameObject CreatePlayer()
@@ -55,7 +86,7 @@ namespace GameSkill.Editor
             playerInput.defaultActionMap = "Player";
             playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
 
-            player.AddComponent<ThirdPersonMotor>();
+            player.AddComponent<SideScrollerMotor>();
             CharacterAnimationBuilder.ConfigurePlayerVisual(player);
 
             return player;
@@ -72,59 +103,58 @@ namespace GameSkill.Editor
                 cameraObject.AddComponent<AudioListener>();
             }
 
-            ThirdPersonOrbitCamera orbitCamera =
-                camera.GetComponent<ThirdPersonOrbitCamera>()
-                ?? camera.gameObject.AddComponent<ThirdPersonOrbitCamera>();
+            SideScrollerCamera sideScrollerCamera =
+                camera.GetComponent<SideScrollerCamera>()
+                ?? camera.gameObject.AddComponent<SideScrollerCamera>();
+            sideScrollerCamera.Configure(player.transform);
 
-            var serializedCamera = new SerializedObject(orbitCamera);
-            serializedCamera.FindProperty("target").objectReferenceValue = player.transform;
-            serializedCamera.FindProperty("playerInput").objectReferenceValue =
-                player.GetComponent<PlayerInput>();
-            serializedCamera.ApplyModifiedPropertiesWithoutUndo();
-
+            camera.orthographic = true;
+            camera.orthographicSize = 5.2f;
             camera.transform.SetPositionAndRotation(
-                new Vector3(0f, 3f, -5.5f),
-                Quaternion.Euler(15f, 0f, 0f));
+                new Vector3(1.35f, 2.4f, -9f),
+                Quaternion.identity);
+            EditorUtility.SetDirty(sideScrollerCamera);
+            EditorUtility.SetDirty(camera);
         }
 
         private static void CreateGraybox(Material groundMaterial, Material accentMaterial)
         {
-            var root = new GameObject("Graybox");
+            var root = new GameObject(GrayboxRootName);
 
             CreateBlock(
                 root.transform,
                 "Ground",
                 new Vector3(0f, -0.5f, 0f),
-                new Vector3(24f, 1f, 24f),
+                new Vector3(30f, 1f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "Step_A",
-                new Vector3(3f, 0.5f, 2f),
+                new Vector3(4f, 0.5f, 0f),
                 new Vector3(3f, 1f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "Step_B",
-                new Vector3(6f, 1.5f, 2f),
+                new Vector3(8f, 1.5f, 0f),
                 new Vector3(3f, 3f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "High_Platform",
-                new Vector3(9f, 3f, 2f),
-                new Vector3(4f, 1f, 4f),
+                new Vector3(13f, 3.2f, 0f),
+                new Vector3(7f, 0.6f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "Wall_Gate",
-                new Vector3(-4f, 2f, 6f),
-                new Vector3(5f, 4f, 0.5f),
+                new Vector3(-6f, 2f, 0f),
+                new Vector3(0.6f, 4f, 3f),
                 accentMaterial);
             CreateBlock(
                 root.transform,
                 "Backtrack_Reward",
-                new Vector3(-4f, 4.5f, 6f),
+                new Vector3(-9f, 4.5f, 0f),
                 new Vector3(1f, 1f, 1f),
                 accentMaterial);
         }
@@ -164,6 +194,7 @@ namespace GameSkill.Editor
         {
             Object.DestroyImmediate(GameObject.Find("Player"));
             Object.DestroyImmediate(GameObject.Find("Graybox"));
+            Object.DestroyImmediate(GameObject.Find(GrayboxRootName));
         }
     }
 }
