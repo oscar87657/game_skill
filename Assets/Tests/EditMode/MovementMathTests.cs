@@ -37,6 +37,20 @@ namespace GameSkill.Tests
                 Is.EqualTo(expectedYaw));
         }
 
+        [TestCase(-0.5f, 1f, -1f)]
+        [TestCase(0.5f, -1f, 1f)]
+        [TestCase(0f, -1f, -1f)]
+        [TestCase(0f, 1f, 1f)]
+        public void DodgeDirection_PrefersInputThenFallsBackToFacing(
+            float horizontalInput,
+            float facingDirection,
+            float expectedDirection)
+        {
+            Assert.That(
+                MovementMath.DodgeDirection(horizontalInput, facingDirection),
+                Is.EqualTo(expectedDirection));
+        }
+
         [Test]
         public void JumpSpeed_ReturnsExpectedBallisticSpeed()
         {

@@ -33,8 +33,9 @@ namespace GameSkill.Editor
         [InitializeOnLoadMethod]
         private static void BuildMissingCharacterSetup()
         {
-            if (AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(
-                    AnimatorControllerPath) != null)
+            AnimatorController controller =
+                AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
+            if (controller != null && HasDodgeSetup(controller))
             {
                 return;
             }
@@ -240,6 +241,7 @@ namespace GameSkill.Editor
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (existingController != null)
             {
+                EnsureDodgeSetup(existingController);
                 return existingController;
             }
 
@@ -253,13 +255,9 @@ namespace GameSkill.Editor
             controller.AddParameter("Speed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
             controller.AddParameter("VerticalSpeed", AnimatorControllerParameterType.Float);
+            controller.AddParameter("Dodging", AnimatorControllerParameterType.Bool);
 
-            AnimationClip[] clips =
-                AssetDatabase.LoadAllAssetsAtPath(CharacterModelPath)
-                    .Concat(AssetDatabase.LoadAllAssetsAtPath(AnimationSourcePath))
-                    .OfType<AnimationClip>()
-                    .Where(clip => !clip.name.StartsWith("__preview__", StringComparison.Ordinal))
-                    .ToArray();
+            AnimationClip[] clips = LoadAnimationClips();
 
             AnimationClip idle = RequireClip(clips, "Idle_Loop");
             AnimationClip walk = RequireClip(clips, "Walk_Loop");
@@ -267,6 +265,7 @@ namespace GameSkill.Editor
             AnimationClip sprint = RequireClip(clips, "Sprint_Loop");
             AnimationClip jump = RequireClip(clips, "Jump_Start");
             AnimationClip fall = RequireClip(clips, "Jump_Loop");
+            AnimationClip dodge = RequireClip(clips, "Roll");
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             var locomotionTree = new BlendTree
@@ -289,6 +288,7 @@ namespace GameSkill.Editor
             AnimatorState fallState = stateMachine.AddState("Fall");
             fallState.motion = fall;
             stateMachine.defaultState = locomotion;
+            AddDodgeState(stateMachine, locomotion, fallState, dodge);
 
             AddTransition(
                 locomotion,
@@ -318,15 +318,98 @@ namespace GameSkill.Editor
             return controller;
         }
 
+        private static bool HasDodgeSetup(AnimatorController controller)
+        {
+            bool hasParameter = controller.parameters.Any(
+                parameter => parameter.name == "Dodging"
+                    && parameter.type == AnimatorControllerParameterType.Bool);
+            if (!hasParameter || controller.layers.Length == 0)
+            {
+                return false;
+            }
+
+            return FindState(controller.layers[0].stateMachine, "Dodge") != null;
+        }
+
+        private static void EnsureDodgeSetup(AnimatorController controller)
+        {
+            if (!controller.parameters.Any(parameter => parameter.name == "Dodging"))
+            {
+                controller.AddParameter(
+                    "Dodging",
+                    AnimatorControllerParameterType.Bool);
+            }
+
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+            if (FindState(stateMachine, "Dodge") != null)
+            {
+                return;
+            }
+
+            AnimatorState locomotion = FindState(stateMachine, "Locomotion");
+            AnimatorState fall = FindState(stateMachine, "Fall");
+            if (locomotion == null || fall == null)
+            {
+                throw new MissingReferenceException(
+                    "HumanoidPlayer controller requires Locomotion and Fall states.");
+            }
+
+            AddDodgeState(
+                stateMachine,
+                locomotion,
+                fall,
+                RequireClip(LoadAnimationClips(), "Roll"));
+            EditorUtility.SetDirty(controller);
+            AssetDatabase.SaveAssets();
+        }
+
+        private static void AddDodgeState(
+            AnimatorStateMachine stateMachine,
+            AnimatorState locomotion,
+            AnimatorState fall,
+            AnimationClip dodgeClip)
+        {
+            AnimatorState dodge = stateMachine.AddState("Dodge");
+            dodge.motion = dodgeClip;
+            dodge.speed = Mathf.Max(1f, dodgeClip.length / 0.36f);
+
+            AnimatorStateTransition enterDodge =
+                stateMachine.AddAnyStateTransition(dodge);
+            enterDodge.canTransitionToSelf = false;
+            ConfigureTransition(
+                enterDodge,
+                0.04f,
+                new TransitionCondition(AnimatorConditionMode.If, 0f, "Dodging"));
+
+            AddTransition(
+                dodge,
+                locomotion,
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Dodging"),
+                new TransitionCondition(AnimatorConditionMode.If, 0f, "Grounded"));
+            AddTransition(
+                dodge,
+                fall,
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Dodging"),
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Grounded"));
+        }
+
         private static void AddTransition(
             AnimatorState from,
             AnimatorState to,
             params TransitionCondition[] conditions)
         {
             AnimatorStateTransition transition = from.AddTransition(to);
+            ConfigureTransition(transition, 0.1f, conditions);
+        }
+
+        private static void ConfigureTransition(
+            AnimatorStateTransition transition,
+            float duration,
+            params TransitionCondition[] conditions)
+        {
             transition.hasExitTime = false;
             transition.hasFixedDuration = true;
-            transition.duration = 0.1f;
+            transition.duration = duration;
 
             foreach (TransitionCondition condition in conditions)
             {
@@ -335,6 +418,26 @@ namespace GameSkill.Editor
                     condition.Threshold,
                     condition.Parameter);
             }
+        }
+
+        private static AnimatorState FindState(
+            AnimatorStateMachine stateMachine,
+            string name)
+        {
+            return stateMachine.states
+                .Select(childState => childState.state)
+                .FirstOrDefault(state => state.name == name);
+        }
+
+        private static AnimationClip[] LoadAnimationClips()
+        {
+            return AssetDatabase.LoadAllAssetsAtPath(CharacterModelPath)
+                .Concat(AssetDatabase.LoadAllAssetsAtPath(AnimationSourcePath))
+                .OfType<AnimationClip>()
+                .Where(clip => !clip.name.StartsWith(
+                    "__preview__",
+                    StringComparison.Ordinal))
+                .ToArray();
         }
 
         private static AnimationClip RequireClip(
