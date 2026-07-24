@@ -24,6 +24,7 @@ Unity 기능을 작은 단위로 직접 구현하고, 재사용 가능한 예제
 
 - [x] Git 및 Unity 프로젝트 기본 구조
 - [x] 개발 계획서
+- [x] CC0 캐릭터 및 프로토타입 에셋
 - [ ] 기본 Scene과 플레이어 이동
 - [ ] 카메라 및 상호작용
 - [ ] 체력, 데미지 및 전투
@@ -47,6 +48,7 @@ Unity 기능을 작은 단위로 직접 구현하고, 재사용 가능한 예제
 ```text
 Assets/
 ├── Art/
+│   └── ThirdParty/
 ├── Audio/
 ├── Materials/
 ├── Prefabs/
@@ -68,6 +70,15 @@ ProjectSettings/
 - 한 커밋에는 하나의 논리적인 변경만 담습니다.
 - `Library`, `Temp`, `Logs`, 빌드 결과물은 커밋하지 않습니다.
 - 큰 바이너리 에셋을 추가하기 전에 Git LFS를 설치하고 추적 규칙을 정합니다.
+
+## 포함된 외부 에셋
+
+- Kenney Blocky Characters 2.0: 애니메이션 캐릭터 18종
+- Kenney Prototype Kit 1.0: 테스트 레벨용 모델 145종
+
+두 에셋은 CC0 라이선스이며 원본 라이선스는
+[`Assets/Art/ThirdParty/Kenney`](Assets/Art/ThirdParty/Kenney) 아래에 보존합니다.
+FBX와 PNG 파일은 Git LFS로 관리합니다.
 
 커밋 메시지 예시:
 

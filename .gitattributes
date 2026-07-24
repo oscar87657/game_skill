@@ -18,13 +18,13 @@
 *.unity merge=unityyamlmerge eol=lf
 
 *.aiff binary
-*.fbx binary
+*.fbx filter=lfs diff=lfs merge=lfs -text
 *.gif binary
 *.jpeg binary
 *.jpg binary
 *.mp3 binary
 *.ogg binary
-*.png binary
+*.png filter=lfs diff=lfs merge=lfs -text
 *.psd binary
 *.tga binary
 *.wav binary

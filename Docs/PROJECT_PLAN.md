@@ -55,6 +55,7 @@ GitHub에 지속적으로 기록한다. 최종적으로 여러 예제를 결합�
 - [x] GitHub 원격 저장소 연결
 - [x] 서명된 초기 커밋 준비
 - [x] README와 프로젝트 계획서 작성
+- [x] Git LFS와 CC0 프로토타입 에셋 구성
 
 완료 기준: 저장소를 복제해 Unity Hub에서 프로젝트로 인식할 수 있다.
 
@@ -181,8 +182,10 @@ docs/inventory-guide
 
 ## 8. 다음 작업
 
-1. Unity Hub와 Unity 6 LTS를 설치한다.
+1. Unity Hub와 Unity 6 LTS 설치를 완료한다.
 2. 저장소를 Unity Hub에서 연다.
-3. `feature/player-movement` 브랜치를 만든다.
-4. `Assets/Scenes/Main.unity`를 생성한다.
-5. 플레이어 이동의 가장 작은 구현부터 시작한다.
+3. FBX 모델의 Rig를 `Humanoid`로 가져올 수 있는지 확인한다.
+4. Unity 공식 Starter Assets Third Person을 Asset Store에서 가져온다.
+5. `feature/player-movement` 브랜치를 만든다.
+6. `Assets/Scenes/Main.unity`를 생성한다.
+7. 플레이어 이동의 가장 작은 구현부터 시작한다.
