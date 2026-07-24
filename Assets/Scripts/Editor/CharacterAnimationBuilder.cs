@@ -35,7 +35,7 @@ namespace GameSkill.Editor
         {
             AnimatorController controller =
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
-            if (controller != null && HasDodgeSetup(controller))
+            if (controller != null && HasActionSetup(controller))
             {
                 return;
             }
@@ -241,7 +241,7 @@ namespace GameSkill.Editor
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (existingController != null)
             {
-                EnsureDodgeSetup(existingController);
+                EnsureActionSetup(existingController);
                 return existingController;
             }
 
@@ -256,6 +256,7 @@ namespace GameSkill.Editor
             controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
             controller.AddParameter("VerticalSpeed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Dodging", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("Attacking", AnimatorControllerParameterType.Bool);
 
             AnimationClip[] clips = LoadAnimationClips();
 
@@ -265,7 +266,7 @@ namespace GameSkill.Editor
             AnimationClip sprint = RequireClip(clips, "Sprint_Loop");
             AnimationClip jump = RequireClip(clips, "Jump_Start");
             AnimationClip fall = RequireClip(clips, "Jump_Loop");
-            AnimationClip dodge = RequireClip(clips, "Roll");
+            AnimationClip attack = RequireClip(clips, "Punch_Cross");
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             var locomotionTree = new BlendTree
@@ -288,7 +289,8 @@ namespace GameSkill.Editor
             AnimatorState fallState = stateMachine.AddState("Fall");
             fallState.motion = fall;
             stateMachine.defaultState = locomotion;
-            AddDodgeState(stateMachine, locomotion, fallState, dodge);
+            AddDashState(stateMachine, locomotion, fallState, sprint);
+            AddAttackState(stateMachine, locomotion, fallState, attack);
 
             AddTransition(
                 locomotion,
@@ -318,20 +320,27 @@ namespace GameSkill.Editor
             return controller;
         }
 
-        private static bool HasDodgeSetup(AnimatorController controller)
+        private static bool HasActionSetup(AnimatorController controller)
         {
-            bool hasParameter = controller.parameters.Any(
+            bool hasDashParameter = controller.parameters.Any(
                 parameter => parameter.name == "Dodging"
                     && parameter.type == AnimatorControllerParameterType.Bool);
-            if (!hasParameter || controller.layers.Length == 0)
+            bool hasAttackParameter = controller.parameters.Any(
+                parameter => parameter.name == "Attacking"
+                    && parameter.type == AnimatorControllerParameterType.Bool);
+            if (!hasDashParameter
+                || !hasAttackParameter
+                || controller.layers.Length == 0)
             {
                 return false;
             }
 
-            return FindState(controller.layers[0].stateMachine, "Dodge") != null;
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
+            return FindState(stateMachine, "Dash") != null
+                && FindState(stateMachine, "Attack") != null;
         }
 
-        private static void EnsureDodgeSetup(AnimatorController controller)
+        private static void EnsureActionSetup(AnimatorController controller)
         {
             if (!controller.parameters.Any(parameter => parameter.name == "Dodging"))
             {
@@ -340,12 +349,14 @@ namespace GameSkill.Editor
                     AnimatorControllerParameterType.Bool);
             }
 
-            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
-            if (FindState(stateMachine, "Dodge") != null)
+            if (!controller.parameters.Any(parameter => parameter.name == "Attacking"))
             {
-                return;
+                controller.AddParameter(
+                    "Attacking",
+                    AnimatorControllerParameterType.Bool);
             }
 
+            AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             AnimatorState locomotion = FindState(stateMachine, "Locomotion");
             AnimatorState fall = FindState(stateMachine, "Fall");
             if (locomotion == null || fall == null)
@@ -354,42 +365,95 @@ namespace GameSkill.Editor
                     "HumanoidPlayer controller requires Locomotion and Fall states.");
             }
 
-            AddDodgeState(
-                stateMachine,
-                locomotion,
-                fall,
-                RequireClip(LoadAnimationClips(), "Roll"));
+            AnimationClip[] clips = LoadAnimationClips();
+            AnimatorState dash =
+                FindState(stateMachine, "Dash")
+                ?? FindState(stateMachine, "Dodge");
+            if (dash == null)
+            {
+                AddDashState(
+                    stateMachine,
+                    locomotion,
+                    fall,
+                    RequireClip(clips, "Sprint_Loop"));
+            }
+            else
+            {
+                dash.name = "Dash";
+                dash.motion = RequireClip(clips, "Sprint_Loop");
+                dash.speed = 1.35f;
+            }
+
+            if (FindState(stateMachine, "Attack") == null)
+            {
+                AddAttackState(
+                    stateMachine,
+                    locomotion,
+                    fall,
+                    RequireClip(clips, "Punch_Cross"));
+            }
+
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
         }
 
-        private static void AddDodgeState(
+        private static void AddDashState(
             AnimatorStateMachine stateMachine,
             AnimatorState locomotion,
             AnimatorState fall,
-            AnimationClip dodgeClip)
+            AnimationClip dashClip)
         {
-            AnimatorState dodge = stateMachine.AddState("Dodge");
-            dodge.motion = dodgeClip;
-            dodge.speed = Mathf.Max(1f, dodgeClip.length / 0.36f);
+            AnimatorState dash = stateMachine.AddState("Dash");
+            dash.motion = dashClip;
+            dash.speed = 1.35f;
 
-            AnimatorStateTransition enterDodge =
-                stateMachine.AddAnyStateTransition(dodge);
-            enterDodge.canTransitionToSelf = false;
+            AnimatorStateTransition enterDash =
+                stateMachine.AddAnyStateTransition(dash);
+            enterDash.canTransitionToSelf = false;
             ConfigureTransition(
-                enterDodge,
+                enterDash,
                 0.04f,
                 new TransitionCondition(AnimatorConditionMode.If, 0f, "Dodging"));
 
             AddTransition(
-                dodge,
+                dash,
                 locomotion,
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Dodging"),
                 new TransitionCondition(AnimatorConditionMode.If, 0f, "Grounded"));
             AddTransition(
-                dodge,
+                dash,
                 fall,
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Dodging"),
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Grounded"));
+        }
+
+        private static void AddAttackState(
+            AnimatorStateMachine stateMachine,
+            AnimatorState locomotion,
+            AnimatorState fall,
+            AnimationClip attackClip)
+        {
+            AnimatorState attack = stateMachine.AddState("Attack");
+            attack.motion = attackClip;
+            attack.speed = Mathf.Max(1f, attackClip.length / 0.38f);
+
+            AnimatorStateTransition enterAttack =
+                stateMachine.AddAnyStateTransition(attack);
+            enterAttack.canTransitionToSelf = false;
+            ConfigureTransition(
+                enterAttack,
+                0.04f,
+                new TransitionCondition(AnimatorConditionMode.If, 0f, "Attacking"));
+
+            AddTransition(
+                attack,
+                locomotion,
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Attacking"),
+                new TransitionCondition(AnimatorConditionMode.If, 0f, "Grounded"));
+            AddTransition(
+                attack,
+                fall,
+                new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Attacking"),
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Grounded"));
         }
 

@@ -29,11 +29,18 @@ namespace GameSkill.Editor
             }
 
             EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
-            if (SceneManager.GetActiveScene().path == ScenePath
-                && GameObject.Find(GrayboxRootName) == null)
+            if (SceneManager.GetActiveScene().path != ScenePath)
+            {
+                return;
+            }
+
+            if (GameObject.Find(GrayboxRootName) == null)
             {
                 Build();
+                return;
             }
+
+            EnsureCombatPrototype();
         }
 
         private static void HandlePlayModeStateChanged(PlayModeStateChange state)
@@ -87,6 +94,7 @@ namespace GameSkill.Editor
             playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
 
             player.AddComponent<SideScrollerMotor>();
+            player.AddComponent<PlayerCombat>();
             CharacterAnimationBuilder.ConfigurePlayerVisual(player);
 
             return player;
@@ -157,6 +165,72 @@ namespace GameSkill.Editor
                 new Vector3(-9f, 4.5f, 0f),
                 new Vector3(1f, 1f, 1f),
                 accentMaterial);
+            CreateTrainingDummy(root.transform, accentMaterial);
+        }
+
+        [MenuItem("Game Skill/Add Combat Prototype")]
+        public static void AddCombatPrototype()
+        {
+            Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
+            if (!EnsureCombatPrototype())
+            {
+                return;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, ScenePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log("Basic attack and training dummy added to Main scene.");
+        }
+
+        private static bool EnsureCombatPrototype()
+        {
+            bool changed = false;
+            GameObject player = GameObject.Find("Player");
+            if (player != null && player.GetComponent<PlayerCombat>() == null)
+            {
+                player.AddComponent<PlayerCombat>();
+                changed = true;
+            }
+
+            if (GameObject.Find("TrainingDummy") == null)
+            {
+                GameObject root = GameObject.Find(GrayboxRootName);
+                Material accentMaterial =
+                    AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
+                if (root != null && accentMaterial != null)
+                {
+                    CreateTrainingDummy(root.transform, accentMaterial);
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                Scene scene = SceneManager.GetActiveScene();
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene, ScenePath);
+                AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static GameObject CreateTrainingDummy(
+            Transform parent,
+            Material material)
+        {
+            GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
+            dummy.name = "TrainingDummy";
+            dummy.transform.SetParent(parent);
+            dummy.transform.position = new Vector3(3.25f, 1f, 0f);
+            dummy.transform.localScale = new Vector3(0.7f, 1f, 0.7f);
+            dummy.GetComponent<MeshRenderer>().sharedMaterial = material;
+
+            Health health = dummy.AddComponent<Health>();
+            health.Configure(3);
+            dummy.AddComponent<TrainingDummy>();
+            return dummy;
         }
 
         private static GameObject CreateBlock(

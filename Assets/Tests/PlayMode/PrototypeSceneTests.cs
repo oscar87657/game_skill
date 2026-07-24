@@ -20,11 +20,12 @@ namespace GameSkill.Tests
             Assert.That(player.GetComponent<CharacterController>(), Is.Not.Null);
             PlayerInput playerInput = player.GetComponent<PlayerInput>();
             Assert.That(playerInput, Is.Not.Null);
-            Assert.That(playerInput.actions.FindAction("Dodge"), Is.Not.Null);
+            Assert.That(playerInput.actions.FindAction("Dash"), Is.Not.Null);
             SideScrollerMotor motor = player.GetComponent<SideScrollerMotor>();
             Assert.That(motor, Is.Not.Null);
-            Assert.That(motor.IsDodging, Is.False);
+            Assert.That(motor.IsDashing, Is.False);
             Assert.That(motor.IsInvulnerable, Is.False);
+            Assert.That(player.GetComponent<PlayerCombat>(), Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
             Animator animator = player.GetComponentInChildren<Animator>();
             Assert.That(animator, Is.Not.Null);
@@ -38,6 +39,12 @@ namespace GameSkill.Tests
                     parameter => parameter.name == "Dodging"
                         && parameter.type == AnimatorControllerParameterType.Bool),
                 Is.True);
+            Assert.That(
+                System.Array.Exists(
+                    animator.parameters,
+                    parameter => parameter.name == "Attacking"
+                        && parameter.type == AnimatorControllerParameterType.Bool),
+                Is.True);
 
             Camera camera = Camera.main;
             Assert.That(camera, Is.Not.Null);
@@ -46,6 +53,9 @@ namespace GameSkill.Tests
 
             Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
             Assert.That(GameObject.Find("Wall_Gate"), Is.Not.Null);
+            GameObject dummy = GameObject.Find("TrainingDummy");
+            Assert.That(dummy, Is.Not.Null);
+            Assert.That(dummy.GetComponent<Health>(), Is.Not.Null);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
         }
     }

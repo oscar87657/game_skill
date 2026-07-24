@@ -66,5 +66,33 @@ namespace GameSkill.Tests
         {
             Assert.That(MovementMath.JumpSpeed(height, gravity), Is.Zero);
         }
+
+        [Test]
+        public void Health_TakeDamageClampsAndReportsDeath()
+        {
+            var target = new GameObject("HealthTestTarget");
+            try
+            {
+                Health health = target.AddComponent<Health>();
+                health.Configure(3);
+                int damageEvents = 0;
+                int deathEvents = 0;
+                health.Damaged += (_, _) => damageEvents++;
+                health.Died += () => deathEvents++;
+
+                Assert.That(health.TakeDamage(2), Is.True);
+                Assert.That(health.CurrentHealth, Is.EqualTo(1));
+                Assert.That(health.TakeDamage(4), Is.True);
+                Assert.That(health.CurrentHealth, Is.Zero);
+                Assert.That(health.IsDead, Is.True);
+                Assert.That(damageEvents, Is.EqualTo(2));
+                Assert.That(deathEvents, Is.EqualTo(1));
+                Assert.That(health.TakeDamage(1), Is.False);
+            }
+            finally
+            {
+                Object.DestroyImmediate(target);
+            }
+        }
     }
 }

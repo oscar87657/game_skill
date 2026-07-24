@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.Serialization;
 
 namespace GameSkill
 {
@@ -22,30 +23,35 @@ namespace GameSkill
         [SerializeField, Min(0f)] private float coyoteTime = 0.12f;
         [SerializeField, Min(0f)] private float jumpBufferTime = 0.12f;
 
-        [Header("Dodge")]
-        [SerializeField, Min(0f)] private float dodgeSpeed = 10f;
-        [SerializeField, Min(0.01f)] private float dodgeDuration = 0.36f;
-        [SerializeField, Min(0f)] private float dodgeCooldown = 0.55f;
-        [SerializeField, Min(0f)] private float dodgeInvulnerabilityDuration = 0.24f;
+        [Header("Dash")]
+        [FormerlySerializedAs("dodgeSpeed")]
+        [SerializeField, Min(0f)] private float dashSpeed = 11f;
+        [FormerlySerializedAs("dodgeDuration")]
+        [SerializeField, Min(0.01f)] private float dashDuration = 0.28f;
+        [FormerlySerializedAs("dodgeCooldown")]
+        [SerializeField, Min(0f)] private float dashCooldown = 0.48f;
+        [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
+        [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.2f;
 
         private CharacterController characterController;
         private InputAction moveAction;
         private InputAction jumpAction;
-        private InputAction sprintAction;
-        private InputAction dodgeAction;
+        private InputAction dashAction;
         private float horizontalSpeed;
         private float verticalSpeed;
         private float coyoteTimer;
         private float jumpBufferTimer;
-        private float dodgeTimer;
-        private float dodgeCooldownTimer;
+        private float dashTimer;
+        private float dashCooldownTimer;
         private float invulnerabilityTimer;
-        private float dodgeDirection = 1f;
+        private float dashDirection = 1f;
+        private bool dashRunChainActive;
         private float lockedDepth;
 
         public bool IsGrounded => characterController != null && characterController.isGrounded;
-        public bool IsDodging => dodgeTimer > 0f;
+        public bool IsDashing => dashTimer > 0f;
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
+        public bool IsRunning { get; private set; }
         public float HorizontalSpeed => horizontalSpeed;
         public float NormalizedSpeed { get; private set; }
         public float VerticalSpeed => verticalSpeed;
@@ -58,31 +64,36 @@ namespace GameSkill
 
             moveAction = playerInput.actions.FindAction("Move", true);
             jumpAction = playerInput.actions.FindAction("Jump", true);
-            sprintAction = playerInput.actions.FindAction("Sprint", false);
-            dodgeAction = playerInput.actions.FindAction("Dodge", true);
+            dashAction = playerInput.actions.FindAction("Dash", true);
             lockedDepth = transform.position.z;
         }
 
         private void Update()
         {
             float deltaTime = Time.deltaTime;
-            UpdateDodgeTimers(deltaTime);
+            UpdateDashTimers(deltaTime);
 
             float horizontalInput = MovementMath.HorizontalInput(
                 moveAction.ReadValue<Vector2>(),
                 inputDeadZone);
-            TryStartDodge(horizontalInput);
-            UpdateVerticalSpeed(deltaTime, !IsDodging);
-
-            if (IsDodging)
+            if (dashAction.WasReleasedThisFrame())
             {
-                horizontalSpeed = dodgeDirection * dodgeSpeed;
-                UpdateFacing(dodgeDirection, deltaTime);
+                dashRunChainActive = false;
+            }
+
+            TryStartDash(horizontalInput);
+            UpdateVerticalSpeed(deltaTime, !IsDashing);
+
+            if (IsDashing)
+            {
+                IsRunning = false;
+                horizontalSpeed = dashDirection * dashSpeed;
+                UpdateFacing(dashDirection, deltaTime);
             }
             else
             {
-                bool isSprinting = sprintAction?.IsPressed() == true;
-                float maximumSpeed = isSprinting ? sprintSpeed : runSpeed;
+                IsRunning = dashRunChainActive && dashAction.IsPressed();
+                float maximumSpeed = IsRunning ? sprintSpeed : runSpeed;
                 float targetSpeed = horizontalInput * maximumSpeed;
                 float acceleration = IsGrounded ? groundAcceleration : airAcceleration;
 
@@ -105,31 +116,32 @@ namespace GameSkill
                 : Mathf.Clamp01(Mathf.Abs(horizontalSpeed) / sprintSpeed);
         }
 
-        private void UpdateDodgeTimers(float deltaTime)
+        private void UpdateDashTimers(float deltaTime)
         {
-            dodgeTimer = Mathf.Max(0f, dodgeTimer - deltaTime);
-            dodgeCooldownTimer = Mathf.Max(0f, dodgeCooldownTimer - deltaTime);
+            dashTimer = Mathf.Max(0f, dashTimer - deltaTime);
+            dashCooldownTimer = Mathf.Max(0f, dashCooldownTimer - deltaTime);
             invulnerabilityTimer = Mathf.Max(0f, invulnerabilityTimer - deltaTime);
         }
 
-        private void TryStartDodge(float horizontalInput)
+        private void TryStartDash(float horizontalInput)
         {
-            if (!dodgeAction.WasPressedThisFrame()
-                || IsDodging
+            if (!dashAction.WasPressedThisFrame()
+                || IsDashing
                 || !IsGrounded
-                || dodgeCooldownTimer > 0f)
+                || dashCooldownTimer > 0f)
             {
                 return;
             }
 
-            dodgeDirection = MovementMath.DodgeDirection(
+            dashDirection = MovementMath.DodgeDirection(
                 horizontalInput,
                 FacingDirection);
-            dodgeTimer = dodgeDuration;
-            dodgeCooldownTimer = dodgeCooldown;
+            dashTimer = dashDuration;
+            dashCooldownTimer = dashCooldown;
             invulnerabilityTimer = Mathf.Min(
-                dodgeInvulnerabilityDuration,
-                dodgeDuration);
+                dashInvulnerabilityDuration,
+                dashDuration);
+            dashRunChainActive = true;
             jumpBufferTimer = 0f;
         }
 
