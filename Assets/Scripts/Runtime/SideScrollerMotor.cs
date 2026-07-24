@@ -46,11 +46,13 @@ namespace GameSkill
         private float invulnerabilityTimer;
         private float dashDirection = 1f;
         private bool dashRunChainActive;
+        private bool airDashAvailable = true;
         private float lockedDepth;
 
         public bool IsGrounded => characterController != null && characterController.isGrounded;
         public bool IsDashing => dashTimer > 0f;
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
+        public bool CanAirDash => airDashAvailable;
         public bool IsRunning { get; private set; }
         public float HorizontalSpeed => horizontalSpeed;
         public float NormalizedSpeed { get; private set; }
@@ -76,6 +78,11 @@ namespace GameSkill
             float horizontalInput = MovementMath.HorizontalInput(
                 moveAction.ReadValue<Vector2>(),
                 inputDeadZone);
+            if (IsGrounded)
+            {
+                airDashAvailable = true;
+            }
+
             if (dashAction.WasReleasedThisFrame())
             {
                 dashRunChainActive = false;
@@ -87,6 +94,7 @@ namespace GameSkill
             if (IsDashing)
             {
                 IsRunning = false;
+                verticalSpeed = 0f;
                 horizontalSpeed = dashDirection * dashSpeed;
                 UpdateFacing(dashDirection, deltaTime);
             }
@@ -127,8 +135,13 @@ namespace GameSkill
         {
             if (!dashAction.WasPressedThisFrame()
                 || IsDashing
-                || !IsGrounded
                 || dashCooldownTimer > 0f)
+            {
+                return;
+            }
+
+            bool isGrounded = IsGrounded;
+            if (!isGrounded && !airDashAvailable)
             {
                 return;
             }
@@ -143,6 +156,10 @@ namespace GameSkill
                 dashDuration);
             dashRunChainActive = true;
             jumpBufferTimer = 0f;
+            if (!isGrounded)
+            {
+                airDashAvailable = false;
+            }
         }
 
         private void UpdateVerticalSpeed(float deltaTime, bool canJump)

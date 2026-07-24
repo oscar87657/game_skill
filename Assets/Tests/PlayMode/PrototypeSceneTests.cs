@@ -25,6 +25,7 @@ namespace GameSkill.Tests
             Assert.That(motor, Is.Not.Null);
             Assert.That(motor.IsDashing, Is.False);
             Assert.That(motor.IsInvulnerable, Is.False);
+            Assert.That(motor.CanAirDash, Is.True);
             Assert.That(player.GetComponent<PlayerCombat>(), Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
             Animator animator = player.GetComponentInChildren<Animator>();
