@@ -20,6 +20,8 @@ namespace GameSkill.Tests
             Assert.That(player.GetComponent<CharacterController>(), Is.Not.Null);
             Assert.That(player.GetComponent<PlayerInput>(), Is.Not.Null);
             Assert.That(player.GetComponent<ThirdPersonMotor>(), Is.Not.Null);
+            Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
+            Assert.That(player.GetComponentInChildren<Animator>(), Is.Not.Null);
 
             Camera camera = Camera.main;
             Assert.That(camera, Is.Not.Null);

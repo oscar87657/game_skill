@@ -14,6 +14,13 @@
 - 구성: 테스트 레벨, 상호작용 및 장식용 FBX 모델 145종
 - 라이선스: Creative Commons Zero 1.0
 
+## Platformer Kit 4.1
+
+- 출처: https://www.kenney.nl/assets/platformer-kit
+- 구성: `character-oobi` FBX, 공용 컬러맵 및 캐릭터 애니메이션
+- 사용 클립: Idle, Walk, Sprint, Jump, Fall
+- 라이선스: Creative Commons Zero 1.0
+
 각 폴더의 `LICENSE.txt`는 배포자가 제공한 라이선스 원문입니다. CC0는 저작자
 표시를 요구하지 않지만, 프로젝트 문서에는 제작자 Kenney를 기록합니다.
 

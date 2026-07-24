@@ -30,6 +30,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 3D 메트�
 - [x] CC0 캐릭터 및 프로토타입 에셋
 - [x] URP Main Scene과 플레이어 이동 프로토타입
 - [x] 3인칭 카메라 프로토타입
+- [x] Kenney 캐릭터 및 이동·점프 애니메이션
 - [ ] 상호작용 및 체크포인트
 - [ ] 체력, 데미지 및 전투
 - [ ] 이동 능력 해금 및 능력 게이트
@@ -58,8 +59,8 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 3D 메트�
 - 마우스 잠금 해제: `Escape`
 - 마우스 다시 잠금: Game View 왼쪽 클릭
 
-현재 플레이어는 조작 검증용 Capsule입니다. 다음 단계에서 Kenney 캐릭터와
-애니메이션을 연결합니다.
+현재 플레이어는 Kenney `character-oobi` 모델을 사용합니다. 이동 속도에 따라
+Idle, Walk, Sprint가 블렌딩되며 점프 중에는 Jump와 Fall 상태가 재생됩니다.
 
 ## 폴더 구조
 
@@ -93,8 +94,9 @@ ProjectSettings/
 
 - Kenney Blocky Characters 2.0: 애니메이션 캐릭터 18종
 - Kenney Prototype Kit 1.0: 테스트 레벨용 모델 145종
+- Kenney Platformer Kit 4.1: 플레이어 캐릭터와 이동·점프 애니메이션
 
-두 에셋은 CC0 라이선스이며 원본 라이선스는
+세 에셋은 CC0 라이선스이며 원본 라이선스는
 [`Assets/Art/ThirdParty/Kenney`](Assets/Art/ThirdParty/Kenney) 아래에 보존합니다.
 FBX와 PNG 파일은 Git LFS로 관리합니다.
 

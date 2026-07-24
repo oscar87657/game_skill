@@ -27,6 +27,8 @@ namespace GameSkill
         private float rotationVelocity;
 
         public bool IsGrounded => characterController != null && characterController.isGrounded;
+        public float NormalizedSpeed { get; private set; }
+        public float VerticalSpeed => verticalSpeed;
 
         private void Awake()
         {
@@ -48,6 +50,7 @@ namespace GameSkill
 
             if (cameraTransform == null)
             {
+                NormalizedSpeed = 0f;
                 return;
             }
 
@@ -72,7 +75,10 @@ namespace GameSkill
                 transform.rotation = Quaternion.Euler(0f, angle, 0f);
             }
 
-            float speed = sprintAction.IsPressed() ? sprintSpeed : walkSpeed;
+            bool isSprinting = sprintAction.IsPressed();
+            float speed = isSprinting ? sprintSpeed : walkSpeed;
+            NormalizedSpeed = direction.magnitude * (isSprinting ? 1f : 0.5f);
+
             Vector3 velocity = direction * speed;
             velocity.y = verticalSpeed;
             characterController.Move(velocity * deltaTime);

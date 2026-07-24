@@ -11,7 +11,6 @@ namespace GameSkill.Editor
         private const string ScenePath = "Assets/Scenes/Main.unity";
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string GroundMaterialPath = "Assets/Materials/PrototypeGround.mat";
-        private const string PlayerMaterialPath = "Assets/Materials/PrototypePlayer.mat";
         private const string AccentMaterialPath = "Assets/Materials/PrototypeAccent.mat";
 
         [MenuItem("Game Skill/Build Prototype Scene")]
@@ -23,14 +22,11 @@ namespace GameSkill.Editor
             Material groundMaterial = GetOrCreateMaterial(
                 GroundMaterialPath,
                 new Color(0.16f, 0.2f, 0.24f));
-            Material playerMaterial = GetOrCreateMaterial(
-                PlayerMaterialPath,
-                new Color(0.15f, 0.65f, 0.95f));
             Material accentMaterial = GetOrCreateMaterial(
                 AccentMaterialPath,
                 new Color(1f, 0.45f, 0.12f));
 
-            GameObject player = CreatePlayer(playerMaterial);
+            GameObject player = CreatePlayer();
             CreateGraybox(groundMaterial, accentMaterial);
             ConfigureCamera(player);
 
@@ -41,7 +37,7 @@ namespace GameSkill.Editor
             Debug.Log("Prototype Scene created: Assets/Scenes/Main.unity");
         }
 
-        private static GameObject CreatePlayer(Material playerMaterial)
+        private static GameObject CreatePlayer()
         {
             var player = new GameObject("Player");
             player.transform.position = new Vector3(0f, 0.05f, 0f);
@@ -60,14 +56,7 @@ namespace GameSkill.Editor
             playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
 
             player.AddComponent<ThirdPersonMotor>();
-
-            GameObject visual = GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            visual.name = "Visual";
-            visual.transform.SetParent(player.transform, false);
-            visual.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            visual.transform.localScale = new Vector3(0.7f, 0.9f, 0.7f);
-            Object.DestroyImmediate(visual.GetComponent<Collider>());
-            visual.GetComponent<MeshRenderer>().sharedMaterial = playerMaterial;
+            CharacterAnimationBuilder.ConfigurePlayerVisual(player);
 
             return player;
         }
