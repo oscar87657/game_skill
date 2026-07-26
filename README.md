@@ -44,6 +44,19 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 자세한 내용은 [게임 디자인](Docs/GAME_DESIGN.md)과
 [프로젝트 계획서](Docs/PROJECT_PLAN.md)를 참고하세요.
 
+## 포트폴리오 문서
+
+이 저장소는 하나의 게임을 완성하면서 기능별 구현 방식과 선택 근거를
+비교·기록하는 포트폴리오로 운영합니다.
+
+- [포트폴리오 운영 계획](Docs/PORTFOLIO_PLAN.md)
+- [기능 문서 인덱스](Docs/FEATURE_INDEX.md)
+- [아키텍처 규칙](Docs/ARCHITECTURE.md)
+- [기능 문서 템플릿](Docs/FEATURE_TEMPLATE.md)
+- [이동 시스템](Docs/Features/Movement.md)
+- [전투 시스템](Docs/Features/Combat.md)
+- 시연 자료: [Media/README](Media/README.md)
+
 ## 프로젝트 열기
 
 1. Unity Hub에서 Unity `6000.5.5f1` macOS ARM64를 설치합니다.
@@ -94,6 +107,15 @@ Assets/
     ├── EditMode/
     └── PlayMode/
 Docs/
+├── Features/
+├── ARCHITECTURE.md
+├── FEATURE_INDEX.md
+├── FEATURE_TEMPLATE.md
+├── PORTFOLIO_PLAN.md
+Media/
+├── GIF/
+├── Screenshots/
+└── Diagrams/
 Packages/
 ProjectSettings/
 ```
