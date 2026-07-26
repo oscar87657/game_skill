@@ -33,10 +33,6 @@ namespace GameSkill
         [SerializeField, Min(0f)] private float dashCooldown = 0.48f;
         [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
         [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.2f;
-        [SerializeField] private AnimationCurve dashSpeedCurve = new(
-            new Keyframe(0f, 0.35f),
-            new Keyframe(0.5f, 1f),
-            new Keyframe(1f, 0.35f));
 
         private CharacterController characterController;
         private InputAction moveAction;
@@ -112,9 +108,8 @@ namespace GameSkill
                 float dashProgress = dashDuration <= Mathf.Epsilon
                     ? 1f
                     : Mathf.Clamp01(dashElapsed / dashDuration);
-                float curveMultiplier = dashSpeedCurve == null
-                    ? 1f
-                    : Mathf.Max(0f, dashSpeedCurve.Evaluate(dashProgress));
+                float curveMultiplier = 0.72f
+                    + 0.28f * Mathf.Sin(dashProgress * Mathf.PI);
                 horizontalSpeed = dashDirection * dashSpeed * curveMultiplier;
                 dashElapsed += deltaTime;
                 UpdateFacing(dashDirection, deltaTime);
