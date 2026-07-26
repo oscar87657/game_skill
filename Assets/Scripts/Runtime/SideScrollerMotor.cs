@@ -34,9 +34,9 @@ namespace GameSkill
         [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
         [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.2f;
         [SerializeField] private AnimationCurve dashSpeedCurve = new(
-            new Keyframe(0f, 0f),
+            new Keyframe(0f, 0.35f),
             new Keyframe(0.5f, 1f),
-            new Keyframe(1f, 0f));
+            new Keyframe(1f, 0.35f));
 
         private CharacterController characterController;
         private InputAction moveAction;
@@ -103,7 +103,7 @@ namespace GameSkill
 
             TryStartDash(horizontalInput);
             bool isAirAttackHovering = IsAirAttackHovering && !IsDashing;
-            UpdateVerticalSpeed(deltaTime, !IsDashing && !isAirAttackHovering);
+            UpdateVerticalSpeed(deltaTime, !IsDashing);
 
             if (IsDashing)
             {
@@ -119,10 +119,6 @@ namespace GameSkill
                 dashElapsed += deltaTime;
                 UpdateFacing(dashDirection, deltaTime);
             }
-            else if (isAirAttackHovering)
-            {
-                verticalSpeed = 0f;
-            }
             else
             {
                 IsRunning = dashRunChainActive && dashAction.IsPressed();
@@ -135,6 +131,14 @@ namespace GameSkill
                     targetSpeed,
                     acceleration * deltaTime);
                 UpdateFacing(horizontalInput, deltaTime);
+            }
+
+            if (isAirAttackHovering)
+            {
+                verticalSpeed = Mathf.MoveTowards(
+                    verticalSpeed,
+                    0f,
+                    Mathf.Abs(gravity) * 2f * deltaTime);
             }
 
             Vector3 velocity = new(horizontalSpeed, verticalSpeed, 0f);
@@ -193,8 +197,8 @@ namespace GameSkill
             if (!IsGrounded && !IsDashing)
             {
                 airAttackHoverTimer = Mathf.Clamp(
-                    airAttackHoverTimer + duration,
                     duration,
+                    0f,
                     Mathf.Max(duration, maximumDuration));
             }
         }

@@ -16,7 +16,6 @@ namespace GameSkill
         [SerializeField, Min(0f)] private float attackCooldown = 0.42f;
         [SerializeField, Min(0f)] private float airAttackHoverDuration = 0.45f;
         [SerializeField, Min(0f)] private float maxAirAttackHoverDuration = 0.9f;
-        [SerializeField, Min(0f)] private float airAttackCycleDuration = 1.15f;
 
         [Header("Hit Box")]
         [SerializeField] private Vector3 hitBoxOffset = new(0.9f, 0.9f, 0f);
@@ -29,7 +28,6 @@ namespace GameSkill
         private float attackTimer;
         private float hitTimer;
         private float cooldownTimer;
-        private float airAttackCycleTimer;
         private bool hitApplied;
 
         public bool IsAttacking => attackTimer > 0f;
@@ -44,18 +42,6 @@ namespace GameSkill
         {
             float deltaTime = Time.deltaTime;
             cooldownTimer = Mathf.Max(0f, cooldownTimer - deltaTime);
-            airAttackCycleTimer = Mathf.Max(0f, airAttackCycleTimer - deltaTime);
-
-            if (!motor.IsGrounded && airAttackCycleTimer > 0f)
-            {
-                motor.RequestAirAttackHover(
-                    deltaTime,
-                    maxAirAttackHoverDuration);
-            }
-            else if (airAttackCycleTimer <= 0f)
-            {
-                motor.StopAirAttackHover();
-            }
 
             if (motor.IsDashing)
             {
@@ -82,7 +68,6 @@ namespace GameSkill
             damagedTargets.Clear();
             if (!motor.IsGrounded)
             {
-                airAttackCycleTimer = airAttackCycleDuration;
                 motor.RequestAirAttackHover(
                     airAttackHoverDuration,
                     maxAirAttackHoverDuration);
