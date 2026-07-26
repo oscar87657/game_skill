@@ -26,13 +26,17 @@ namespace GameSkill
 
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
-        [SerializeField, Min(0f)] private float dashSpeed = 9.5f;
+        [SerializeField, Min(0f)] private float dashSpeed = 8f;
         [FormerlySerializedAs("dodgeDuration")]
         [SerializeField, Min(0.01f)] private float dashDuration = 0.2f;
         [FormerlySerializedAs("dodgeCooldown")]
         [SerializeField, Min(0f)] private float dashCooldown = 0.48f;
         [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
         [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.2f;
+        [SerializeField] private AnimationCurve dashSpeedCurve = new(
+            new Keyframe(0f, 0f),
+            new Keyframe(0.5f, 1f),
+            new Keyframe(1f, 0f));
 
         private CharacterController characterController;
         private InputAction moveAction;
@@ -43,6 +47,7 @@ namespace GameSkill
         private float coyoteTimer;
         private float jumpBufferTimer;
         private float dashTimer;
+        private float dashElapsed;
         private float dashCooldownTimer;
         private float invulnerabilityTimer;
         private float airAttackHoverTimer;
@@ -104,7 +109,14 @@ namespace GameSkill
             {
                 IsRunning = false;
                 verticalSpeed = 0f;
-                horizontalSpeed = dashDirection * dashSpeed;
+                float dashProgress = dashDuration <= Mathf.Epsilon
+                    ? 1f
+                    : Mathf.Clamp01(dashElapsed / dashDuration);
+                float curveMultiplier = dashSpeedCurve == null
+                    ? 1f
+                    : Mathf.Max(0f, dashSpeedCurve.Evaluate(dashProgress));
+                horizontalSpeed = dashDirection * dashSpeed * curveMultiplier;
+                dashElapsed += deltaTime;
                 UpdateFacing(dashDirection, deltaTime);
             }
             else if (isAirAttackHovering)
@@ -163,6 +175,7 @@ namespace GameSkill
                 horizontalInput,
                 FacingDirection);
             dashTimer = dashDuration;
+            dashElapsed = 0f;
             dashCooldownTimer = dashCooldown;
             invulnerabilityTimer = Mathf.Min(
                 dashInvulnerabilityDuration,
@@ -184,6 +197,11 @@ namespace GameSkill
                     duration,
                     Mathf.Max(duration, maximumDuration));
             }
+        }
+
+        public void StopAirAttackHover()
+        {
+            airAttackHoverTimer = 0f;
         }
 
         private void UpdateVerticalSpeed(float deltaTime, bool canJump)
