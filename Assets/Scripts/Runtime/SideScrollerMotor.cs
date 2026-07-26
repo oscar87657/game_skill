@@ -27,7 +27,7 @@ namespace GameSkill
         [FormerlySerializedAs("dodgeSpeed")]
         [SerializeField, Min(0f)] private float dashSpeed = 11f;
         [FormerlySerializedAs("dodgeDuration")]
-        [SerializeField, Min(0.01f)] private float dashDuration = 0.28f;
+        [SerializeField, Min(0.01f)] private float dashDuration = 0.2f;
         [FormerlySerializedAs("dodgeCooldown")]
         [SerializeField, Min(0f)] private float dashCooldown = 0.48f;
         [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
@@ -44,6 +44,7 @@ namespace GameSkill
         private float dashTimer;
         private float dashCooldownTimer;
         private float invulnerabilityTimer;
+        private float airAttackHoverTimer;
         private float dashDirection = 1f;
         private bool dashRunChainActive;
         private bool airDashAvailable = true;
@@ -52,6 +53,7 @@ namespace GameSkill
         public bool IsGrounded => characterController != null && characterController.isGrounded;
         public bool IsDashing => dashTimer > 0f;
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
+        public bool IsAirAttackHovering => airAttackHoverTimer > 0f;
         public bool CanAirDash => airDashAvailable;
         public bool IsRunning { get; private set; }
         public float HorizontalSpeed => horizontalSpeed;
@@ -74,6 +76,7 @@ namespace GameSkill
         {
             float deltaTime = Time.deltaTime;
             UpdateDashTimers(deltaTime);
+            airAttackHoverTimer = Mathf.Max(0f, airAttackHoverTimer - deltaTime);
 
             float horizontalInput = MovementMath.HorizontalInput(
                 moveAction.ReadValue<Vector2>(),
@@ -89,7 +92,8 @@ namespace GameSkill
             }
 
             TryStartDash(horizontalInput);
-            UpdateVerticalSpeed(deltaTime, !IsDashing);
+            bool isAirAttackHovering = IsAirAttackHovering && !IsDashing;
+            UpdateVerticalSpeed(deltaTime, !IsDashing && !isAirAttackHovering);
 
             if (IsDashing)
             {
@@ -97,6 +101,10 @@ namespace GameSkill
                 verticalSpeed = 0f;
                 horizontalSpeed = dashDirection * dashSpeed;
                 UpdateFacing(dashDirection, deltaTime);
+            }
+            else if (isAirAttackHovering)
+            {
+                verticalSpeed = 0f;
             }
             else
             {
@@ -159,6 +167,14 @@ namespace GameSkill
             if (!isGrounded)
             {
                 airDashAvailable = false;
+            }
+        }
+
+        public void RequestAirAttackHover(float duration)
+        {
+            if (!IsGrounded && !IsDashing)
+            {
+                airAttackHoverTimer = Mathf.Max(airAttackHoverTimer, duration);
             }
         }
 

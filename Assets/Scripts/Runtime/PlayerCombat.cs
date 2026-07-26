@@ -14,6 +14,7 @@ namespace GameSkill
         [SerializeField, Min(0.01f)] private float attackDuration = 0.38f;
         [SerializeField, Min(0f)] private float hitDelay = 0.13f;
         [SerializeField, Min(0f)] private float attackCooldown = 0.42f;
+        [SerializeField, Min(0f)] private float airAttackHoverDuration = 0.1f;
 
         [Header("Hit Box")]
         [SerializeField] private Vector3 hitBoxOffset = new(0.9f, 0.9f, 0f);
@@ -51,8 +52,7 @@ namespace GameSkill
 
             if (attackAction.WasPressedThisFrame()
                 && !IsAttacking
-                && cooldownTimer <= 0f
-                && motor.IsGrounded)
+                && cooldownTimer <= 0f)
             {
                 StartAttack();
             }
@@ -65,6 +65,10 @@ namespace GameSkill
             cooldownTimer = attackCooldown;
             hitApplied = false;
             damagedTargets.Clear();
+            if (!motor.IsGrounded)
+            {
+                motor.RequestAirAttackHover(airAttackHoverDuration);
+            }
         }
 
         private void UpdateActiveAttack(float deltaTime)

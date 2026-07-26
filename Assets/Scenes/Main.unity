@@ -1129,9 +1129,9 @@ MonoBehaviour:
   coyoteTime: 0.12
   jumpBufferTime: 0.12
   dashSpeed: 10
-  dashDuration: 0.36
-  dashCooldown: 0.55
-  dashInvulnerabilityDuration: 0.24
+  dashDuration: 0.2
+  dashCooldown: 0.42
+  dashInvulnerabilityDuration: 0.16
 --- !u!114 &1555451363
 MonoBehaviour:
   m_ObjectHideFlags: 0
