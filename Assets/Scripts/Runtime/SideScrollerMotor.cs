@@ -26,7 +26,7 @@ namespace GameSkill
 
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
-        [SerializeField, Min(0f)] private float dashSpeed = 11f;
+        [SerializeField, Min(0f)] private float dashSpeed = 9.5f;
         [FormerlySerializedAs("dodgeDuration")]
         [SerializeField, Min(0.01f)] private float dashDuration = 0.2f;
         [FormerlySerializedAs("dodgeCooldown")]

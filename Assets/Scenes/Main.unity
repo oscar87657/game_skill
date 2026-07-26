@@ -1128,7 +1128,7 @@ MonoBehaviour:
   groundedGravity: -2
   coyoteTime: 0.12
   jumpBufferTime: 0.12
-  dashSpeed: 10
+  dashSpeed: 9.5
   dashDuration: 0.2
   dashCooldown: 0.42
   dashInvulnerabilityDuration: 0.16
