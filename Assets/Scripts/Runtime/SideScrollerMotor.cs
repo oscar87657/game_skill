@@ -22,6 +22,7 @@ namespace GameSkill
         [SerializeField] private float groundedGravity = -2f;
         [SerializeField, Min(0f)] private float coyoteTime = 0.12f;
         [SerializeField, Min(0f)] private float jumpBufferTime = 0.12f;
+        [SerializeField, Range(0, 2)] private int maxAirJumps = 1;
 
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
@@ -45,6 +46,7 @@ namespace GameSkill
         private float dashCooldownTimer;
         private float invulnerabilityTimer;
         private float airAttackHoverTimer;
+        private int airJumpsRemaining;
         private float dashDirection = 1f;
         private bool dashRunChainActive;
         private bool airDashAvailable = true;
@@ -55,6 +57,7 @@ namespace GameSkill
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
         public bool IsAirAttackHovering => airAttackHoverTimer > 0f;
         public bool CanAirDash => airDashAvailable;
+        public int AirJumpsRemaining => airJumpsRemaining;
         public bool IsRunning { get; private set; }
         public float HorizontalSpeed => horizontalSpeed;
         public float NormalizedSpeed { get; private set; }
@@ -69,6 +72,7 @@ namespace GameSkill
             moveAction = playerInput.actions.FindAction("Move", true);
             jumpAction = playerInput.actions.FindAction("Jump", true);
             dashAction = playerInput.actions.FindAction("Dash", true);
+            airJumpsRemaining = maxAirJumps;
             lockedDepth = transform.position.z;
         }
 
@@ -84,6 +88,7 @@ namespace GameSkill
             if (IsGrounded)
             {
                 airDashAvailable = true;
+                airJumpsRemaining = maxAirJumps;
             }
 
             if (dashAction.WasReleasedThisFrame())
@@ -170,11 +175,14 @@ namespace GameSkill
             }
         }
 
-        public void RequestAirAttackHover(float duration)
+        public void RequestAirAttackHover(float duration, float maximumDuration)
         {
             if (!IsGrounded && !IsDashing)
             {
-                airAttackHoverTimer = Mathf.Max(airAttackHoverTimer, duration);
+                airAttackHoverTimer = Mathf.Clamp(
+                    airAttackHoverTimer + duration,
+                    duration,
+                    Mathf.Max(duration, maximumDuration));
             }
         }
 
@@ -203,9 +211,19 @@ namespace GameSkill
                 verticalSpeed = groundedGravity;
             }
 
-            if (canJump && jumpBufferTimer > 0f && coyoteTimer > 0f)
+            bool canGroundJump = coyoteTimer > 0f;
+            bool canAirJump = !IsGrounded && airJumpsRemaining > 0;
+            if (canJump
+                && jumpBufferTimer > 0f
+                && (canGroundJump || canAirJump))
             {
                 verticalSpeed = MovementMath.JumpSpeed(jumpHeight, gravity);
+                if (canAirJump && !canGroundJump)
+                {
+                    airJumpsRemaining--;
+                }
+
+                airDashAvailable = true;
                 jumpBufferTimer = 0f;
                 coyoteTimer = 0f;
             }
