@@ -5,6 +5,7 @@
 | 이동 | 2.5D 이동·점프·대시 | 진행 중 | [Movement](Features/Movement.md) |
 | 전투 | 공격·체력·훈련용 더미 | 진행 중 | [Combat](Features/Combat.md) |
 | 월드 | 체크포인트·회복 | 진행 중 | [Checkpoint](Features/Checkpoint.md) |
+| 생존 | 사망·마지막 체크포인트 재시작 | 진행 중 | [Respawn](Features/Respawn.md) |
 | AI | 적 상태 머신 | 예정 | — |
 | 저장 | 세이브·로드 | 예정 | — |
 

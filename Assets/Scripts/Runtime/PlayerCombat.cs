@@ -94,6 +94,15 @@ namespace GameSkill
             }
         }
 
+        private void OnDisable()
+        {
+            // 사망이나 씬 종료로 전투가 꺼질 때 버퍼와 공격 판정이 재활성화 후 남지 않게 한다.
+            if (motor != null)
+            {
+                CancelAttack();
+            }
+        }
+
         private void ReadAttackInput()
         {
             // 공격 입력을 즉시 실행하지 않고 짧게 저장하여 프레임 단위 입력 누락을 줄인다.

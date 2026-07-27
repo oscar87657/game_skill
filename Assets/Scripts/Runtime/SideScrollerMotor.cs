@@ -63,6 +63,7 @@ namespace GameSkill
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
         public bool IsAirAttackHovering => airAttackHoverTimer > 0f;
         public bool CanAirDash => airDashAvailable;
+        public bool IsControlLocked { get; private set; }
         public int AirJumpsRemaining => airJumpsRemaining;
         public bool IsRunning { get; private set; }
         public float HorizontalSpeed => horizontalSpeed;
@@ -87,6 +88,14 @@ namespace GameSkill
         {
             // Update는 타이머 → 입력 결정 → 속도 계산 → 충돌 이동 순서로 구성한다.
             float deltaTime = Time.deltaTime;
+            if (IsControlLocked)
+            {
+                // 사망 연출 중에는 입력·중력·CharacterController 이동을 모두 멈춘다.
+                IsRunning = false;
+                NormalizedSpeed = 0f;
+                return;
+            }
+
             UpdateDashTimers(deltaTime);
             airAttackHoverTimer = Mathf.Max(0f, airAttackHoverTimer - deltaTime);
 
@@ -212,6 +221,47 @@ namespace GameSkill
         {
             // 대시·착지·추후 경직이 전투를 끊을 때 명시적으로 취소할 수 있다.
             airAttackHoverTimer = 0f;
+        }
+
+        public void SetControlLocked(bool locked)
+        {
+            // 잠그는 순간 남은 관성과 대시 상태를 지워 재시작 지점에서 미끄러지지 않게 한다.
+            IsControlLocked = locked;
+            if (locked)
+            {
+                ResetMotionState();
+            }
+        }
+
+        public void Teleport(Vector3 destination)
+        {
+            // CharacterController를 잠시 꺼야 충돌 해결이 목적지 변경을 이전 위치로 되돌리지 않는다.
+            characterController ??= GetComponent<CharacterController>();
+            bool wasEnabled = characterController.enabled;
+            characterController.enabled = false;
+            transform.position = destination;
+            lockedDepth = destination.z;
+            characterController.enabled = wasEnabled;
+            ResetMotionState();
+        }
+
+        public void ResetMotionState()
+        {
+            // 재시작 시 프레임 타이머와 능력 횟수를 한곳에서 초기화해 부분 상태 잔존을 막는다.
+            horizontalSpeed = 0f;
+            verticalSpeed = 0f;
+            coyoteTimer = 0f;
+            jumpBufferTimer = 0f;
+            dashTimer = 0f;
+            dashElapsed = 0f;
+            dashCooldownTimer = 0f;
+            invulnerabilityTimer = 0f;
+            airAttackHoverTimer = 0f;
+            airJumpsRemaining = maxAirJumps;
+            dashRunChainActive = false;
+            airDashAvailable = true;
+            IsRunning = false;
+            NormalizedSpeed = 0f;
         }
 
         private void UpdateVerticalSpeed(float deltaTime, bool canJump)

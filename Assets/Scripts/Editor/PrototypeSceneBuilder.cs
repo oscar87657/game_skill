@@ -112,6 +112,7 @@ namespace GameSkill.Editor
             player.AddComponent<SideScrollerMotor>();
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
+            player.AddComponent<PlayerRespawnController>();
             CharacterAnimationBuilder.ConfigurePlayerVisual(player);
 
             return player;
@@ -192,6 +193,7 @@ namespace GameSkill.Editor
                 new Vector3(1f, 1f, 1f),
                 accentMaterial);
             CreateCheckpoint(root.transform, accentMaterial);
+            CreateRespawnHazard(root.transform, accentMaterial);
             CreateTrainingDummy(root.transform, accentMaterial);
         }
 
@@ -244,6 +246,14 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (player != null
+                && player.GetComponent<PlayerRespawnController>() == null)
+            {
+                // 사망 이벤트가 체크포인트 상태를 소비하도록 기존 플레이어에 생존 컨트롤러를 추가한다.
+                player.AddComponent<PlayerRespawnController>();
+                changed = true;
+            }
+
             if (GameObject.Find("TrainingDummy") == null)
             {
                 GameObject root = GameObject.Find(GrayboxRootName);
@@ -264,6 +274,18 @@ namespace GameSkill.Editor
                 if (root != null && accentMaterial != null)
                 {
                     CreateCheckpoint(root.transform, accentMaterial);
+                    changed = true;
+                }
+            }
+
+            if (GameObject.Find("RespawnHazard") == null)
+            {
+                GameObject root = GameObject.Find(GrayboxRootName);
+                Material accentMaterial =
+                    AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
+                if (root != null && accentMaterial != null)
+                {
+                    CreateRespawnHazard(root.transform, accentMaterial);
                     changed = true;
                 }
             }
@@ -321,6 +343,27 @@ namespace GameSkill.Editor
                 new Vector3(0f, -0.95f, 0f),
                 checkpoint.GetComponent<MeshRenderer>());
             return checkpoint;
+        }
+
+        private static GameObject CreateRespawnHazard(
+            Transform parent,
+            Material material)
+        {
+            // 체크포인트 뒤에 대시로 통과하거나 접촉해 재시작을 검증할 위험 지대를 만든다.
+            GameObject hazard =
+                GameObject.CreatePrimitive(PrimitiveType.Cube);
+            hazard.name = "RespawnHazard";
+            hazard.transform.SetParent(parent);
+            hazard.transform.position = new Vector3(5.9f, 0.15f, 0f);
+            hazard.transform.localScale = new Vector3(0.8f, 0.3f, 2.2f);
+            hazard.GetComponent<MeshRenderer>().sharedMaterial = material;
+
+            BoxCollider trigger = hazard.GetComponent<BoxCollider>();
+            trigger.isTrigger = true;
+
+            DamageVolume damageVolume = hazard.AddComponent<DamageVolume>();
+            damageVolume.Configure(99);
+            return hazard;
         }
 
         private static GameObject CreateBlock(

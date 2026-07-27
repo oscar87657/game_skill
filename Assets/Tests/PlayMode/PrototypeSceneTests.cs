@@ -36,7 +36,8 @@ namespace GameSkill.Tests
             Assert.That(motor.IsInvulnerable, Is.False);
             Assert.That(motor.CanAirDash, Is.True);
             Assert.That(motor.AirJumpsRemaining, Is.EqualTo(1));
-            Assert.That(player.GetComponent<PlayerCombat>(), Is.Not.Null);
+            PlayerCombat combat = player.GetComponent<PlayerCombat>();
+            Assert.That(combat, Is.Not.Null);
             SideScrollerTargeting targeting =
                 player.GetComponent<SideScrollerTargeting>();
             Assert.That(targeting, Is.Not.Null);
@@ -45,6 +46,9 @@ namespace GameSkill.Tests
             PlayerCheckpointState checkpointState =
                 player.GetComponent<PlayerCheckpointState>();
             Assert.That(checkpointState, Is.Not.Null);
+            PlayerRespawnController respawnController =
+                player.GetComponent<PlayerRespawnController>();
+            Assert.That(respawnController, Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
             Animator animator = player.GetComponentInChildren<Animator>();
             Assert.That(animator, Is.Not.Null);
@@ -99,11 +103,40 @@ namespace GameSkill.Tests
                 Is.EqualTo(checkpoint.RespawnPosition));
             Assert.That(checkpoint.IsActivated, Is.True);
 
+            // 실제 위험 지대의 즉사 데미지로 사망 이벤트부터 체크포인트 재시작까지 통합 검증한다.
+            GameObject hazardObject = GameObject.Find("RespawnHazard");
+            Assert.That(hazardObject, Is.Not.Null);
+            DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
+            Assert.That(hazard, Is.Not.Null);
+            respawnController.Configure(0f);
+            motor.Teleport(new Vector3(4.5f, 0.05f, 0f));
+            Assert.That(hazard.TryApply(player), Is.True);
+            Assert.That(playerHealth.IsDead, Is.True);
+            Assert.That(respawnController.IsRespawning, Is.True);
+            Assert.That(motor.IsControlLocked, Is.True);
+            Assert.That(combat.enabled, Is.False);
+
+            // 0초 재시작도 사망 상태 관찰을 위해 한 프레임 양보하므로 완료될 때까지 제한적으로 기다린다.
+            for (int frame = 0;
+                 frame < 3 && respawnController.IsRespawning;
+                 frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(respawnController.IsRespawning, Is.False);
+            Assert.That(respawnController.RespawnCount, Is.EqualTo(1));
+            Assert.That(playerHealth.IsDead, Is.False);
+            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth));
+            Assert.That(player.transform.position, Is.EqualTo(checkpoint.RespawnPosition));
+            Assert.That(motor.IsControlLocked, Is.False);
+            Assert.That(combat.enabled, Is.True);
+
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
-            player.transform.position = new Vector3(
+            motor.Teleport(new Vector3(
                 dummy.transform.position.x - 1.5f,
                 0.05f,
-                0f);
+                0f));
             Physics.SyncTransforms();
             Health selectedTarget = targeting.AcquireTarget(
                 player.transform.position + Vector3.up * 0.9f,

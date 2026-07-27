@@ -203,6 +203,36 @@ namespace GameSkill.Tests
             }
         }
 
+        [Test]
+        public void ResolveDestination_UsesCheckpointWhenAvailable()
+        {
+            // 활성화된 체크포인트가 있으면 최초 시작 위치보다 마지막 체크포인트를 우선해야 한다.
+            Vector3 checkpointPosition = new(5f, 1f, 0f);
+            Vector3 initialPosition = new(0f, 0.05f, 0f);
+
+            Vector3 destination = RespawnMath.ResolveDestination(
+                true,
+                checkpointPosition,
+                initialPosition);
+
+            Assert.That(destination, Is.EqualTo(checkpointPosition));
+        }
+
+        [Test]
+        public void ResolveDestination_FallsBackToInitialSpawn()
+        {
+            // 체크포인트 이전 사망도 복구 가능하도록 최초 위치를 안전한 대체 지점으로 선택한다.
+            Vector3 checkpointPosition = new(5f, 1f, 0f);
+            Vector3 initialPosition = new(0f, 0.05f, 0f);
+
+            Vector3 destination = RespawnMath.ResolveDestination(
+                false,
+                checkpointPosition,
+                initialPosition);
+
+            Assert.That(destination, Is.EqualTo(initialPosition));
+        }
+
         [TestCase(0, 3, 1)]
         [TestCase(1, 3, 2)]
         [TestCase(2, 3, 3)]
