@@ -14,6 +14,8 @@
 - 지상·공중 대시와 대시 중 무적
 - 대시 후 Shift 홀드 달리기 연계
 - `MovementMath`: 순수 계산 함수와 EditMode 테스트
+- CharacterController 경사 제한 45도와 0.3m 계단 오프셋
+- Showcase Graybox의 `Slope_Test` 경사면과 `Step_A/B` 계단
 
 ## 구현 방식 비교
 
@@ -34,4 +36,4 @@
 - 이동 상태와 전투 상태를 명시적인 모듈로 분리
 - Showcase 씬에서 능력별 토글 제공
 - 경사면·계단과 이동 플랫폼 검증
-
+- 실제 플레이에서 경사 진입·하강·계단 모서리의 감각 조정

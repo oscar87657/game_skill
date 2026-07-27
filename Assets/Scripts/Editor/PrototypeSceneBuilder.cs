@@ -94,7 +94,10 @@ namespace GameSkill.Editor
             controller.center = new Vector3(0f, 0.9f, 0f);
             controller.height = 1.8f;
             controller.radius = 0.35f;
+            controller.slopeLimit = 45f;
             controller.stepOffset = 0.3f;
+            controller.skinWidth = 0.08f;
+            controller.minMoveDistance = 0f;
 
             InputActionAsset inputActions =
                 AssetDatabase.LoadAssetAtPath<InputActionAsset>(InputActionsPath);
@@ -158,6 +161,13 @@ namespace GameSkill.Editor
                 "Step_B",
                 new Vector3(8f, 1.5f, 0f),
                 new Vector3(3f, 3f, 3f),
+                groundMaterial);
+            CreateRamp(
+                root.transform,
+                "Slope_Test",
+                new Vector3(-2.5f, 0.5f, 0f),
+                new Vector3(4f, 1f, 3f),
+                15f,
                 groundMaterial);
             CreateBlock(
                 root.transform,
@@ -263,6 +273,20 @@ namespace GameSkill.Editor
             block.transform.localScale = scale;
             block.GetComponent<MeshRenderer>().sharedMaterial = material;
             return block;
+        }
+
+        private static GameObject CreateRamp(
+            Transform parent,
+            string name,
+            Vector3 position,
+            Vector3 scale,
+            float zRotation,
+            Material material)
+        {
+            // 회전한 큐브로 경사면을 단순화하여 CharacterController 경계값을 빠르게 검증한다.
+            GameObject ramp = CreateBlock(parent, name, position, scale, material);
+            ramp.transform.rotation = Quaternion.Euler(0f, 0f, zRotation);
+            return ramp;
         }
 
         private static Material GetOrCreateMaterial(string path, Color color)

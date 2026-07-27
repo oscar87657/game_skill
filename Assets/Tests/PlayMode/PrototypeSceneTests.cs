@@ -22,7 +22,11 @@ namespace GameSkill.Tests
 
             GameObject player = GameObject.Find("Player");
             Assert.That(player, Is.Not.Null);
-            Assert.That(player.GetComponent<CharacterController>(), Is.Not.Null);
+            CharacterController characterController =
+                player.GetComponent<CharacterController>();
+            Assert.That(characterController, Is.Not.Null);
+            Assert.That(characterController.slopeLimit, Is.EqualTo(45f).Within(0.001f));
+            Assert.That(characterController.stepOffset, Is.EqualTo(0.3f).Within(0.001f));
             PlayerInput playerInput = player.GetComponent<PlayerInput>();
             Assert.That(playerInput, Is.Not.Null);
             Assert.That(playerInput.actions.FindAction("Dash"), Is.Not.Null);
@@ -60,6 +64,7 @@ namespace GameSkill.Tests
 
             Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
             Assert.That(GameObject.Find("Wall_Gate"), Is.Not.Null);
+            Assert.That(GameObject.Find("Slope_Test"), Is.Not.Null);
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
             Assert.That(dummy.GetComponent<Health>(), Is.Not.Null);
