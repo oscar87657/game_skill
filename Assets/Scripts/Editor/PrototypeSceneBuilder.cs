@@ -107,6 +107,7 @@ namespace GameSkill.Editor
             playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
 
             player.AddComponent<SideScrollerMotor>();
+            player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
             CharacterAnimationBuilder.ConfigurePlayerVisual(player);
 
@@ -214,6 +215,13 @@ namespace GameSkill.Editor
             if (player != null && player.GetComponent<PlayerCombat>() == null)
             {
                 player.AddComponent<PlayerCombat>();
+                changed = true;
+            }
+
+            if (player != null && player.GetComponent<SideScrollerTargeting>() == null)
+            {
+                // 이전 씬에도 자동 조준을 추가해 전체 재생성 없이 최신 전투 구성을 유지한다.
+                player.AddComponent<SideScrollerTargeting>();
                 changed = true;
             }
 

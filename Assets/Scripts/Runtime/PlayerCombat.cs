@@ -12,6 +12,7 @@ namespace GameSkill
     [DefaultExecutionOrder(20)]
     [RequireComponent(typeof(PlayerInput))]
     [RequireComponent(typeof(SideScrollerMotor))]
+    [RequireComponent(typeof(SideScrollerTargeting))]
     public sealed class PlayerCombat : MonoBehaviour
     {
         [Header("Attack")]
@@ -33,6 +34,7 @@ namespace GameSkill
 
         private readonly HashSet<Health> damagedTargets = new();
         private SideScrollerMotor motor;
+        private SideScrollerTargeting targeting;
         private InputAction attackAction;
         private float attackTimer;
         private float hitTimer;
@@ -49,6 +51,7 @@ namespace GameSkill
         {
             // 의존성을 한 번만 캐시하며 전투는 이동 상태를 읽기만 하고 소유하지 않는다.
             motor = GetComponent<SideScrollerMotor>();
+            targeting = GetComponent<SideScrollerTargeting>();
             attackAction = GetComponent<PlayerInput>().actions.FindAction("Attack", true);
         }
 
@@ -115,6 +118,7 @@ namespace GameSkill
             comboBufferTimer = 0f;
             hitApplied = false;
             damagedTargets.Clear();
+            targeting.AcquireTarget(GetAttackOrigin(), motor.FacingDirection);
             if (!motor.IsGrounded)
             {
                 motor.RequestAirAttackHover(
@@ -151,14 +155,19 @@ namespace GameSkill
         private void ApplyHit()
         {
             // 지정된 타격 순간에 한 번만 조회하고 아래 HashSet으로 중복 피격을 막는다.
-            Vector3 facingOffset = hitBoxOffset;
-            facingOffset.x *= motor.FacingDirection;
-            Vector3 center = transform.position + facingOffset;
+            Vector3 aimDirection = targeting != null
+                ? targeting.AimDirection
+                : new Vector3(motor.FacingDirection, 0f, 0f);
+            Vector3 center = GetAttackOrigin()
+                + aimDirection * Mathf.Abs(hitBoxOffset.x);
+            float aimAngle = Mathf.Atan2(aimDirection.y, aimDirection.x)
+                * Mathf.Rad2Deg;
+            Quaternion hitBoxRotation = Quaternion.Euler(0f, 0f, aimAngle);
 
             Collider[] hits = Physics.OverlapBox(
                 center,
                 hitBoxHalfExtents,
-                Quaternion.identity,
+                hitBoxRotation,
                 damageLayers,
                 QueryTriggerInteraction.Collide);
 
@@ -191,6 +200,14 @@ namespace GameSkill
             ComboStep = 0;
             hitApplied = false;
             damagedTargets.Clear();
+            targeting?.ClearTarget(motor.FacingDirection);
+        }
+
+        private Vector3 GetAttackOrigin()
+        {
+            // 공격 원점을 별도 함수로 두어 탐색과 실제 히트박스가 같은 좌표 기준을 공유한다.
+            return transform.position
+                + new Vector3(0f, hitBoxOffset.y, hitBoxOffset.z);
         }
 
         private void OnDrawGizmosSelected()
@@ -198,13 +215,24 @@ namespace GameSkill
             SideScrollerMotor currentMotor =
                 motor != null ? motor : GetComponent<SideScrollerMotor>();
             float facing = currentMotor != null ? currentMotor.FacingDirection : 1f;
-            Vector3 facingOffset = hitBoxOffset;
-            facingOffset.x *= facing;
+            SideScrollerTargeting currentTargeting =
+                targeting != null ? targeting : GetComponent<SideScrollerTargeting>();
+            Vector3 aimDirection = currentTargeting != null
+                ? currentTargeting.AimDirection
+                : new Vector3(facing, 0f, 0f);
+            float aimAngle = Mathf.Atan2(aimDirection.y, aimDirection.x)
+                * Mathf.Rad2Deg;
+            Vector3 center = GetAttackOrigin()
+                + aimDirection * Mathf.Abs(hitBoxOffset.x);
 
             Gizmos.color = new Color(1f, 0.2f, 0.1f, 0.35f);
-            Gizmos.DrawCube(
-                transform.position + facingOffset,
-                hitBoxHalfExtents * 2f);
+            Matrix4x4 previousMatrix = Gizmos.matrix;
+            Gizmos.matrix = Matrix4x4.TRS(
+                center,
+                Quaternion.Euler(0f, 0f, aimAngle),
+                Vector3.one);
+            Gizmos.DrawCube(Vector3.zero, hitBoxHalfExtents * 2f);
+            Gizmos.matrix = previousMatrix;
         }
     }
 }

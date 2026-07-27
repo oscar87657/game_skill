@@ -37,6 +37,9 @@ namespace GameSkill.Tests
             Assert.That(motor.CanAirDash, Is.True);
             Assert.That(motor.AirJumpsRemaining, Is.EqualTo(1));
             Assert.That(player.GetComponent<PlayerCombat>(), Is.Not.Null);
+            SideScrollerTargeting targeting =
+                player.GetComponent<SideScrollerTargeting>();
+            Assert.That(targeting, Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
             Animator animator = player.GetComponentInChildren<Animator>();
             Assert.That(animator, Is.Not.Null);
@@ -73,8 +76,23 @@ namespace GameSkill.Tests
             Assert.That(GameObject.Find("Slope_Test"), Is.Not.Null);
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
-            Assert.That(dummy.GetComponent<Health>(), Is.Not.Null);
+            Health dummyHealth = dummy.GetComponent<Health>();
+            Assert.That(dummyHealth, Is.Not.Null);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
+
+            // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
+            player.transform.position = new Vector3(
+                dummy.transform.position.x - 1.5f,
+                0.05f,
+                0f);
+            Physics.SyncTransforms();
+            Health selectedTarget = targeting.AcquireTarget(
+                player.transform.position + Vector3.up * 0.9f,
+                1f);
+
+            Assert.That(selectedTarget, Is.SameAs(dummyHealth));
+            Assert.That(targeting.AimDirection.x, Is.GreaterThan(0f));
+            Assert.That(targeting.AimDirection.z, Is.Zero.Within(0.0001f));
         }
     }
 }
