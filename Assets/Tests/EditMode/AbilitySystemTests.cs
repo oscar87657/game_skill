@@ -147,6 +147,73 @@ namespace GameSkill.Tests
             }
         }
 
+        [TestCase(1f, 0f, 0f, true)]
+        [TestCase(-0.8f, 0.1f, 0f, true)]
+        [TestCase(0.7f, 0.7f, 0f, false)]
+        [TestCase(0.2f, 0.98f, 0f, false)]
+        public void IsWallSurface_FiltersFloorAndSlopeNormals(
+            float x,
+            float y,
+            float z,
+            bool expected)
+        {
+            // 벽 법선 임계값이 수직면은 허용하고 바닥·일반 경사면은 제외하는지 검증한다.
+            bool result = WallTraversalMath.IsWallSurface(
+                new Vector3(x, y, z),
+                0.75f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(1f, 1f, true)]
+        [TestCase(-1f, -1f, true)]
+        [TestCase(-1f, 1f, false)]
+        [TestCase(0.05f, 1f, false)]
+        public void IsHoldingTowardWall_UsesInputDirection(
+            float horizontalInput,
+            float wallDirection,
+            bool expected)
+        {
+            // 오른쪽·왼쪽 벽 모두 입력 방향을 같은 규칙으로 판정하는지 확인한다.
+            bool result = WallTraversalMath.IsHoldingTowardWall(
+                horizontalInput,
+                wallDirection,
+                0.1f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(-8f, 2.4f, -2.4f)]
+        [TestCase(-1f, 2.4f, -1f)]
+        [TestCase(3f, 2.4f, 3f)]
+        public void ClampWallSlideSpeed_LimitsOnlyFastFalling(
+            float verticalSpeed,
+            float maximumFallSpeed,
+            float expected)
+        {
+            // 벽 미끄러짐은 빠른 낙하만 줄이고 느린 하강이나 상승 속도는 보존해야 한다.
+            Assert.That(
+                WallTraversalMath.ClampWallSlideSpeed(
+                    verticalSpeed,
+                    maximumFallSpeed),
+                Is.EqualTo(expected).Within(0.0001f));
+        }
+
+        [TestCase(1f, 7f, -7f)]
+        [TestCase(-1f, 7f, 7f)]
+        public void WallJumpHorizontalSpeed_PushesAwayFromWall(
+            float wallDirection,
+            float jumpSpeed,
+            float expected)
+        {
+            // 벽 방향과 반대 부호의 속도가 만들어져 재충돌 없이 떨어지는지 검증한다.
+            Assert.That(
+                WallTraversalMath.WallJumpHorizontalSpeed(
+                    wallDirection,
+                    jumpSpeed),
+                Is.EqualTo(expected));
+        }
+
         private static AbilityDefinition CreateAbility(
             string id,
             string displayName)

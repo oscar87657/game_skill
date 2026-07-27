@@ -56,11 +56,15 @@ namespace GameSkill
             Unsubscribe();
         }
 
-        public void Configure(
+        public bool Configure(
             AbilityDefinition ability,
             PlayerAbilityState state,
             Renderer renderer)
         {
+            bool changed = requiredAbility != ability
+                || playerState != state
+                || visualRenderer != renderer;
+
             // 기존 상태에서 먼저 구독을 해제해야 재설정 시 이전 플레이어 이벤트가 남지 않는다.
             Unsubscribe();
             requiredAbility = ability;
@@ -69,6 +73,7 @@ namespace GameSkill
             blockingCollider ??= GetComponent<Collider>();
             Subscribe();
             RefreshLockState();
+            return changed;
         }
 
         public bool RefreshLockState()

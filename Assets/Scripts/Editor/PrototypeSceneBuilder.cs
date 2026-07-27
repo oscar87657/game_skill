@@ -23,6 +23,8 @@ namespace GameSkill.Editor
             AbilityFolderPath + "/Ability_DoubleJump.asset";
         private const string AirDashAbilityPath =
             AbilityFolderPath + "/Ability_AirDash.asset";
+        private const string WallTraversalAbilityPath =
+            AbilityFolderPath + "/Ability_WallTraversal.asset";
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -80,6 +82,11 @@ namespace GameSkill.Editor
 
             GameObject player = CreatePlayer();
             CreateGraybox(groundMaterial, accentMaterial);
+            EnsureAbilityPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                accentMaterial,
+                groundMaterial);
             ConfigureCamera(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -128,12 +135,19 @@ namespace GameSkill.Editor
                     "air_dash",
                     "공중 대시",
                     "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversalAbility =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
             SideScrollerMotor motor =
                 player.AddComponent<SideScrollerMotor>();
             motor.ConfigureAbilityRequirements(
                 abilityState,
                 doubleJumpAbility,
-                airDashAbility);
+                airDashAbility,
+                wallTraversalAbility);
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
             player.AddComponent<PlayerRespawnController>();
@@ -325,10 +339,13 @@ namespace GameSkill.Editor
             GameObject grayboxRoot = GameObject.Find(GrayboxRootName);
             Material abilityMaterial =
                 AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
+            Material groundMaterial =
+                AssetDatabase.LoadAssetAtPath<Material>(GroundMaterialPath);
             if (EnsureAbilityPrototype(
                 player,
                 grayboxRoot,
-                abilityMaterial))
+                abilityMaterial,
+                groundMaterial))
             {
                 // 능력 에셋·픽업·게이트 중 하나라도 추가되면 씬을 저장 대상으로 표시한다.
                 changed = true;
@@ -348,10 +365,14 @@ namespace GameSkill.Editor
         private static bool EnsureAbilityPrototype(
             GameObject player,
             GameObject grayboxRoot,
-            Material material)
+            Material abilityMaterial,
+            Material groundMaterial)
         {
             // 진행 루프의 필수 씬 참조가 없으면 부분 배치로 씬을 깨뜨리지 않고 재시도를 기다린다.
-            if (player == null || grayboxRoot == null || material == null)
+            if (player == null
+                || grayboxRoot == null
+                || abilityMaterial == null
+                || groundMaterial == null)
             {
                 return false;
             }
@@ -378,6 +399,12 @@ namespace GameSkill.Editor
                     "air_dash",
                     "공중 대시",
                     "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversalAbility =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
 
             SideScrollerMotor motor =
                 player.GetComponent<SideScrollerMotor>();
@@ -385,7 +412,8 @@ namespace GameSkill.Editor
                 && motor.ConfigureAbilityRequirements(
                     abilityState,
                     doubleJumpAbility,
-                    airDashAbility))
+                    airDashAbility,
+                    wallTraversalAbility))
             {
                 // 이동 능력의 실제 사용 조건을 진행 상태와 연결하고 씬 직렬화 대상으로 표시한다.
                 EditorUtility.SetDirty(motor);
@@ -400,7 +428,7 @@ namespace GameSkill.Editor
                     "AbilityPickup_DoubleJump",
                     new Vector3(7f, 1f, 0f),
                     doubleJumpAbility,
-                    material);
+                    abilityMaterial);
                 changed = true;
             }
 
@@ -412,30 +440,167 @@ namespace GameSkill.Editor
                     "AbilityPickup_AirDash",
                     new Vector3(20f, 4.2f, 0f),
                     airDashAbility,
-                    material);
+                    abilityMaterial);
+                changed = true;
+            }
+
+            if (GameObject.Find("AbilityPickup_WallTraversal") == null)
+            {
+                // 공중 대시 게이트 뒤에서 세 번째 벽 이동 능력을 획득하게 한다.
+                CreateAbilityPickup(
+                    grayboxRoot.transform,
+                    "AbilityPickup_WallTraversal",
+                    new Vector3(22.6f, 4.2f, 0f),
+                    wallTraversalAbility,
+                    abilityMaterial);
                 changed = true;
             }
 
             GameObject gateObject = GameObject.Find("Wall_Gate");
-            if (gateObject != null)
+            if (EnsureAbilityGate(
+                gateObject,
+                doubleJumpAbility,
+                abilityState))
             {
-                AbilityGate gate =
-                    gateObject.GetComponent<AbilityGate>();
-                if (gate == null)
-                {
-                    // 기존 물리 블록을 능력 요구 게이트로 승격해 레벨 배치를 중복하지 않는다.
-                    gate = gateObject.AddComponent<AbilityGate>();
-                    changed = true;
-                }
+                changed = true;
+            }
 
-                gate.Configure(
-                    doubleJumpAbility,
-                    abilityState,
-                    gateObject.GetComponentInChildren<Renderer>());
-                EditorUtility.SetDirty(gate);
+            GameObject airDashGate =
+                GameObject.Find("AirDash_Gate");
+            if (airDashGate == null)
+            {
+                // 높은 발판에서 공중 대시를 얻은 뒤에만 세 번째 픽업으로 이동할 수 있게 막는다.
+                airDashGate = CreateBlock(
+                    grayboxRoot.transform,
+                    "AirDash_Gate",
+                    new Vector3(21.25f, 4.8f, 0f),
+                    new Vector3(0.5f, 2.6f, 3f),
+                    abilityMaterial);
+                changed = true;
+            }
+
+            if (EnsureAbilityGate(
+                airDashGate,
+                airDashAbility,
+                abilityState))
+            {
+                changed = true;
+            }
+
+            if (EnsureWallTraversalCourse(
+                grayboxRoot.transform,
+                groundMaterial,
+                abilityMaterial))
+            {
+                changed = true;
             }
 
             return changed;
+        }
+
+        private static bool EnsureAbilityGate(
+            GameObject gateObject,
+            AbilityDefinition requiredAbility,
+            PlayerAbilityState abilityState)
+        {
+            // 물리 블록이 없으면 게이트 컴포넌트만 생성하지 않고 호출자가 배치를 보완하게 한다.
+            if (gateObject == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            AbilityGate gate =
+                gateObject.GetComponent<AbilityGate>();
+            if (gate == null)
+            {
+                // 기존 Collider 블록을 능력 게이트로 승격해 충돌 표현을 중복 생성하지 않는다.
+                gate = gateObject.AddComponent<AbilityGate>();
+                changed = true;
+            }
+
+            if (gate.Configure(
+                requiredAbility,
+                abilityState,
+                gateObject.GetComponentInChildren<Renderer>()))
+            {
+                EditorUtility.SetDirty(gate);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureWallTraversalCourse(
+            Transform parent,
+            Material groundMaterial,
+            Material rewardMaterial)
+        {
+            // 오른쪽 아래로 진입한 뒤 두 벽 사이를 번갈아 점프하는 백트래킹 샤프트를 만든다.
+            bool changed = false;
+            if (GameObject.Find("WallTraversal_Left") == null)
+            {
+                CreateBlock(
+                    parent,
+                    "WallTraversal_Left",
+                    new Vector3(-11f, 3f, 0f),
+                    new Vector3(0.6f, 6f, 3f),
+                    groundMaterial);
+                changed = true;
+            }
+
+            if (GameObject.Find("WallTraversal_RightUpper") == null)
+            {
+                // 오른쪽 벽 아래에 2m 진입 공간을 남겨 능력 획득 전에도 샤프트 입구를 볼 수 있게 한다.
+                CreateBlock(
+                    parent,
+                    "WallTraversal_RightUpper",
+                    new Vector3(-8.5f, 4.25f, 0f),
+                    new Vector3(0.6f, 4.5f, 3f),
+                    groundMaterial);
+                changed = true;
+            }
+
+            GameObject reward = GameObject.Find("Backtrack_Reward");
+            if (reward == null)
+            {
+                // 완주 지점을 물리적으로 밟을 수 있는 보상 블록으로 생성한다.
+                reward = CreateBlock(
+                    parent,
+                    "Backtrack_Reward",
+                    new Vector3(-11f, 6.5f, 0f),
+                    Vector3.one,
+                    rewardMaterial);
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                reward.transform,
+                new Vector3(-11f, 6.5f, 0f),
+                Vector3.one))
+            {
+                // 이전 위치의 보상 블록을 샤프트 정상으로 멱등적으로 이동한다.
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool SetTransformIfDifferent(
+            Transform target,
+            Vector3 position,
+            Vector3 scale)
+        {
+            // 허용 오차 안에서 같은 배치면 씬을 Dirty 상태로 만들지 않는다.
+            if ((target.position - position).sqrMagnitude < 0.000001f
+                && (target.localScale - scale).sqrMagnitude < 0.000001f)
+            {
+                return false;
+            }
+
+            target.position = position;
+            target.localScale = scale;
+            EditorUtility.SetDirty(target);
+            return true;
         }
 
         private static GameObject CreateAbilityPickup(

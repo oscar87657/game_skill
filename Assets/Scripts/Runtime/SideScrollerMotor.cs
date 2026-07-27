@@ -33,6 +33,15 @@ namespace GameSkill
         [SerializeField] private PlayerAbilityState abilityState;
         [SerializeField] private AbilityDefinition doubleJumpAbility;
         [SerializeField] private AbilityDefinition airDashAbility;
+        [SerializeField] private AbilityDefinition wallTraversalAbility;
+
+        [Header("Wall Traversal")]
+        [SerializeField, Min(0f)] private float wallClingDuration = 0.22f;
+        [SerializeField, Min(0f)] private float wallSlideSpeed = 2.4f;
+        [SerializeField, Min(0f)] private float wallJumpHorizontalSpeed = 7f;
+        [SerializeField, Min(0f)] private float wallJumpControlLockTime = 0.12f;
+        [SerializeField, Range(0.5f, 1f)]
+        private float minimumWallNormal = 0.75f;
 
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
@@ -57,6 +66,10 @@ namespace GameSkill
         private float dashCooldownTimer;
         private float invulnerabilityTimer;
         private float airAttackHoverTimer;
+        private float wallClingTimer;
+        private float wallJumpControlLockTimer;
+        private float wallContactDirection;
+        private int wallContactFrame = -100;
         private int airJumpsRemaining;
         private float dashDirection = 1f;
         private bool dashRunChainActive;
@@ -72,6 +85,12 @@ namespace GameSkill
             IsAbilityAvailable(doubleJumpAbility);
         public bool IsAirDashUnlocked =>
             IsAbilityAvailable(airDashAbility);
+        public bool IsWallTraversalUnlocked =>
+            IsAbilityAvailable(wallTraversalAbility);
+        public bool IsWallClinging { get; private set; }
+        public bool IsWallSliding { get; private set; }
+        public float WallContactDirection =>
+            HasRecentWallContact ? wallContactDirection : 0f;
         public bool IsControlLocked { get; private set; }
         public int AirJumpsRemaining => airJumpsRemaining;
         public bool IsRunning { get; private set; }
@@ -90,18 +109,21 @@ namespace GameSkill
             jumpAction = playerInput.actions.FindAction("Jump", true);
             dashAction = playerInput.actions.FindAction("Dash", true);
             airJumpsRemaining = maxAirJumps;
+            wallClingTimer = wallClingDuration;
             lockedDepth = transform.position.z;
         }
 
         public bool ConfigureAbilityRequirements(
             PlayerAbilityState state,
             AbilityDefinition requiredDoubleJump,
-            AbilityDefinition requiredAirDash)
+            AbilityDefinition requiredAirDash,
+            AbilityDefinition requiredWallTraversal)
         {
             // 같은 참조로 다시 구성할 때 씬을 불필요하게 Dirty 상태로 만들지 않는다.
             if (abilityState == state
                 && doubleJumpAbility == requiredDoubleJump
-                && airDashAbility == requiredAirDash)
+                && airDashAbility == requiredAirDash
+                && wallTraversalAbility == requiredWallTraversal)
             {
                 return false;
             }
@@ -110,6 +132,7 @@ namespace GameSkill
             abilityState = state;
             doubleJumpAbility = requiredDoubleJump;
             airDashAbility = requiredAirDash;
+            wallTraversalAbility = requiredWallTraversal;
             return true;
         }
 
@@ -127,14 +150,19 @@ namespace GameSkill
 
             UpdateDashTimers(deltaTime);
             airAttackHoverTimer = Mathf.Max(0f, airAttackHoverTimer - deltaTime);
+            wallJumpControlLockTimer = Mathf.Max(
+                0f,
+                wallJumpControlLockTimer - deltaTime);
 
             float horizontalInput = MovementMath.HorizontalInput(
                 moveAction.ReadValue<Vector2>(),
                 inputDeadZone);
             if (IsGrounded)
             {
+                // 착지는 모든 공중 능력과 벽 체공 시간을 다음 시도에 맞게 초기화한다.
                 airDashAvailable = true;
                 airJumpsRemaining = maxAirJumps;
+                wallClingTimer = wallClingDuration;
             }
 
             if (dashAction.WasReleasedThisFrame())
@@ -144,7 +172,12 @@ namespace GameSkill
 
             TryStartDash(horizontalInput);
             bool isAirAttackHovering = IsAirAttackHovering && !IsDashing;
-            UpdateVerticalSpeed(deltaTime, !IsDashing);
+            UpdateVerticalSpeed(
+                deltaTime,
+                !IsDashing);
+            UpdateWallTraversal(
+                horizontalInput,
+                deltaTime);
 
             if (IsDashing)
             {
@@ -166,11 +199,15 @@ namespace GameSkill
                 float targetSpeed = horizontalInput * maximumSpeed;
                 float acceleration = IsGrounded ? groundAcceleration : airAcceleration;
 
-                horizontalSpeed = Mathf.MoveTowards(
-                    horizontalSpeed,
-                    targetSpeed,
-                    acceleration * deltaTime);
-                UpdateFacing(horizontalInput, deltaTime);
+                // 벽 점프 직후 짧은 시간은 반발 속도를 보존하고 이후에 일반 공중 조작으로 복귀한다.
+                if (wallJumpControlLockTimer <= 0f)
+                {
+                    horizontalSpeed = Mathf.MoveTowards(
+                        horizontalSpeed,
+                        targetSpeed,
+                        acceleration * deltaTime);
+                    UpdateFacing(horizontalInput, deltaTime);
+                }
             }
 
             if (isAirAttackHovering)
@@ -289,13 +326,21 @@ namespace GameSkill
             invulnerabilityTimer = 0f;
             airAttackHoverTimer = 0f;
             airJumpsRemaining = maxAirJumps;
+            wallClingTimer = wallClingDuration;
+            wallJumpControlLockTimer = 0f;
+            wallContactDirection = 0f;
+            wallContactFrame = -100;
             dashRunChainActive = false;
             airDashAvailable = true;
+            IsWallClinging = false;
+            IsWallSliding = false;
             IsRunning = false;
             NormalizedSpeed = 0f;
         }
 
-        private void UpdateVerticalSpeed(float deltaTime, bool canJump)
+        private void UpdateVerticalSpeed(
+            float deltaTime,
+            bool canJump)
         {
             // 이번 프레임 중력을 적분하기 전에 점프 버퍼와 코요테 타임을 해결한다.
             if (jumpAction.WasPressedThisFrame())
@@ -325,12 +370,30 @@ namespace GameSkill
             bool canAirJump = !IsGrounded
                 && airJumpsRemaining > 0
                 && IsDoubleJumpUnlocked;
+            bool canWallJump = !IsGrounded
+                && HasRecentWallContact
+                && IsWallTraversalUnlocked;
             if (canJump
                 && jumpBufferTimer > 0f
-                && (canGroundJump || canAirJump))
+                && (canGroundJump || canAirJump || canWallJump))
             {
                 verticalSpeed = MovementMath.JumpSpeed(jumpHeight, gravity);
-                if (canAirJump && !canGroundJump)
+
+                // 벽 점프는 일반 공중 점프 횟수를 소비하지 않고 벽의 반대 방향으로 반발한다.
+                if (canWallJump && !canGroundJump)
+                {
+                    horizontalSpeed =
+                        WallTraversalMath.WallJumpHorizontalSpeed(
+                            wallContactDirection,
+                            wallJumpHorizontalSpeed);
+                    wallJumpControlLockTimer =
+                        wallJumpControlLockTime;
+                    FacingDirection = -wallContactDirection;
+                    wallContactFrame = -100;
+                    IsWallClinging = false;
+                    IsWallSliding = false;
+                }
+                else if (canAirJump && !canGroundJump)
                 {
                     airJumpsRemaining--;
                 }
@@ -343,6 +406,55 @@ namespace GameSkill
             verticalSpeed += gravity * deltaTime;
         }
 
+        private void UpdateWallTraversal(
+            float horizontalInput,
+            float deltaTime)
+        {
+            // 대시·지상·미해금 상태에서는 벽 이동 보정을 적용하지 않고 표시 상태도 즉시 해제한다.
+            if (IsDashing
+                || IsGrounded
+                || !HasRecentWallContact
+                || !IsWallTraversalUnlocked)
+            {
+                IsWallClinging = false;
+                IsWallSliding = false;
+                return;
+            }
+
+            bool isHoldingTowardWall =
+                WallTraversalMath.IsHoldingTowardWall(
+                    horizontalInput,
+                    wallContactDirection,
+                    inputDeadZone);
+            if (!isHoldingTowardWall || verticalSpeed > 0f)
+            {
+                // 벽을 향한 의도를 놓거나 상승 중이면 일반 공중 이동을 유지한다.
+                IsWallClinging = false;
+                IsWallSliding = false;
+                return;
+            }
+
+            if (wallClingTimer > 0f)
+            {
+                // 최초 접촉의 짧은 잡기 구간은 낙하를 멈춰 다음 벽 점프 입력 시간을 제공한다.
+                wallClingTimer = Mathf.Max(
+                    0f,
+                    wallClingTimer - deltaTime);
+                verticalSpeed = 0f;
+                IsWallClinging = true;
+                IsWallSliding = false;
+                return;
+            }
+
+            // 잡기 시간이 끝나면 하강 속도만 제한해 벽에서 무한 체공하지 않게 한다.
+            verticalSpeed =
+                WallTraversalMath.ClampWallSlideSpeed(
+                    verticalSpeed,
+                    wallSlideSpeed);
+            IsWallClinging = false;
+            IsWallSliding = true;
+        }
+
         private bool IsAbilityAvailable(AbilityDefinition requirement)
         {
             // 요구 에셋이 없는 기존 씬은 이전 동작을 유지하고, 명시된 요구 조건은 보유 상태로 판정한다.
@@ -352,6 +464,24 @@ namespace GameSkill
             }
 
             return abilityState != null && abilityState.HasAbility(requirement);
+        }
+
+        private bool HasRecentWallContact =>
+            Time.frameCount - wallContactFrame <= 1;
+
+        private void OnControllerColliderHit(
+            ControllerColliderHit hit)
+        {
+            // CharacterController 접촉 중 충분히 수직인 표면만 벽 이동 후보로 기록한다.
+            if (!WallTraversalMath.IsWallSurface(
+                hit.normal,
+                minimumWallNormal))
+            {
+                return;
+            }
+
+            wallContactDirection = -Mathf.Sign(hit.normal.x);
+            wallContactFrame = Time.frameCount;
         }
 
         private void UpdateFacing(float horizontalInput, float deltaTime)
