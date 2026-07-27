@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 한 객체의 체력 상태를 소유하고 데미지·사망 이벤트를 제공한다.
-// 책임: 값을 제한하고 잘못된 데미지를 거부하며 구독자에게 상태 변화를 알린다.
+// 목적: 한 객체의 체력 상태를 소유하고 데미지·회복·사망 이벤트를 제공한다.
+// 책임: 값을 제한하고 잘못된 데미지를 거부하며 구독자에게 체력 변화를 알린다.
 // 불변식: CurrentHealth는 항상 0 이상 MaxHealth 이하이며, UI와 전투 규칙은 알지 않는다.
 // 선택 이유: 작은 이벤트 기반 컴포넌트로 적·플레이어·UI를 서로 교체 가능하게 한다.
 using System;
@@ -13,6 +13,7 @@ namespace GameSkill
         [SerializeField, Min(1)] private int maxHealth = 3;
 
         public event Action<int, int> Damaged;
+        public event Action<int, int> Restored;
         public event Action Died;
 
         public int MaxHealth => maxHealth;
@@ -55,6 +56,7 @@ namespace GameSkill
         {
             // 회복과 부활이 서로 다른 로직으로 갈라지지 않도록 하나의 초기화 경로를 사용한다.
             CurrentHealth = MaxHealth;
+            Restored?.Invoke(CurrentHealth, MaxHealth);
         }
     }
 }

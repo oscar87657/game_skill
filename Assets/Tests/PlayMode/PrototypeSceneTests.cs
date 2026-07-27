@@ -40,6 +40,11 @@ namespace GameSkill.Tests
             SideScrollerTargeting targeting =
                 player.GetComponent<SideScrollerTargeting>();
             Assert.That(targeting, Is.Not.Null);
+            Health playerHealth = player.GetComponent<Health>();
+            Assert.That(playerHealth, Is.Not.Null);
+            PlayerCheckpointState checkpointState =
+                player.GetComponent<PlayerCheckpointState>();
+            Assert.That(checkpointState, Is.Not.Null);
             Assert.That(player.GetComponent<PlayerAnimator>(), Is.Not.Null);
             Animator animator = player.GetComponentInChildren<Animator>();
             Assert.That(animator, Is.Not.Null);
@@ -79,6 +84,20 @@ namespace GameSkill.Tests
             Health dummyHealth = dummy.GetComponent<Health>();
             Assert.That(dummyHealth, Is.Not.Null);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
+
+            // 실제 Main 씬 체크포인트를 활성화해 플레이어 체력과 재시작 위치가 함께 갱신되는지 확인한다.
+            GameObject checkpointObject = GameObject.Find("Checkpoint_Start");
+            Assert.That(checkpointObject, Is.Not.Null);
+            Checkpoint checkpoint = checkpointObject.GetComponent<Checkpoint>();
+            Assert.That(checkpoint, Is.Not.Null);
+            Assert.That(playerHealth.TakeDamage(2), Is.True);
+            Assert.That(checkpoint.Activate(checkpointState), Is.True);
+            Assert.That(playerHealth.CurrentHealth, Is.EqualTo(playerHealth.MaxHealth));
+            Assert.That(checkpointState.LastCheckpointId, Is.EqualTo("start_hall"));
+            Assert.That(
+                checkpointState.LastRespawnPosition,
+                Is.EqualTo(checkpoint.RespawnPosition));
+            Assert.That(checkpoint.IsActivated, Is.True);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             player.transform.position = new Vector3(

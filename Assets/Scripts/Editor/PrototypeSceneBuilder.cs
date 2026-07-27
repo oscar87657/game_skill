@@ -106,6 +106,9 @@ namespace GameSkill.Editor
             playerInput.defaultActionMap = "Player";
             playerInput.notificationBehavior = PlayerNotifications.InvokeCSharpEvents;
 
+            Health health = player.AddComponent<Health>();
+            health.Configure(5);
+            player.AddComponent<PlayerCheckpointState>();
             player.AddComponent<SideScrollerMotor>();
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
@@ -188,6 +191,7 @@ namespace GameSkill.Editor
                 new Vector3(-9f, 4.5f, 0f),
                 new Vector3(1f, 1f, 1f),
                 accentMaterial);
+            CreateCheckpoint(root.transform, accentMaterial);
             CreateTrainingDummy(root.transform, accentMaterial);
         }
 
@@ -212,6 +216,21 @@ namespace GameSkill.Editor
             // 기존 씬을 멱등적으로 마이그레이션하고 변경 여부를 반환한다.
             bool changed = false;
             GameObject player = GameObject.Find("Player");
+            if (player != null && player.GetComponent<Health>() == null)
+            {
+                // 생존 흐름의 단일 체력 원본을 플레이어 루트에 추가한다.
+                Health health = player.AddComponent<Health>();
+                health.Configure(5);
+                changed = true;
+            }
+
+            if (player != null && player.GetComponent<PlayerCheckpointState>() == null)
+            {
+                // 기존 Main 씬도 재생성 없이 체크포인트 진행 상태를 사용할 수 있게 한다.
+                player.AddComponent<PlayerCheckpointState>();
+                changed = true;
+            }
+
             if (player != null && player.GetComponent<PlayerCombat>() == null)
             {
                 player.AddComponent<PlayerCombat>();
@@ -233,6 +252,18 @@ namespace GameSkill.Editor
                 if (root != null && accentMaterial != null)
                 {
                     CreateTrainingDummy(root.transform, accentMaterial);
+                    changed = true;
+                }
+            }
+
+            if (GameObject.Find("Checkpoint_Start") == null)
+            {
+                GameObject root = GameObject.Find(GrayboxRootName);
+                Material accentMaterial =
+                    AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
+                if (root != null && accentMaterial != null)
+                {
+                    CreateCheckpoint(root.transform, accentMaterial);
                     changed = true;
                 }
             }
@@ -264,6 +295,32 @@ namespace GameSkill.Editor
             health.Configure(3);
             dummy.AddComponent<TrainingDummy>();
             return dummy;
+        }
+
+        private static GameObject CreateCheckpoint(
+            Transform parent,
+            Material material)
+        {
+            // 하나의 큐브를 시각 기둥과 Trigger로 함께 사용해 체크포인트 흐름을 빠르게 시연한다.
+            GameObject checkpoint =
+                GameObject.CreatePrimitive(PrimitiveType.Cube);
+            checkpoint.name = "Checkpoint_Start";
+            checkpoint.transform.SetParent(parent);
+            checkpoint.transform.position = new Vector3(1.25f, 1f, 0f);
+            checkpoint.transform.localScale = new Vector3(0.4f, 2f, 0.4f);
+            checkpoint.GetComponent<MeshRenderer>().sharedMaterial = material;
+
+            BoxCollider trigger = checkpoint.GetComponent<BoxCollider>();
+            trigger.isTrigger = true;
+            trigger.size = new Vector3(3.25f, 1f, 5f);
+
+            Checkpoint checkpointComponent =
+                checkpoint.AddComponent<Checkpoint>();
+            checkpointComponent.Configure(
+                "start_hall",
+                new Vector3(0f, -0.95f, 0f),
+                checkpoint.GetComponent<MeshRenderer>());
+            return checkpoint;
         }
 
         private static GameObject CreateBlock(

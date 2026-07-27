@@ -106,6 +106,103 @@ namespace GameSkill.Tests
             }
         }
 
+        [Test]
+        public void PlayerCheckpointState_RecordsPositionAndRestoresHealth()
+        {
+            // 체크포인트 활성화 한 번으로 위치 기록·회복·이벤트가 함께 일어나는지 검증한다.
+            var player = new GameObject("CheckpointStateTestPlayer");
+            try
+            {
+                Health health = player.AddComponent<Health>();
+                health.Configure(5);
+                Assert.That(health.TakeDamage(3), Is.True);
+                PlayerCheckpointState checkpointState =
+                    player.AddComponent<PlayerCheckpointState>();
+                int activationEvents = 0;
+                int restorationEvents = 0;
+                checkpointState.CheckpointActivated += (_, _) =>
+                    activationEvents++;
+                health.Restored += (_, _) => restorationEvents++;
+                Vector3 respawnPosition = new(4f, 1.05f, 0f);
+
+                bool activated = checkpointState.ActivateCheckpoint(
+                    "test_hall",
+                    respawnPosition);
+
+                Assert.That(activated, Is.True);
+                Assert.That(checkpointState.HasCheckpoint, Is.True);
+                Assert.That(
+                    checkpointState.LastCheckpointId,
+                    Is.EqualTo("test_hall"));
+                Assert.That(
+                    checkpointState.LastRespawnPosition,
+                    Is.EqualTo(respawnPosition));
+                Assert.That(health.CurrentHealth, Is.EqualTo(5));
+                Assert.That(activationEvents, Is.EqualTo(1));
+                Assert.That(restorationEvents, Is.EqualTo(1));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+            }
+        }
+
+        [TestCase("")]
+        [TestCase("   ")]
+        public void PlayerCheckpointState_RejectsEmptyId(string checkpointId)
+        {
+            // 영구 저장 키로 사용할 수 없는 빈 ID는 상태와 체력을 바꾸지 않아야 한다.
+            var player = new GameObject("InvalidCheckpointTestPlayer");
+            try
+            {
+                Health health = player.AddComponent<Health>();
+                health.Configure(5);
+                health.TakeDamage(2);
+                PlayerCheckpointState checkpointState =
+                    player.AddComponent<PlayerCheckpointState>();
+
+                bool activated = checkpointState.ActivateCheckpoint(
+                    checkpointId,
+                    Vector3.zero);
+
+                Assert.That(activated, Is.False);
+                Assert.That(checkpointState.HasCheckpoint, Is.False);
+                Assert.That(health.CurrentHealth, Is.EqualTo(3));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+            }
+        }
+
+        [Test]
+        public void PlayerCheckpointState_RejectsInvalidPosition()
+        {
+            // NaN 재시작 좌표가 저장되면 복구가 불가능하므로 입력 경계에서 차단한다.
+            var player = new GameObject("InvalidCheckpointPositionTestPlayer");
+            try
+            {
+                Health health = player.AddComponent<Health>();
+                health.Configure(3);
+                PlayerCheckpointState checkpointState =
+                    player.AddComponent<PlayerCheckpointState>();
+
+                bool activated = checkpointState.ActivateCheckpoint(
+                    "invalid_position",
+                    new Vector3(float.NaN, 0f, 0f));
+
+                Assert.That(activated, Is.False);
+                Assert.That(checkpointState.HasCheckpoint, Is.False);
+                Assert.That(
+                    health.CurrentHealth,
+                    Is.EqualTo(health.MaxHealth));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+            }
+        }
+
         [TestCase(0, 3, 1)]
         [TestCase(1, 3, 2)]
         [TestCase(2, 3, 3)]
