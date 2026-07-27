@@ -1,7 +1,7 @@
 // GOLDEN STANDARD
-// Purpose: Smoke-test the integrated Main scene as a playable portfolio showcase.
-// Responsibility: Verify required components, assets, animation parameters, and demo targets.
-// Invariant: This test checks wiring, not fine-grained movement timing.
+// 목적: 통합 Main 씬을 포트폴리오 시연용 플레이 가능 씬으로 스모크 테스트한다.
+// 책임: 필수 컴포넌트·에셋·애니메이터 파라미터·시연 대상을 확인한다.
+// 불변식: 세밀한 이동 타이밍이 아니라 씬 연결 상태를 검사한다.
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
@@ -16,7 +16,7 @@ namespace GameSkill.Tests
         [UnityTest]
         public IEnumerator MainScene_HasPlayablePrototype()
         {
-            // Load the same scene a portfolio viewer would launch, then validate its public contract.
+            // 포트폴리오 사용자가 실행할 씬을 로드하고 외부 계약을 검증한다.
             SceneManager.LoadScene("Main", LoadSceneMode.Single);
             yield return null;
 

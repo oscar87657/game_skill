@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// Purpose: Coordinate a small, testable player attack loop for the prototype.
-// Responsibility: Read attack input, manage timing, query hitboxes, and send damage to Health.
-// Invariant: Each attack damages a target at most once and never changes locomotion directly.
-// Design choice: Physics.OverlapBox keeps hit timing deterministic while leaving animation presentation separate.
+// 목적: 프로토타입의 작고 테스트 가능한 플레이어 공격 루프를 조정한다.
+// 책임: 공격 입력·시간을 관리하고 히트박스를 조회해 Health에 데미지를 전달한다.
+// 불변식: 한 공격은 대상에게 최대 한 번만 데미지를 주며 이동을 직접 변경하지 않는다.
+// 선택 이유: Physics.OverlapBox로 판정 타이밍을 결정적으로 만들고 표현과 분리한다.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -39,14 +39,14 @@ namespace GameSkill
 
         private void Awake()
         {
-            // Cache dependencies once; combat reads movement state but does not own movement.
+            // 의존성을 한 번만 캐시하며 전투는 이동 상태를 읽기만 하고 소유하지 않는다.
             motor = GetComponent<SideScrollerMotor>();
             attackAction = GetComponent<PlayerInput>().actions.FindAction("Attack", true);
         }
 
         private void Update()
         {
-            // Resolve cooldown and active attack before accepting a new attack input.
+            // 새 입력을 받기 전에 쿨다운과 현재 공격 상태를 먼저 해결한다.
             float deltaTime = Time.deltaTime;
             cooldownTimer = Mathf.Max(0f, cooldownTimer - deltaTime);
 
@@ -68,7 +68,7 @@ namespace GameSkill
 
         private void StartAttack()
         {
-            // Reset per-swing state so a new attack cannot inherit an old target set.
+            // 새 공격이 이전 공격의 대상 목록을 물려받지 않도록 타격별 상태를 초기화한다.
             attackTimer = attackDuration;
             hitTimer = Mathf.Min(hitDelay, attackDuration);
             cooldownTimer = attackCooldown;
@@ -84,7 +84,7 @@ namespace GameSkill
 
         private void UpdateActiveAttack(float deltaTime)
         {
-            // Decrement both animation duration and hit delay using the same frame clock.
+            // 같은 프레임 시간으로 애니메이션 지속시간과 타격 지연을 함께 감소시킨다.
             if (!IsAttacking)
             {
                 return;
@@ -102,7 +102,7 @@ namespace GameSkill
 
         private void ApplyHit()
         {
-            // Query once at the authored hit moment; the HashSet below prevents multi-hit overlap.
+            // 지정된 타격 순간에 한 번만 조회하고 아래 HashSet으로 중복 피격을 막는다.
             Vector3 facingOffset = hitBoxOffset;
             facingOffset.x *= motor.FacingDirection;
             Vector3 center = transform.position + facingOffset;
@@ -114,7 +114,7 @@ namespace GameSkill
                 damageLayers,
                 QueryTriggerInteraction.Collide);
 
-            // Iterate every collider because compound enemies may expose multiple body colliders.
+            // 여러 콜라이더를 가진 적도 있으므로 모든 콜라이더를 순회한다.
             foreach (Collider hit in hits)
             {
                 Health target = hit.GetComponentInParent<Health>();
@@ -131,7 +131,7 @@ namespace GameSkill
 
         private void CancelAttack()
         {
-            // Interruptions such as dashing must clear all transient attack state.
+            // 대시 같은 중단 상황에서는 모든 임시 공격 상태를 제거한다.
             attackTimer = 0f;
             hitTimer = 0f;
             hitApplied = false;

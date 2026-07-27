@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// Purpose: Own player locomotion on the X/Y plane for the 2.5D prototype.
-// Responsibility: Read movement actions, resolve jump/dash state, and move CharacterController.
-// Invariant: Z depth stays locked; movement abilities never directly own combat or animation.
-// Design choice: Explicit timers make coyote time, buffering, cooldowns, and invulnerability inspectable and testable.
+// 목적: 2.5D 프로토타입의 X/Y 평면 플레이어 이동을 담당한다.
+// 책임: 이동 입력을 읽고 점프·대시 상태를 해결한 뒤 CharacterController를 이동시킨다.
+// 불변식: Z 깊이는 고정되며 이동 능력이 전투나 애니메이션을 직접 소유하지 않는다.
+// 선택 이유: 명시적인 타이머로 코요테 타임·버퍼·쿨다운·무적을 확인하고 테스트할 수 있다.
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
@@ -72,7 +72,7 @@ namespace GameSkill
 
         private void Awake()
         {
-            // Cache input actions and initialize counters before the first Update tick.
+            // 첫 Update 전에 입력 액션과 카운터를 캐시하고 초기화한다.
             characterController = GetComponent<CharacterController>();
             PlayerInput playerInput = GetComponent<PlayerInput>();
 
@@ -85,7 +85,7 @@ namespace GameSkill
 
         private void Update()
         {
-            // Update is organized as timers → input decisions → velocity → collision move.
+            // Update는 타이머 → 입력 결정 → 속도 계산 → 충돌 이동 순서로 구성한다.
             float deltaTime = Time.deltaTime;
             UpdateDashTimers(deltaTime);
             airAttackHoverTimer = Mathf.Max(0f, airAttackHoverTimer - deltaTime);
@@ -157,7 +157,7 @@ namespace GameSkill
 
         private void UpdateDashTimers(float deltaTime)
         {
-            // Clamp timers at zero so callers can use simple > 0 checks without negative drift.
+            // 타이머를 0 아래로 내려가지 않게 하여 호출자가 단순한 > 0 검사를 사용할 수 있게 한다.
             dashTimer = Mathf.Max(0f, dashTimer - deltaTime);
             dashCooldownTimer = Mathf.Max(0f, dashCooldownTimer - deltaTime);
             invulnerabilityTimer = Mathf.Max(0f, invulnerabilityTimer - deltaTime);
@@ -165,7 +165,7 @@ namespace GameSkill
 
         private void TryStartDash(float horizontalInput)
         {
-            // A dash begins only on a press, never from a held key after its cooldown expires.
+            // 대시는 누른 순간에만 시작하며 쿨다운이 끝났다고 홀드 입력으로 재시작하지 않는다.
             if (!dashAction.WasPressedThisFrame()
                 || IsDashing
                 || dashCooldownTimer > 0f)
@@ -198,7 +198,7 @@ namespace GameSkill
 
         public void RequestAirAttackHover(float duration, float maximumDuration)
         {
-            // Combat requests a small vertical assist; horizontal locomotion remains motor-owned.
+            // 전투는 짧은 수직 보정만 요청하고 수평 이동은 계속 Motor가 소유한다.
             if (!IsGrounded && !IsDashing)
             {
                 airAttackHoverTimer = Mathf.Clamp(
@@ -210,13 +210,13 @@ namespace GameSkill
 
         public void StopAirAttackHover()
         {
-            // Explicit cancellation is useful when a dash, landing, or future stun interrupts combat.
+            // 대시·착지·추후 경직이 전투를 끊을 때 명시적으로 취소할 수 있다.
             airAttackHoverTimer = 0f;
         }
 
         private void UpdateVerticalSpeed(float deltaTime, bool canJump)
         {
-            // Jump buffering and coyote time are resolved before gravity is integrated for this frame.
+            // 이번 프레임 중력을 적분하기 전에 점프 버퍼와 코요테 타임을 해결한다.
             if (jumpAction.WasPressedThisFrame())
             {
                 jumpBufferTimer = jumpBufferTime;
@@ -262,7 +262,7 @@ namespace GameSkill
 
         private void UpdateFacing(float horizontalInput, float deltaTime)
         {
-            // Facing follows meaningful horizontal intent and rotates at a designer-tunable rate.
+            // 의미 있는 수평 의도를 따라가며 디자이너가 조정한 속도로 회전한다.
             if (Mathf.Abs(horizontalInput) <= Mathf.Epsilon)
             {
                 return;

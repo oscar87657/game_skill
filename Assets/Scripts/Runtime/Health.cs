@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// Purpose: Own one object's health state and expose stable damage/death events.
-// Responsibility: Clamp values, reject invalid damage, and notify observers.
-// Invariant: CurrentHealth is always in [0, MaxHealth]; this class does not know UI or combat rules.
-// Design choice: A small event-driven component keeps enemies, players, and UI replaceable.
+// 목적: 한 객체의 체력 상태를 소유하고 데미지·사망 이벤트를 제공한다.
+// 책임: 값을 제한하고 잘못된 데미지를 거부하며 구독자에게 상태 변화를 알린다.
+// 불변식: CurrentHealth는 항상 0 이상 MaxHealth 이하이며, UI와 전투 규칙은 알지 않는다.
+// 선택 이유: 작은 이벤트 기반 컴포넌트로 적·플레이어·UI를 서로 교체 가능하게 한다.
 using System;
 using UnityEngine;
 
@@ -21,20 +21,20 @@ namespace GameSkill
 
         private void Awake()
         {
-            // Initialize runtime state from the serialized maximum rather than relying on prefab defaults.
+            // 프리팹 기본값에 의존하지 않고 직렬화된 최대 체력으로 런타임 상태를 초기화한다.
             RestoreFullHealth();
         }
 
         public void Configure(int maximumHealth)
         {
-            // Configuration is clamped so external designers cannot create an unusable zero-health target.
+            // 외부 설정으로 사용할 수 없는 0 체력 대상이 생기지 않도록 값을 제한한다.
             maxHealth = Mathf.Max(1, maximumHealth);
             RestoreFullHealth();
         }
 
         public bool TakeDamage(int amount)
         {
-            // Invalid or post-mortem damage is ignored, making repeated hit callbacks safe.
+            // 잘못된 데미지나 사망 후 데미지는 무시하여 중복 피격 콜백에도 안전하게 만든다.
             if (amount <= 0 || IsDead)
             {
                 return false;
@@ -53,7 +53,7 @@ namespace GameSkill
 
         public void RestoreFullHealth()
         {
-            // A single reset path prevents respawn and checkpoint code from drifting apart.
+            // 회복과 부활이 서로 다른 로직으로 갈라지지 않도록 하나의 초기화 경로를 사용한다.
             CurrentHealth = MaxHealth;
         }
     }

@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// Purpose: Generate and migrate the smallest playable 2.5D showcase scene.
-// Responsibility: Create player, graybox, camera, combat dummy, and editor menu commands.
-// Invariant: Re-running the builder removes only its own named prototype roots.
-// Design choice: Editor-only scene generation keeps runtime scripts focused on gameplay.
+// 목적: 가장 작은 플레이 가능한 2.5D Showcase 씬을 생성하고 마이그레이션한다.
+// 책임: 플레이어·그레이박스·카메라·전투 더미와 에디터 메뉴를 생성한다.
+// 불변식: 빌더를 다시 실행해도 자신이 만든 이름의 프로토타입 루트만 제거한다.
+// 선택 이유: 씬 생성은 에디터 전용으로 두어 런타임 스크립트를 게임플레이에 집중시킨다.
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -22,14 +22,14 @@ namespace GameSkill.Editor
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
         {
-            // Defer migration until Unity finishes loading the active scene and assemblies.
+            // Unity가 활성 씬과 어셈블리를 모두 로드한 뒤 마이그레이션을 지연 실행한다.
             EditorApplication.delayCall += TryMigrateOpenPrototype;
             EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
         }
 
         private static void TryMigrateOpenPrototype()
         {
-            // Never mutate a scene while entering Play Mode.
+            // Play Mode 진입 중에는 씬을 절대 변경하지 않는다.
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 return;
@@ -52,7 +52,7 @@ namespace GameSkill.Editor
 
         private static void HandlePlayModeStateChanged(PlayModeStateChange state)
         {
-            // Re-run migration when the editor becomes writable again.
+            // 에디터가 다시 수정 가능한 상태가 되면 마이그레이션을 재시도한다.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
                 TryMigrateOpenPrototype();
@@ -62,7 +62,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Build Side-Scroller Prototype")]
         public static void Build()
         {
-            // Recreate the canonical graybox from deterministic dimensions and asset paths.
+            // 결정적인 크기와 에셋 경로로 표준 그레이박스를 다시 만든다.
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             RemoveExistingPrototypeRoots();
 
@@ -86,7 +86,7 @@ namespace GameSkill.Editor
 
         private static GameObject CreatePlayer()
         {
-            // Assemble only gameplay components here; the animation builder owns the visual child.
+            // 여기서는 게임플레이 컴포넌트만 조립하고 시각 자식은 애니메이션 빌더가 소유한다.
             var player = new GameObject("Player");
             player.transform.position = new Vector3(0f, 0.05f, 0f);
 
@@ -112,7 +112,7 @@ namespace GameSkill.Editor
 
         private static void ConfigureCamera(GameObject player)
         {
-            // Reuse Main Camera when present so scene references and tags remain stable.
+            // 씬 참조와 태그를 유지하기 위해 Main Camera가 있으면 재사용한다.
             Camera camera = Camera.main;
             if (camera == null)
             {
@@ -138,7 +138,7 @@ namespace GameSkill.Editor
 
         private static void CreateGraybox(Material groundMaterial, Material accentMaterial)
         {
-            // Compose a traversal test space with steps, gate, reward, and combat target.
+            // 계단·게이트·보상·전투 대상을 포함한 탐색 테스트 공간을 조합한다.
             var root = new GameObject(GrayboxRootName);
 
             CreateBlock(
@@ -183,7 +183,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Add Combat Prototype")]
         public static void AddCombatPrototype()
         {
-            // Public menu command for adding combat without rebuilding the whole scene.
+            // 전체 씬을 재생성하지 않고 전투만 추가하는 공개 메뉴 명령이다.
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             if (!EnsureCombatPrototype())
             {
@@ -198,7 +198,7 @@ namespace GameSkill.Editor
 
         private static bool EnsureCombatPrototype()
         {
-            // Migrate existing scenes idempotently and report whether anything changed.
+            // 기존 씬을 멱등적으로 마이그레이션하고 변경 여부를 반환한다.
             bool changed = false;
             GameObject player = GameObject.Find("Player");
             if (player != null && player.GetComponent<PlayerCombat>() == null)
@@ -234,7 +234,7 @@ namespace GameSkill.Editor
             Transform parent,
             Material material)
         {
-            // Create a visible, collidable Health target for attack demonstrations.
+            // 공격 시연을 위한 보이고 충돌하는 Health 대상을 만든다.
             GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             dummy.name = "TrainingDummy";
             dummy.transform.SetParent(parent);
@@ -255,7 +255,7 @@ namespace GameSkill.Editor
             Vector3 scale,
             Material material)
         {
-            // Centralize graybox primitive creation so every platform shares collider/material rules.
+            // 그레이박스 생성 규칙을 한곳에 모아 모든 플랫폼의 콜라이더·재질을 통일한다.
             GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
             block.name = name;
             block.transform.SetParent(parent);

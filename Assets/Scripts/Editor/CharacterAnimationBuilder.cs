@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// Purpose: Build reproducible Humanoid visuals and Animator assets in the Unity Editor.
-// Responsibility: Import source assets, create materials/controllers, and save Main.unity.
-// Invariant: Editor automation must be idempotent and must not run while entering Play Mode.
-// Design choice: AssetDatabase-driven generation keeps binary setup reproducible from source code.
+// 목적: Unity Editor에서 재현 가능한 Humanoid 시각물과 Animator 에셋을 만든다.
+// 책임: 원본 에셋을 임포트하고 재질·컨트롤러를 생성하여 Main.unity에 저장한다.
+// 불변식: 에디터 자동화는 멱등적이며 Play Mode 진입 중 실행되지 않는다.
+// 선택 이유: AssetDatabase 기반 생성으로 바이너리 설정도 소스 코드에서 재현한다.
 using System;
 using System.Linq;
 using UnityEditor;
@@ -38,7 +38,7 @@ namespace GameSkill.Editor
         [InitializeOnLoadMethod]
         private static void BuildMissingCharacterSetup()
         {
-            // Register deferred work only when the controller is absent or missing required states.
+            // 컨트롤러가 없거나 필수 상태가 없을 때만 지연 작업을 등록한다.
             AnimatorController controller =
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (controller != null && HasActionSetup(controller))
@@ -52,7 +52,7 @@ namespace GameSkill.Editor
 
         private static void TryBuildMissingCharacterSetup()
         {
-            // Delay until edit mode so asset writes cannot invalidate a running player.
+            // 실행 중인 플레이어를 무효화하지 않도록 Edit Mode까지 기다린다.
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 return;
@@ -64,7 +64,7 @@ namespace GameSkill.Editor
 
         private static void HandlePlayModeStateChanged(PlayModeStateChange state)
         {
-            // Retry deferred setup after Unity returns to a safe editable state.
+            // Unity가 안전한 편집 상태로 돌아오면 지연 설정을 재시도한다.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
                 TryBuildMissingCharacterSetup();
@@ -74,7 +74,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Build Character Animation")]
         public static void Build()
         {
-            // Rebuild the complete visual pipeline from canonical asset paths.
+            // 표준 에셋 경로에서 시각 파이프라인 전체를 재생성한다.
             ConfigureModelImporters();
             Material bodyMaterial = GetOrCreateCharacterMaterial(
                 CharacterBodyMaterialPath,
@@ -105,7 +105,7 @@ namespace GameSkill.Editor
 
         public static void ConfigurePlayerVisual(GameObject player)
         {
-            // Public convenience entry point used by the scene builder.
+            // 씬 빌더가 사용하는 공개 편의 진입점이다.
             ConfigureModelImporters();
             ConfigurePlayerVisual(
                 player,
@@ -124,7 +124,7 @@ namespace GameSkill.Editor
             Material eyeMaterial,
             RuntimeAnimatorController controller)
         {
-            // Replace generated visual children so repeated builds remain deterministic.
+            // 반복 빌드 결과가 결정적이도록 생성된 시각 자식을 교체한다.
             Transform existingVisual = player.transform.Find("Visual");
             if (existingVisual != null)
             {
@@ -150,11 +150,11 @@ namespace GameSkill.Editor
             model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             model.transform.localScale = Vector3.one;
 
-            // Apply portfolio materials to every renderer in the imported model hierarchy.
+            // 임포트된 모델 계층의 모든 Renderer에 포트폴리오 재질을 적용한다.
             foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
             {
                 var materials = new Material[renderer.sharedMaterials.Length];
-                // Preserve material slots while swapping only the authored prototype materials.
+                // 재질 슬롯은 유지하고 프로토타입 재질만 교체한다.
                 for (int index = 0; index < materials.Length; index++)
                 {
                     string sourceName = renderer.sharedMaterials[index] != null
@@ -190,14 +190,14 @@ namespace GameSkill.Editor
 
         private static void ConfigureModelImporters()
         {
-            // Force both model sources into the same Humanoid import contract.
+            // 두 모델 원본이 동일한 Humanoid 임포트 계약을 사용하게 한다.
             ConfigureModelImporter(CharacterModelPath, false);
             ConfigureModelImporter(AnimationSourcePath, true);
         }
 
         private static void ConfigureModelImporter(string assetPath, bool importAnimations)
         {
-            // Normalize one FBX importer and reimport only when settings changed.
+            // 하나의 FBX 임포터를 표준화하고 설정이 바뀐 경우에만 재임포트한다.
             var importer = AssetImporter.GetAtPath(assetPath) as ModelImporter;
             if (importer == null)
             {
@@ -227,7 +227,7 @@ namespace GameSkill.Editor
             ModelImporterClipAnimation[] clips = importer.clipAnimations.Length > 0
                 ? importer.clipAnimations
                 : importer.defaultClipAnimations;
-            // Loop only locomotion clips; one-shot actions must retain their authored exit.
+            // 이동 클립만 반복하고 일회성 액션은 원래 종료 동작을 유지한다.
             foreach (ModelImporterClipAnimation clip in clips)
             {
                 string clipName = NormalizeClipName(clip.name);
@@ -253,7 +253,7 @@ namespace GameSkill.Editor
 
         private static AnimatorController CreateAnimatorController()
         {
-            // Create or incrementally upgrade the controller without duplicating states.
+            // 상태를 중복 생성하지 않고 컨트롤러를 생성하거나 점진적으로 업그레이드한다.
             AnimatorController existingController =
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (existingController != null)
@@ -339,7 +339,7 @@ namespace GameSkill.Editor
 
         private static bool HasActionSetup(AnimatorController controller)
         {
-            // Treat parameters and state names as the controller's migration version.
+            // 파라미터와 상태 이름을 컨트롤러 마이그레이션 버전처럼 사용한다.
             bool hasDashParameter = controller.parameters.Any(
                 parameter => parameter.name == "Dodging"
                     && parameter.type == AnimatorControllerParameterType.Bool);
@@ -360,7 +360,7 @@ namespace GameSkill.Editor
 
         private static void EnsureActionSetup(AnimatorController controller)
         {
-            // Add missing gameplay states in place so existing scene references survive upgrades.
+            // 기존 씬 참조를 보존하도록 누락된 게임플레이 상태를 제자리에서 추가한다.
             if (!controller.parameters.Any(parameter => parameter.name == "Dodging"))
             {
                 controller.AddParameter(
@@ -422,7 +422,7 @@ namespace GameSkill.Editor
             AnimatorState fall,
             AnimationClip dashClip)
         {
-            // Dash uses a locomotion clip while gameplay owns the actual displacement curve.
+            // 대시는 이동 클립을 사용하고 실제 이동 곡선은 게임플레이 코드가 소유한다.
             AnimatorState dash = stateMachine.AddState("Dash");
             dash.motion = dashClip;
             dash.speed = 1.35f;
@@ -453,7 +453,7 @@ namespace GameSkill.Editor
             AnimatorState fall,
             AnimationClip attackClip)
         {
-            // Attack is an interruptible presentation state driven by a single bool parameter.
+            // 공격은 하나의 bool 파라미터로 제어되는 중단 가능한 표현 상태다.
             AnimatorState attack = stateMachine.AddState("Attack");
             attack.motion = attackClip;
             attack.speed = Mathf.Max(1f, attackClip.length / 0.38f);
@@ -483,7 +483,7 @@ namespace GameSkill.Editor
             AnimatorState to,
             params TransitionCondition[] conditions)
         {
-            // Keep transition defaults consistent across every generated state.
+            // 생성되는 모든 상태의 전이 기본값을 일관되게 유지한다.
             AnimatorStateTransition transition = from.AddTransition(to);
             ConfigureTransition(transition, 0.1f, conditions);
         }
@@ -493,12 +493,12 @@ namespace GameSkill.Editor
             float duration,
             params TransitionCondition[] conditions)
         {
-            // Apply timing and conditions in one place to avoid subtle Animator differences.
+            // 타이밍과 조건을 한곳에서 적용하여 Animator의 미세한 차이를 막는다.
             transition.hasExitTime = false;
             transition.hasFixedDuration = true;
             transition.duration = duration;
 
-            // Multiple conditions form an AND gate in Unity's Animator transition system.
+            // 여러 조건은 Unity Animator에서 AND 게이트로 동작한다.
             foreach (TransitionCondition condition in conditions)
             {
                 transition.AddCondition(
@@ -512,7 +512,7 @@ namespace GameSkill.Editor
             AnimatorStateMachine stateMachine,
             string name)
         {
-            // Search only the base layer because this prototype intentionally has one layer.
+            // 이 프로토타입은 한 레이어만 사용하므로 Base Layer만 검색한다.
             return stateMachine.states
                 .Select(childState => childState.state)
                 .FirstOrDefault(state => state.name == name);
@@ -520,7 +520,7 @@ namespace GameSkill.Editor
 
         private static AnimationClip[] LoadAnimationClips()
         {
-            // Collect clips from both model assets and discard Unity preview artifacts.
+            // 두 모델 에셋에서 클립을 모으고 Unity 미리보기 부산물은 버린다.
             return AssetDatabase.LoadAllAssetsAtPath(CharacterModelPath)
                 .Concat(AssetDatabase.LoadAllAssetsAtPath(AnimationSourcePath))
                 .OfType<AnimationClip>()
@@ -534,7 +534,7 @@ namespace GameSkill.Editor
             AnimationClip[] clips,
             string name)
         {
-            // Fail early with an actionable asset name instead of creating a broken controller.
+            // 깨진 컨트롤러를 만드는 대신 문제의 에셋 이름을 즉시 알려준다.
             AnimationClip clip = clips.FirstOrDefault(
                 candidate => NormalizeClipName(candidate.name).Equals(
                     name,
@@ -558,7 +558,7 @@ namespace GameSkill.Editor
             string materialPath,
             string texturePath)
         {
-            // Reuse material assets so scene references remain stable across rebuilds.
+            // 재질 에셋을 재사용하여 재빌드 후에도 씬 참조를 안정적으로 유지한다.
             Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (material == null)
             {
@@ -579,7 +579,7 @@ namespace GameSkill.Editor
             float groundHeight,
             float targetHeight)
         {
-            // Fit imported art to the gameplay capsule without changing the player's collision size.
+            // 플레이어 충돌 크기는 유지하면서 임포트된 아트를 게임 캡슐에 맞춘다.
             Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
             if (renderers.Length == 0)
             {
@@ -587,7 +587,7 @@ namespace GameSkill.Editor
             }
 
             Bounds bounds = renderers[0].bounds;
-            // Encapsulate all renderers to calculate the complete visual bounds.
+            // 모든 Renderer를 감싸 전체 시각 경계를 계산한다.
             for (int index = 1; index < renderers.Length; index++)
             {
                 bounds.Encapsulate(renderers[index].bounds);
@@ -601,7 +601,7 @@ namespace GameSkill.Editor
             model.localScale = Vector3.one * (targetHeight / bounds.size.y);
 
             bounds = renderers[0].bounds;
-            // Recalculate bounds after scaling so the feet can be aligned to groundHeight.
+            // 크기 조정 후 경계를 다시 계산하여 발을 groundHeight에 맞춘다.
             for (int index = 1; index < renderers.Length; index++)
             {
                 bounds.Encapsulate(renderers[index].bounds);
