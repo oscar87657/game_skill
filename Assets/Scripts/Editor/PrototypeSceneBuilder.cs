@@ -3,6 +3,7 @@
 // 책임: 플레이어·그레이박스·카메라·전투 더미·능력 진행 루프와 에디터 메뉴를 생성한다.
 // 불변식: 빌더를 다시 실행해도 자신이 만든 이름의 프로토타입 루트만 제거한다.
 // 선택 이유: 씬 생성은 에디터 전용으로 두어 런타임 스크립트를 게임플레이에 집중시킨다.
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -35,6 +36,20 @@ namespace GameSkill.Editor
             WorldZoneFolderPath + "/WorldZone_TraversalLab.asset";
         private const string ShaftReturnShortcutId =
             "shortcut_shaft_return";
+        private const string ZoneSceneFolderPath =
+            "Assets/Scenes/Zones";
+        private const string BacktrackShaftScenePath =
+            ZoneSceneFolderPath + "/Zone_BacktrackShaft.unity";
+        private const string StartHallScenePath =
+            ZoneSceneFolderPath + "/Zone_StartHall.unity";
+        private const string TraversalLabScenePath =
+            ZoneSceneFolderPath + "/Zone_TraversalLab.unity";
+        private const string BacktrackBackdropMaterialPath =
+            "Assets/Materials/ZoneBackdrop_Backtrack.mat";
+        private const string StartBackdropMaterialPath =
+            "Assets/Materials/ZoneBackdrop_Start.mat";
+        private const string TraversalBackdropMaterialPath =
+            "Assets/Materials/ZoneBackdrop_Traversal.mat";
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -105,6 +120,7 @@ namespace GameSkill.Editor
                 GameObject.Find(GrayboxRootName),
                 groundMaterial,
                 accentMaterial);
+            EnsureZoneStreamingPrototype(player);
             ConfigureCamera(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -394,6 +410,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureZoneStreamingPrototype(player))
+            {
+                // Additive 구역 Scene·Build Settings·런타임 제어기 중 변경된 구성을 Main에 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -403,6 +425,206 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureZoneStreamingPrototype(
+            GameObject player)
+        {
+            // 플레이어 상태가 없으면 Scene만 생성하고 연결이 빠지는 부분 구성을 만들지 않는다.
+            if (player == null)
+            {
+                return false;
+            }
+
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            if (worldState == null)
+            {
+                return false;
+            }
+
+            EnsureZoneSceneFolder();
+            Material backtrackMaterial = GetOrCreateMaterial(
+                BacktrackBackdropMaterialPath,
+                new Color(0.08f, 0.14f, 0.22f));
+            Material startMaterial = GetOrCreateMaterial(
+                StartBackdropMaterialPath,
+                new Color(0.18f, 0.1f, 0.24f));
+            Material traversalMaterial = GetOrCreateMaterial(
+                TraversalBackdropMaterialPath,
+                new Color(0.24f, 0.16f, 0.06f));
+
+            bool changed = false;
+            changed |= EnsureZoneContentScene(
+                BacktrackShaftScenePath,
+                "ZoneContent_BacktrackShaft",
+                new Vector3(-10.75f, 4f, 2.4f),
+                new Vector3(4.5f, 10f, 0.2f),
+                backtrackMaterial);
+            changed |= EnsureZoneContentScene(
+                StartHallScenePath,
+                "ZoneContent_StartHall",
+                new Vector3(-1f, 4f, 2.4f),
+                new Vector3(15f, 10f, 0.2f),
+                startMaterial);
+            changed |= EnsureZoneContentScene(
+                TraversalLabScenePath,
+                "ZoneContent_TraversalLab",
+                new Vector3(15.5f, 4f, 2.4f),
+                new Vector3(18f, 10f, 0.2f),
+                traversalMaterial);
+
+            if (EnsureZoneScenesInBuildSettings())
+            {
+                changed = true;
+            }
+
+            WorldZoneDefinition backtrackShaft =
+                GetOrCreateWorldZoneDefinition(
+                    BacktrackShaftZonePath,
+                    "backtrack_shaft",
+                    "백트래킹 샤프트",
+                    "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역.");
+            WorldZoneDefinition startHall =
+                GetOrCreateWorldZoneDefinition(
+                    StartHallZonePath,
+                    "start_hall",
+                    "시작 홀",
+                    "체크포인트와 첫 능력 단서를 제공하는 중앙 구역.");
+            WorldZoneDefinition traversalLab =
+                GetOrCreateWorldZoneDefinition(
+                    TraversalLabZonePath,
+                    "traversal_lab",
+                    "이동 실험실",
+                    "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+
+            GameObject streamingObject =
+                GameObject.Find("WorldZoneStreaming");
+            if (streamingObject == null)
+            {
+                // Main Scene에 남는 제어기 루트는 Additive 콘텐츠와 함께 언로드되지 않는다.
+                streamingObject =
+                    new GameObject("WorldZoneStreaming");
+                changed = true;
+            }
+
+            WorldZoneStreamController controller =
+                streamingObject.GetComponent<WorldZoneStreamController>();
+            if (controller == null)
+            {
+                controller =
+                    streamingObject.AddComponent<WorldZoneStreamController>();
+                changed = true;
+            }
+
+            var bindings = new List<WorldZoneSceneBinding>
+            {
+                new(backtrackShaft, BacktrackShaftScenePath),
+                new(startHall, StartHallScenePath),
+                new(traversalLab, TraversalLabScenePath)
+            };
+            if (controller.Configure(
+                worldState,
+                startHall,
+                bindings))
+            {
+                EditorUtility.SetDirty(controller);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureZoneContentScene(
+            string scenePath,
+            string rootName,
+            Vector3 backdropPosition,
+            Vector3 backdropScale,
+            Material backdropMaterial)
+        {
+            // 이미 생성된 구역 Scene은 GUID와 사용자의 후속 편집을 보존하고 다시 만들지 않는다.
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath)
+                != null)
+            {
+                return false;
+            }
+
+            Scene mainScene = SceneManager.GetActiveScene();
+            Scene zoneScene = EditorSceneManager.NewScene(
+                NewSceneSetup.EmptyScene,
+                NewSceneMode.Additive);
+            var root = new GameObject(rootName);
+            GameObject backdrop = CreateBlock(
+                root.transform,
+                rootName + "_Backdrop",
+                backdropPosition,
+                backdropScale,
+                backdropMaterial);
+            Collider backdropCollider =
+                backdrop.GetComponent<Collider>();
+            if (backdropCollider != null)
+            {
+                // Additive 배경 콘텐츠는 Main의 게임플레이 충돌과 중복되지 않게 시각 역할만 가진다.
+                Object.DestroyImmediate(backdropCollider);
+            }
+
+            EditorSceneManager.SaveScene(zoneScene, scenePath);
+            EditorSceneManager.CloseScene(zoneScene, true);
+            if (mainScene.IsValid() && mainScene.isLoaded)
+            {
+                // 임시 구역 Scene 저장 뒤 원래 Main을 다시 활성화해 이후 빌더 오브젝트의 소유 Scene을 보존한다.
+                SceneManager.SetActiveScene(mainScene);
+            }
+
+            return true;
+        }
+
+        private static bool EnsureZoneScenesInBuildSettings()
+        {
+            string[] desiredPaths =
+            {
+                ScenePath,
+                BacktrackShaftScenePath,
+                StartHallScenePath,
+                TraversalLabScenePath
+            };
+            var scenes =
+                new List<EditorBuildSettingsScene>(
+                    EditorBuildSettings.scenes);
+            bool changed = false;
+
+            // 기존 사용자 Scene 순서는 유지하고 누락된 스트리밍 Scene만 마지막에 추가한다.
+            foreach (string desiredPath in desiredPaths)
+            {
+                bool exists = scenes.Exists(
+                    scene => scene.path == desiredPath);
+                if (!exists)
+                {
+                    scenes.Add(
+                        new EditorBuildSettingsScene(
+                            desiredPath,
+                            true));
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                EditorBuildSettings.scenes = scenes.ToArray();
+            }
+
+            return changed;
+        }
+
+        private static void EnsureZoneSceneFolder()
+        {
+            // Additive Scene 전용 폴더를 AssetDatabase API로 생성해 메타 GUID를 안정적으로 관리한다.
+            if (!AssetDatabase.IsValidFolder(ZoneSceneFolderPath))
+            {
+                AssetDatabase.CreateFolder(
+                    "Assets/Scenes",
+                    "Zones");
+            }
         }
 
         private static bool EnsureWorldShortcutPrototype(

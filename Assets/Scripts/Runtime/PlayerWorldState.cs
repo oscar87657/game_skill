@@ -1,5 +1,5 @@
 // GOLDEN STANDARD
-// 목적: 플레이어가 발견한 월드 구역의 방문 상태를 단일 런타임 원본으로 관리한다.
+// 목적: 플레이어의 구역 방문·현재 위치·영구 지름길 상태를 단일 런타임 원본으로 관리한다.
 // 책임: 구역 방문과 지름길 해금 ID의 조회·초기화·최초 변경 이벤트를 제공한다.
 // 불변식: 같은 진행 ID는 한 번만 기록하며 중복 변경은 상태와 이벤트를 바꾸지 않는다.
 // 선택 이유: HashSet 기반 ID 상태는 지도·월드 게이트·저장 데이터에 동일한 계약을 제공한다.
@@ -23,10 +23,12 @@ namespace GameSkill
             new(StringComparer.Ordinal);
 
         public event Action<WorldZoneDefinition> ZoneVisited;
+        public event Action<WorldZoneDefinition> ZoneEntered;
         public event Action<string> ShortcutUnlocked;
 
         public int VisitedCount => visitedZoneIds.Count;
         public int UnlockedShortcutCount => unlockedShortcutIds.Count;
+        public WorldZoneDefinition CurrentZone { get; private set; }
 
         private void Awake()
         {
@@ -74,6 +76,27 @@ namespace GameSkill
             return true;
         }
 
+        public bool EnterZone(WorldZoneDefinition zone)
+        {
+            // 유효하지 않거나 현재 구역과 같은 ID의 중복 Trigger 진입은 전환 이벤트를 만들지 않는다.
+            if (zone == null
+                || !zone.IsConfigured
+                || (CurrentZone != null
+                    && string.Equals(
+                        CurrentZone.Id,
+                        zone.Id,
+                        StringComparison.Ordinal)))
+            {
+                return false;
+            }
+
+            // 방문 기록은 최초 한 번만 바뀌지만 구역 진입은 재방문 때도 스트리밍에 알려야 한다.
+            TryVisit(zone);
+            CurrentZone = zone;
+            ZoneEntered?.Invoke(zone);
+            return true;
+        }
+
         public bool IsShortcutUnlocked(string shortcutId)
         {
             // 저장 데이터나 게이트에서 전달한 빈 ID는 해금 상태로 판단하지 않는다.
@@ -109,6 +132,7 @@ namespace GameSkill
             // 씬 재시작과 테스트 초기화가 이전 런타임 진행 기록을 남기지 않게 먼저 비운다.
             visitedZoneIds.Clear();
             unlockedShortcutIds.Clear();
+            CurrentZone = null;
 
             // 직렬화 목록의 null과 중복을 검증하며 유효한 영구 ID만 집합에 넣는다.
             foreach (WorldZoneDefinition zone in initiallyVisitedZones)

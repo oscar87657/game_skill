@@ -40,6 +40,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 짧은 벽 잡기·벽 미끄러짐·벽 점프 능력
 - [x] 세 구역 Graybox와 ID 기반 방문 상태
 - [x] 백트래킹 샤프트에서 시작 홀로 돌아오는 영구 지름길
+- [x] 세 구역 Additive Scene 비동기 스트리밍
 - [ ] 연결된 월드와 백트래킹
 - [ ] 적 AI 및 상태 머신
 - [ ] 세이브/로드
@@ -64,6 +65,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [능력 해금과 게이트](Docs/Features/AbilitiesAndGates.md)
 - [월드 구역과 방문 상태](Docs/Features/WorldZones.md)
 - [구역 연결과 영구 지름길](Docs/Features/WorldShortcuts.md)
+- [Additive 구역 Scene 스트리밍](Docs/Features/WorldStreaming.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기

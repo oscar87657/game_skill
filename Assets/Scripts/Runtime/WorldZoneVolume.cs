@@ -1,7 +1,7 @@
 // GOLDEN STANDARD
 // 목적: 플레이어의 물리적 구역 진입을 영구 ID 기반 방문 상태로 변환한다.
 // 책임: 구역 정의를 보관하고 Trigger 진입 시 플레이어의 월드 상태를 갱신한다.
-// 불변식: 구역 볼륨은 이동을 막지 않으며 최초 방문만 상태와 로그를 변경한다.
+// 불변식: 구역 볼륨은 이동을 막지 않으며 같은 현재 구역의 중복 접촉은 전환을 만들지 않는다.
 // 선택 이유: 물리 볼륨과 방문 상태를 분리하면 구역 크기나 씬 분할 방식이 바뀌어도 진행 데이터를 유지할 수 있다.
 using UnityEngine;
 
@@ -46,16 +46,16 @@ namespace GameSkill
 
         public bool Enter(PlayerWorldState worldState)
         {
-            // 필수 참조가 없거나 이미 방문한 구역이면 상태와 로그를 그대로 유지한다.
+            // 필수 참조가 없거나 현재 구역 Trigger가 중복 호출되면 상태와 로그를 유지한다.
             if (worldState == null
                 || zone == null
                 || !zone.IsConfigured
-                || !worldState.TryVisit(zone))
+                || !worldState.EnterZone(zone))
             {
                 return false;
             }
 
-            Debug.Log($"구역 발견: {zone.DisplayName} ({zone.Id})", this);
+            Debug.Log($"구역 진입: {zone.DisplayName} ({zone.Id})", this);
             return true;
         }
 
