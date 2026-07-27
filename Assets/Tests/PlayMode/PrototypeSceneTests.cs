@@ -108,6 +108,12 @@ namespace GameSkill.Tests
             Assert.That(hazardObject, Is.Not.Null);
             DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
             Assert.That(hazard, Is.Not.Null);
+            Assert.That(
+                hazardObject.transform.localScale.x,
+                Is.EqualTo(0.6f).Within(0.001f));
+            Assert.That(
+                GameObject.Find("Step_A").transform.position.x,
+                Is.EqualTo(10f).Within(0.001f));
             respawnController.Configure(0f);
             motor.Teleport(new Vector3(4.5f, 0.05f, 0f));
             Assert.That(hazard.TryApply(player), Is.True);
@@ -135,7 +141,7 @@ namespace GameSkill.Tests
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(
                 dummy.transform.position.x - 1.5f,
-                0.05f,
+                dummy.transform.position.y - 0.95f,
                 0f));
             Physics.SyncTransforms();
             Health selectedTarget = targeting.AcquireTarget(

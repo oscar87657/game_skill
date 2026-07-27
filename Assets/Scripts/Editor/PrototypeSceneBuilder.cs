@@ -153,18 +153,18 @@ namespace GameSkill.Editor
                 root.transform,
                 "Ground",
                 new Vector3(0f, -0.5f, 0f),
-                new Vector3(30f, 1f, 3f),
+                new Vector3(50f, 1f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "Step_A",
-                new Vector3(4f, 0.5f, 0f),
+                new Vector3(10f, 0.5f, 0f),
                 new Vector3(3f, 1f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
                 "Step_B",
-                new Vector3(8f, 1.5f, 0f),
+                new Vector3(14f, 1.5f, 0f),
                 new Vector3(3f, 3f, 3f),
                 groundMaterial);
             CreateRamp(
@@ -177,7 +177,7 @@ namespace GameSkill.Editor
             CreateBlock(
                 root.transform,
                 "High_Platform",
-                new Vector3(13f, 3.2f, 0f),
+                new Vector3(20f, 3.2f, 0f),
                 new Vector3(7f, 0.6f, 3f),
                 groundMaterial);
             CreateBlock(
@@ -309,7 +309,7 @@ namespace GameSkill.Editor
             GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             dummy.name = "TrainingDummy";
             dummy.transform.SetParent(parent);
-            dummy.transform.position = new Vector3(3.25f, 1f, 0f);
+            dummy.transform.position = new Vector3(10f, 2f, 0f);
             dummy.transform.localScale = new Vector3(0.7f, 1f, 0.7f);
             dummy.GetComponent<MeshRenderer>().sharedMaterial = material;
 
@@ -354,8 +354,8 @@ namespace GameSkill.Editor
                 GameObject.CreatePrimitive(PrimitiveType.Cube);
             hazard.name = "RespawnHazard";
             hazard.transform.SetParent(parent);
-            hazard.transform.position = new Vector3(5.9f, 0.15f, 0f);
-            hazard.transform.localScale = new Vector3(0.8f, 0.3f, 2.2f);
+            hazard.transform.position = new Vector3(5.5f, 0.15f, 0f);
+            hazard.transform.localScale = new Vector3(0.6f, 0.3f, 2.2f);
             hazard.GetComponent<MeshRenderer>().sharedMaterial = material;
 
             BoxCollider trigger = hazard.GetComponent<BoxCollider>();
