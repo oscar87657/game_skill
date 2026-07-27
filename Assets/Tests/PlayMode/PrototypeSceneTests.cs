@@ -145,6 +145,23 @@ namespace GameSkill.Tests
             Assert.That(traversalLab.Enter(worldState), Is.True);
             Assert.That(backtrackShaft.Enter(worldState), Is.True);
             Assert.That(worldState.VisitedCount, Is.EqualTo(3));
+            Assert.That(
+                GameObject.Find("Shortcut_ShaftLanding"),
+                Is.Not.Null);
+            Assert.That(
+                GameObject.Find("Shortcut_ReturnBridge"),
+                Is.Not.Null);
+            GameObject shortcutGateObject =
+                GameObject.Find("ShortcutGate_ShaftReturn");
+            Assert.That(shortcutGateObject, Is.Not.Null);
+            WorldShortcutGate shortcutGate =
+                shortcutGateObject.GetComponent<WorldShortcutGate>();
+            Assert.That(shortcutGate, Is.Not.Null);
+            Assert.That(shortcutGate.IsLocked, Is.True);
+            ShortcutUnlockVolume shortcutActivator =
+                GameObject.Find("ShortcutActivator_ShaftTop")
+                    .GetComponent<ShortcutUnlockVolume>();
+            Assert.That(shortcutActivator, Is.Not.Null);
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
             Health dummyHealth = dummy.GetComponent<Health>();
@@ -186,6 +203,19 @@ namespace GameSkill.Tests
             Assert.That(wallPickup.Collect(abilityState), Is.True);
             Assert.That(motor.IsWallTraversalUnlocked, Is.True);
             Assert.That(abilityState.UnlockedCount, Is.EqualTo(3));
+
+            // 벽 샤프트 정상의 실제 활성 장치로 귀환 다리를 열고 영구 ID 상태를 확인한다.
+            Assert.That(
+                shortcutActivator.Activate(worldState),
+                Is.True);
+            Assert.That(shortcutGate.IsLocked, Is.False);
+            Assert.That(
+                worldState.IsShortcutUnlocked(
+                    "shortcut_shaft_return"),
+                Is.True);
+            Assert.That(
+                shortcutGateObject.GetComponent<Collider>().enabled,
+                Is.False);
 
             // 실제 Main 씬 체크포인트를 활성화해 플레이어 체력과 재시작 위치가 함께 갱신되는지 확인한다.
             GameObject checkpointObject = GameObject.Find("Checkpoint_Start");
@@ -238,6 +268,10 @@ namespace GameSkill.Tests
             Assert.That(abilityState.UnlockedCount, Is.EqualTo(3));
             Assert.That(gate.IsLocked, Is.False);
             Assert.That(airDashGate.IsLocked, Is.False);
+            Assert.That(shortcutGate.IsLocked, Is.False);
+            Assert.That(
+                worldState.UnlockedShortcutCount,
+                Is.EqualTo(1));
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

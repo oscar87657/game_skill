@@ -33,6 +33,8 @@ namespace GameSkill.Editor
             WorldZoneFolderPath + "/WorldZone_StartHall.asset";
         private const string TraversalLabZonePath =
             WorldZoneFolderPath + "/WorldZone_TraversalLab.asset";
+        private const string ShaftReturnShortcutId =
+            "shortcut_shaft_return";
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -98,6 +100,11 @@ namespace GameSkill.Editor
             EnsureWorldZonePrototype(
                 player,
                 GameObject.Find(GrayboxRootName));
+            EnsureWorldShortcutPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                groundMaterial,
+                accentMaterial);
             ConfigureCamera(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -377,12 +384,189 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureWorldShortcutPrototype(
+                player,
+                grayboxRoot,
+                groundMaterial,
+                abilityMaterial))
+            {
+                // 샤프트 정상과 시작 홀을 잇는 다리·게이트·활성 장치를 한 진행 단위로 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureWorldShortcutPrototype(
+            GameObject player,
+            GameObject grayboxRoot,
+            Material groundMaterial,
+            Material accentMaterial)
+        {
+            // 필수 오브젝트와 재질이 모두 준비된 경우에만 물리 지름길을 부분 생성한다.
+            if (player == null
+                || grayboxRoot == null
+                || groundMaterial == null
+                || accentMaterial == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            Transform parent = grayboxRoot.transform;
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            if (worldState == null)
+            {
+                // 이전 씬에도 지름길 영구 ID를 소유할 단일 플레이어 상태를 보완한다.
+                worldState = player.AddComponent<PlayerWorldState>();
+                changed = true;
+            }
+
+            GameObject landing =
+                GameObject.Find("Shortcut_ShaftLanding");
+            if (landing == null)
+            {
+                // 샤프트 정상 보상 블록과 구역 경계 사이의 착지 공간을 만든다.
+                landing = CreateBlock(
+                    parent,
+                    "Shortcut_ShaftLanding",
+                    new Vector3(-9.6f, 6.25f, 0f),
+                    new Vector3(1.8f, 0.5f, 3f),
+                    groundMaterial);
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                landing.transform,
+                new Vector3(-9.6f, 6.25f, 0f),
+                new Vector3(1.8f, 0.5f, 3f)))
+            {
+                // 이전 배치를 설계 기준 위치로 옮기되 오브젝트 참조는 유지한다.
+                changed = true;
+            }
+
+            GameObject bridge =
+                GameObject.Find("Shortcut_ReturnBridge");
+            if (bridge == null)
+            {
+                // 열린 뒤 시작 홀 상단으로 이동해 아래로 떨어지는 순환 귀환 다리를 만든다.
+                bridge = CreateBlock(
+                    parent,
+                    "Shortcut_ReturnBridge",
+                    new Vector3(-5.75f, 6.25f, 0f),
+                    new Vector3(5.5f, 0.5f, 3f),
+                    groundMaterial);
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                bridge.transform,
+                new Vector3(-5.75f, 6.25f, 0f),
+                new Vector3(5.5f, 0.5f, 3f)))
+            {
+                // 다리 크기를 결정적으로 유지해 구역 경계와 시작 홀 낙하 위치가 어긋나지 않게 한다.
+                changed = true;
+            }
+
+            GameObject gateObject =
+                GameObject.Find("ShortcutGate_ShaftReturn");
+            if (gateObject == null)
+            {
+                // 시작 홀 쪽에서 먼저 통과할 수 없도록 경계 바로 오른쪽에 물리 게이트를 세운다.
+                gateObject = CreateBlock(
+                    parent,
+                    "ShortcutGate_ShaftReturn",
+                    new Vector3(-8.35f, 7.25f, 0f),
+                    new Vector3(0.4f, 2f, 3f),
+                    accentMaterial);
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                gateObject.transform,
+                new Vector3(-8.35f, 7.25f, 0f),
+                new Vector3(0.4f, 2f, 3f)))
+            {
+                // 기존 게이트 컴포넌트를 유지하면서 통로를 완전히 막는 위치와 크기로 복구한다.
+                changed = true;
+            }
+
+            WorldShortcutGate gate =
+                gateObject.GetComponent<WorldShortcutGate>();
+            if (gate == null)
+            {
+                gate = gateObject.AddComponent<WorldShortcutGate>();
+                changed = true;
+            }
+
+            if (gate.Configure(
+                ShaftReturnShortcutId,
+                worldState,
+                gateObject.GetComponentInChildren<Renderer>()))
+            {
+                EditorUtility.SetDirty(gate);
+                changed = true;
+            }
+
+            GameObject activatorObject =
+                GameObject.Find("ShortcutActivator_ShaftTop");
+            if (activatorObject == null)
+            {
+                // 게이트의 샤프트 쪽에만 접근 가능한 자동 활성 장치를 배치한다.
+                activatorObject =
+                    GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                activatorObject.name =
+                    "ShortcutActivator_ShaftTop";
+                activatorObject.transform.SetParent(parent);
+                activatorObject.transform.position =
+                    new Vector3(-9.4f, 7.1f, 0f);
+                activatorObject.transform.localScale =
+                    Vector3.one * 0.6f;
+                activatorObject.GetComponent<MeshRenderer>()
+                    .sharedMaterial = accentMaterial;
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                activatorObject.transform,
+                new Vector3(-9.4f, 7.1f, 0f),
+                Vector3.one * 0.6f))
+            {
+                // 활성 장치를 샤프트에서 올라온 플레이어의 착지 동선 안에 유지한다.
+                changed = true;
+            }
+
+            Collider activatorCollider =
+                activatorObject.GetComponent<Collider>();
+            if (activatorCollider != null
+                && !activatorCollider.isTrigger)
+            {
+                // 활성 장치는 접촉만 감지하고 플레이어의 상단 다리 이동을 막지 않는다.
+                activatorCollider.isTrigger = true;
+                EditorUtility.SetDirty(activatorCollider);
+                changed = true;
+            }
+
+            ShortcutUnlockVolume activator =
+                activatorObject.GetComponent<ShortcutUnlockVolume>();
+            if (activator == null)
+            {
+                activator =
+                    activatorObject.AddComponent<ShortcutUnlockVolume>();
+                changed = true;
+            }
+
+            if (activator.Configure(
+                gate,
+                activatorObject.GetComponentInChildren<Renderer>()))
+            {
+                EditorUtility.SetDirty(activator);
+                changed = true;
             }
 
             return changed;

@@ -8,6 +8,7 @@
 | 생존 | 사망·마지막 체크포인트 재시작 | 기본 구현 완료 | [Respawn](Features/Respawn.md) |
 | 진행 | 능력 해금·보유 상태·게이트 | 구현 중 | [Abilities & Gates](Features/AbilitiesAndGates.md) |
 | 월드 | 세 구역·방문 상태 | 기본 구현 완료 | [World Zones](Features/WorldZones.md) |
+| 월드 | 구역 연결·영구 지름길 | 기본 구현 완료 | [World Shortcuts](Features/WorldShortcuts.md) |
 | AI | 적 상태 머신 | 예정 | — |
 | 저장 | 세이브·로드 | 예정 | — |
 
