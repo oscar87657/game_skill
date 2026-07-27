@@ -38,8 +38,8 @@ namespace GameSkill
         [Header("Wall Traversal")]
         [SerializeField, Min(0f)] private float wallClingDuration = 0.22f;
         [SerializeField, Min(0f)] private float wallSlideSpeed = 2.4f;
-        [SerializeField, Min(0f)] private float wallJumpHorizontalSpeed = 7f;
-        [SerializeField, Min(0f)] private float wallJumpControlLockTime = 0.12f;
+        [SerializeField, Min(0f)] private float wallJumpHorizontalSpeed = 4.8f;
+        [SerializeField, Min(0f)] private float wallJumpControlLockTime = 0.08f;
         [SerializeField, Range(0.5f, 1f)]
         private float minimumWallNormal = 0.75f;
 

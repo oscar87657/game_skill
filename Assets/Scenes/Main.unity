@@ -2282,8 +2282,8 @@ MonoBehaviour:
   wallTraversalAbility: {fileID: 11400000, guid: e695cc21de6984e73be4c8f1a2d7f4f3, type: 2}
   wallClingDuration: 0.22
   wallSlideSpeed: 2.4
-  wallJumpHorizontalSpeed: 7
-  wallJumpControlLockTime: 0.12
+  wallJumpHorizontalSpeed: 4.8
+  wallJumpControlLockTime: 0.08
   minimumWallNormal: 0.75
   dashSpeed: 8
   dashDuration: 0.2
