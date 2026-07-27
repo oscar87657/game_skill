@@ -12,6 +12,9 @@
 - `TrainingDummy`: 피격 반응과 자동 부활
 - 공중 공격의 짧은 수직 속도 완화
 - 공격 중에도 수평 이동과 대시 허용
+- 3단 기본 공격과 공격 중 다음 입력 버퍼
+- 1·2타 기본 데미지, 3타 마무리 보너스
+- `ComboStep` 기반 Punch Jab → Punch Cross → Sword Attack 애니메이션
 
 ## 구현 방식 비교
 
@@ -26,8 +29,7 @@ ScriptableObject로 분리한다.
 
 ## 다음 개선
 
-- 공격 1사이클과 입력 버퍼
+- 공격별 ScriptableObject 데이터 분리
 - Hitbox/Hurtbox 계약 분리
 - 히트 스톱·피격 방향·경직
 - 공격별 데이터와 시연용 디버그 UI
-

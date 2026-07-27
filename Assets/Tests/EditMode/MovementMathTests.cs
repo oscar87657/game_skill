@@ -105,5 +105,33 @@ namespace GameSkill.Tests
                 Object.DestroyImmediate(target);
             }
         }
+
+        [TestCase(0, 3, 1)]
+        [TestCase(1, 3, 2)]
+        [TestCase(2, 3, 3)]
+        [TestCase(3, 3, 1)]
+        public void NextComboStep_AdvancesAndWraps(
+            int currentStep,
+            int comboLength,
+            int expectedStep)
+        {
+            // 마지막 단계 다음에는 첫 단계로 돌아가야 반복 입력이 새 콤보 사이클을 만든다.
+            Assert.That(
+                CombatMath.NextComboStep(currentStep, comboLength),
+                Is.EqualTo(expectedStep));
+        }
+
+        [TestCase(1, 1)]
+        [TestCase(2, 1)]
+        [TestCase(3, 2)]
+        public void DamageForComboStep_AddsBonusOnlyToFinisher(
+            int comboStep,
+            int expectedDamage)
+        {
+            // 기본 데미지 1과 마무리 보너스 1을 사용해 3타만 강화되는지 검증한다.
+            Assert.That(
+                CombatMath.DamageForComboStep(1, comboStep, 1),
+                Is.EqualTo(expectedDamage));
+        }
     }
 }

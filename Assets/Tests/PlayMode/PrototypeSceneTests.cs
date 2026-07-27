@@ -56,6 +56,12 @@ namespace GameSkill.Tests
                     parameter => parameter.name == "Attacking"
                         && parameter.type == AnimatorControllerParameterType.Bool),
                 Is.True);
+            Assert.That(
+                System.Array.Exists(
+                    animator.parameters,
+                    parameter => parameter.name == "ComboStep"
+                        && parameter.type == AnimatorControllerParameterType.Int),
+                Is.True);
 
             Camera camera = Camera.main;
             Assert.That(camera, Is.Not.Null);

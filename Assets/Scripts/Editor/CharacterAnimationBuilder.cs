@@ -274,6 +274,7 @@ namespace GameSkill.Editor
             controller.AddParameter("VerticalSpeed", AnimatorControllerParameterType.Float);
             controller.AddParameter("Dodging", AnimatorControllerParameterType.Bool);
             controller.AddParameter("Attacking", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("ComboStep", AnimatorControllerParameterType.Int);
 
             AnimationClip[] clips = LoadAnimationClips();
 
@@ -283,7 +284,9 @@ namespace GameSkill.Editor
             AnimationClip sprint = RequireClip(clips, "Sprint_Loop");
             AnimationClip jump = RequireClip(clips, "Jump_Start");
             AnimationClip fall = RequireClip(clips, "Jump_Loop");
-            AnimationClip attack = RequireClip(clips, "Punch_Cross");
+            AnimationClip attackOne = RequireClip(clips, "Punch_Jab");
+            AnimationClip attackTwo = RequireClip(clips, "Punch_Cross");
+            AnimationClip attackThree = RequireClip(clips, "Sword_Attack");
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             var locomotionTree = new BlendTree
@@ -307,7 +310,13 @@ namespace GameSkill.Editor
             fallState.motion = fall;
             stateMachine.defaultState = locomotion;
             AddDashState(stateMachine, locomotion, fallState, sprint);
-            AddAttackState(stateMachine, locomotion, fallState, attack);
+            AddAttackComboStates(
+                stateMachine,
+                locomotion,
+                fallState,
+                attackOne,
+                attackTwo,
+                attackThree);
 
             AddTransition(
                 locomotion,
@@ -346,8 +355,12 @@ namespace GameSkill.Editor
             bool hasAttackParameter = controller.parameters.Any(
                 parameter => parameter.name == "Attacking"
                     && parameter.type == AnimatorControllerParameterType.Bool);
+            bool hasComboStepParameter = controller.parameters.Any(
+                parameter => parameter.name == "ComboStep"
+                    && parameter.type == AnimatorControllerParameterType.Int);
             if (!hasDashParameter
                 || !hasAttackParameter
+                || !hasComboStepParameter
                 || controller.layers.Length == 0)
             {
                 return false;
@@ -355,7 +368,9 @@ namespace GameSkill.Editor
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
             return FindState(stateMachine, "Dash") != null
-                && FindState(stateMachine, "Attack") != null;
+                && FindState(stateMachine, "Attack1") != null
+                && FindState(stateMachine, "Attack2") != null
+                && FindState(stateMachine, "Attack3") != null;
         }
 
         private static void EnsureActionSetup(AnimatorController controller)
@@ -373,6 +388,13 @@ namespace GameSkill.Editor
                 controller.AddParameter(
                     "Attacking",
                     AnimatorControllerParameterType.Bool);
+            }
+
+            if (!controller.parameters.Any(parameter => parameter.name == "ComboStep"))
+            {
+                controller.AddParameter(
+                    "ComboStep",
+                    AnimatorControllerParameterType.Int);
             }
 
             AnimatorStateMachine stateMachine = controller.layers[0].stateMachine;
@@ -403,13 +425,18 @@ namespace GameSkill.Editor
                 dash.speed = 1.35f;
             }
 
-            if (FindState(stateMachine, "Attack") == null)
+            if (FindState(stateMachine, "Attack1") == null
+                || FindState(stateMachine, "Attack2") == null
+                || FindState(stateMachine, "Attack3") == null)
             {
-                AddAttackState(
+                RemoveAttackStates(stateMachine);
+                AddAttackComboStates(
                     stateMachine,
                     locomotion,
                     fall,
-                    RequireClip(clips, "Punch_Cross"));
+                    RequireClip(clips, "Punch_Jab"),
+                    RequireClip(clips, "Punch_Cross"),
+                    RequireClip(clips, "Sword_Attack"));
             }
 
             EditorUtility.SetDirty(controller);
@@ -447,14 +474,48 @@ namespace GameSkill.Editor
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Grounded"));
         }
 
-        private static void AddAttackState(
+        private static void AddAttackComboStates(
             AnimatorStateMachine stateMachine,
             AnimatorState locomotion,
             AnimatorState fall,
-            AnimationClip attackClip)
+            AnimationClip attackOneClip,
+            AnimationClip attackTwoClip,
+            AnimationClip attackThreeClip)
         {
-            // 공격은 하나의 bool 파라미터로 제어되는 중단 가능한 표현 상태다.
-            AnimatorState attack = stateMachine.AddState("Attack");
+            // 콤보 단계마다 다른 클립을 사용하되 진입·종료 규칙은 공통 함수에서 구성한다.
+            AddAttackComboState(
+                stateMachine,
+                locomotion,
+                fall,
+                "Attack1",
+                attackOneClip,
+                1);
+            AddAttackComboState(
+                stateMachine,
+                locomotion,
+                fall,
+                "Attack2",
+                attackTwoClip,
+                2);
+            AddAttackComboState(
+                stateMachine,
+                locomotion,
+                fall,
+                "Attack3",
+                attackThreeClip,
+                3);
+        }
+
+        private static void AddAttackComboState(
+            AnimatorStateMachine stateMachine,
+            AnimatorState locomotion,
+            AnimatorState fall,
+            string stateName,
+            AnimationClip attackClip,
+            int comboStep)
+        {
+            // 단계 값과 상태 이름을 함께 생성하여 Animator와 PlayerCombat의 계약을 명확히 한다.
+            AnimatorState attack = stateMachine.AddState(stateName);
             attack.motion = attackClip;
             attack.speed = Mathf.Max(1f, attackClip.length / 0.38f);
 
@@ -464,7 +525,11 @@ namespace GameSkill.Editor
             ConfigureTransition(
                 enterAttack,
                 0.04f,
-                new TransitionCondition(AnimatorConditionMode.If, 0f, "Attacking"));
+                new TransitionCondition(AnimatorConditionMode.If, 0f, "Attacking"),
+                new TransitionCondition(
+                    AnimatorConditionMode.Equals,
+                    comboStep,
+                    "ComboStep"));
 
             AddTransition(
                 attack,
@@ -476,6 +541,20 @@ namespace GameSkill.Editor
                 fall,
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Attacking"),
                 new TransitionCondition(AnimatorConditionMode.IfNot, 0f, "Grounded"));
+        }
+
+        private static void RemoveAttackStates(AnimatorStateMachine stateMachine)
+        {
+            // 이전 단일 공격 상태나 불완전한 콤보 상태를 제거해 마이그레이션 중 중복 전이를 막는다.
+            string[] attackStateNames = { "Attack", "Attack1", "Attack2", "Attack3" };
+            foreach (string stateName in attackStateNames)
+            {
+                AnimatorState state = FindState(stateMachine, stateName);
+                if (state != null)
+                {
+                    stateMachine.RemoveState(state);
+                }
+            }
         }
 
         private static void AddTransition(

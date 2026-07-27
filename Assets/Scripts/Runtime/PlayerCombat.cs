@@ -19,6 +19,10 @@ namespace GameSkill
         [SerializeField, Min(0.01f)] private float attackDuration = 0.38f;
         [SerializeField, Min(0f)] private float hitDelay = 0.13f;
         [SerializeField, Min(0f)] private float attackCooldown = 0.42f;
+        [SerializeField, Range(1, 5)] private int comboLength = 3;
+        [SerializeField, Min(0f)] private int finisherDamageBonus = 1;
+        [SerializeField, Min(0f)] private float comboInputBufferTime = 0.24f;
+        [SerializeField, Min(0f)] private float comboResetDelay = 0.5f;
         [SerializeField, Min(0f)] private float airAttackHoverDuration = 0.06f;
         [SerializeField, Min(0f)] private float maxAirAttackHoverDuration = 0.1f;
 
@@ -33,9 +37,13 @@ namespace GameSkill
         private float attackTimer;
         private float hitTimer;
         private float cooldownTimer;
+        private float comboBufferTimer;
+        private float comboResetTimer;
         private bool hitApplied;
+        private bool comboInputQueued;
 
         public bool IsAttacking => attackTimer > 0f;
+        public int ComboStep { get; private set; }
 
         private void Awake()
         {
@@ -49,6 +57,8 @@ namespace GameSkill
             // 새 입력을 받기 전에 쿨다운과 현재 공격 상태를 먼저 해결한다.
             float deltaTime = Time.deltaTime;
             cooldownTimer = Mathf.Max(0f, cooldownTimer - deltaTime);
+            comboBufferTimer = Mathf.Max(0f, comboBufferTimer - deltaTime);
+            comboResetTimer = Mathf.Max(0f, comboResetTimer - deltaTime);
 
             if (motor.IsDashing)
             {
@@ -56,22 +66,53 @@ namespace GameSkill
                 return;
             }
 
+            ReadAttackInput();
             UpdateActiveAttack(deltaTime);
 
-            if (attackAction.WasPressedThisFrame()
-                && !IsAttacking
+            if (!IsAttacking
+                && comboInputQueued
+                && comboBufferTimer > 0f
                 && cooldownTimer <= 0f)
             {
                 StartAttack();
             }
+
+            if (comboInputQueued && comboBufferTimer <= 0f)
+            {
+                // 버퍼 시간이 끝난 입력은 폐기하여 오래된 입력이 뒤늦게 공격을 실행하지 않게 한다.
+                comboInputQueued = false;
+            }
+
+            if (!IsAttacking
+                && !comboInputQueued
+                && comboResetTimer <= 0f)
+            {
+                ComboStep = 0;
+            }
+        }
+
+        private void ReadAttackInput()
+        {
+            // 공격 입력을 즉시 실행하지 않고 짧게 저장하여 프레임 단위 입력 누락을 줄인다.
+            if (!attackAction.WasPressedThisFrame())
+            {
+                return;
+            }
+
+            comboInputQueued = true;
+            comboBufferTimer = comboInputBufferTime;
         }
 
         private void StartAttack()
         {
             // 새 공격이 이전 공격의 대상 목록을 물려받지 않도록 타격별 상태를 초기화한다.
+            ComboStep = CombatMath.NextComboStep(ComboStep, comboLength);
             attackTimer = attackDuration;
             hitTimer = Mathf.Min(hitDelay, attackDuration);
             cooldownTimer = attackCooldown;
+            comboResetTimer = comboResetDelay;
+            comboInputQueued = false;
+            comboBufferTimer = 0f;
             hitApplied = false;
             damagedTargets.Clear();
             if (!motor.IsGrounded)
@@ -97,6 +138,13 @@ namespace GameSkill
             {
                 ApplyHit();
                 hitApplied = true;
+            }
+
+            if (attackTimer <= 0f
+                && comboInputQueued
+                && comboBufferTimer > 0f)
+            {
+                StartAttack();
             }
         }
 
@@ -125,7 +173,10 @@ namespace GameSkill
                     continue;
                 }
 
-                target.TakeDamage(damage);
+                target.TakeDamage(CombatMath.DamageForComboStep(
+                    damage,
+                    ComboStep,
+                    finisherDamageBonus));
             }
         }
 
@@ -134,6 +185,10 @@ namespace GameSkill
             // 대시 같은 중단 상황에서는 모든 임시 공격 상태를 제거한다.
             attackTimer = 0f;
             hitTimer = 0f;
+            comboBufferTimer = 0f;
+            comboResetTimer = 0f;
+            comboInputQueued = false;
+            ComboStep = 0;
             hitApplied = false;
             damagedTargets.Clear();
         }
