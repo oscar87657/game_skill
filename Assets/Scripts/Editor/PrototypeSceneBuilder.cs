@@ -25,6 +25,14 @@ namespace GameSkill.Editor
             AbilityFolderPath + "/Ability_AirDash.asset";
         private const string WallTraversalAbilityPath =
             AbilityFolderPath + "/Ability_WallTraversal.asset";
+        private const string WorldZoneFolderPath =
+            "Assets/Settings/WorldZones";
+        private const string BacktrackShaftZonePath =
+            WorldZoneFolderPath + "/WorldZone_BacktrackShaft.asset";
+        private const string StartHallZonePath =
+            WorldZoneFolderPath + "/WorldZone_StartHall.asset";
+        private const string TraversalLabZonePath =
+            WorldZoneFolderPath + "/WorldZone_TraversalLab.asset";
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -87,6 +95,9 @@ namespace GameSkill.Editor
                 GameObject.Find(GrayboxRootName),
                 accentMaterial,
                 groundMaterial);
+            EnsureWorldZonePrototype(
+                player,
+                GameObject.Find(GrayboxRootName));
             ConfigureCamera(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -121,6 +132,7 @@ namespace GameSkill.Editor
             Health health = player.AddComponent<Health>();
             health.Configure(5);
             player.AddComponent<PlayerCheckpointState>();
+            player.AddComponent<PlayerWorldState>();
             PlayerAbilityState abilityState =
                 player.AddComponent<PlayerAbilityState>();
             AbilityDefinition doubleJumpAbility =
@@ -300,6 +312,14 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (player != null
+                && player.GetComponent<PlayerWorldState>() == null)
+            {
+                // 기존 Main 씬도 지도와 저장이 공유할 구역 방문 상태를 갖게 한다.
+                player.AddComponent<PlayerWorldState>();
+                changed = true;
+            }
+
             if (GameObject.Find("TrainingDummy") == null)
             {
                 GameObject root = GameObject.Find(GrayboxRootName);
@@ -351,12 +371,138 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureWorldZonePrototype(player, grayboxRoot))
+            {
+                // 세 구역 정의·방문 상태·Trigger 중 하나라도 보완되면 씬을 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureWorldZonePrototype(
+            GameObject player,
+            GameObject grayboxRoot)
+        {
+            // 플레이어와 그레이박스가 모두 있을 때만 구역 상태와 물리 볼륨을 한 단위로 구성한다.
+            if (player == null || grayboxRoot == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            if (worldState == null)
+            {
+                // 오래된 씬을 전체 재생성하지 않고 구역 방문 상태만 추가한다.
+                player.AddComponent<PlayerWorldState>();
+                changed = true;
+            }
+
+            WorldZoneDefinition backtrackShaft =
+                GetOrCreateWorldZoneDefinition(
+                    BacktrackShaftZonePath,
+                    "backtrack_shaft",
+                    "백트래킹 샤프트",
+                    "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역.");
+            WorldZoneDefinition startHall =
+                GetOrCreateWorldZoneDefinition(
+                    StartHallZonePath,
+                    "start_hall",
+                    "시작 홀",
+                    "체크포인트와 첫 능력 단서를 제공하는 중앙 구역.");
+            WorldZoneDefinition traversalLab =
+                GetOrCreateWorldZoneDefinition(
+                    TraversalLabZonePath,
+                    "traversal_lab",
+                    "이동 실험실",
+                    "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+
+            // 경계가 맞닿는 세 Trigger로 현재 Graybox를 수직·중앙·수평 구역으로 명시한다.
+            changed |= EnsureWorldZoneVolume(
+                grayboxRoot.transform,
+                "Zone_BacktrackShaft",
+                new Vector3(-10.75f, 4f, 0f),
+                new Vector3(4.5f, 10f, 3.5f),
+                backtrackShaft);
+            changed |= EnsureWorldZoneVolume(
+                grayboxRoot.transform,
+                "Zone_StartHall",
+                new Vector3(-1f, 4f, 0f),
+                new Vector3(15f, 10f, 3.5f),
+                startHall);
+            changed |= EnsureWorldZoneVolume(
+                grayboxRoot.transform,
+                "Zone_TraversalLab",
+                new Vector3(15.5f, 4f, 0f),
+                new Vector3(18f, 10f, 3.5f),
+                traversalLab);
+            return changed;
+        }
+
+        private static bool EnsureWorldZoneVolume(
+            Transform parent,
+            string objectName,
+            Vector3 position,
+            Vector3 size,
+            WorldZoneDefinition zone)
+        {
+            // 이름을 영구적인 씬 배치 키로 사용해 빌더 재실행 시 Trigger를 중복 생성하지 않는다.
+            bool changed = false;
+            GameObject volumeObject = GameObject.Find(objectName);
+            if (volumeObject == null)
+            {
+                volumeObject = new GameObject(objectName);
+                volumeObject.transform.SetParent(parent);
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                volumeObject.transform,
+                position,
+                size))
+            {
+                changed = true;
+            }
+
+            BoxCollider trigger =
+                volumeObject.GetComponent<BoxCollider>();
+            if (trigger == null)
+            {
+                // 단위 크기 Collider에 Transform 크기를 적용해 Hierarchy에서도 구역 범위를 읽기 쉽게 한다.
+                trigger = volumeObject.AddComponent<BoxCollider>();
+                changed = true;
+            }
+
+            if (!trigger.isTrigger)
+            {
+                // 구역 경계는 기록만 하고 플레이어 이동을 물리적으로 막지 않는다.
+                trigger.isTrigger = true;
+                EditorUtility.SetDirty(trigger);
+                changed = true;
+            }
+
+            WorldZoneVolume volume =
+                volumeObject.GetComponent<WorldZoneVolume>();
+            if (volume == null)
+            {
+                volume = volumeObject.AddComponent<WorldZoneVolume>();
+                changed = true;
+            }
+
+            if (volume.Configure(zone))
+            {
+                EditorUtility.SetDirty(volume);
+                changed = true;
             }
 
             return changed;
@@ -662,6 +808,43 @@ namespace GameSkill.Editor
                 AssetDatabase.CreateFolder(
                     "Assets/Settings",
                     "Abilities");
+            }
+        }
+
+        private static WorldZoneDefinition GetOrCreateWorldZoneDefinition(
+            string path,
+            string id,
+            string displayName,
+            string description)
+        {
+            // 구역 에셋 폴더를 먼저 준비해 모든 영구 ID 정의가 결정적인 경로를 갖게 한다.
+            EnsureWorldZoneFolder();
+            WorldZoneDefinition zone =
+                AssetDatabase.LoadAssetAtPath<WorldZoneDefinition>(path);
+            if (zone == null)
+            {
+                // 최초 생성 뒤에는 같은 에셋 GUID를 유지해 지도와 씬 참조가 끊기지 않게 한다.
+                zone =
+                    ScriptableObject.CreateInstance<WorldZoneDefinition>();
+                zone.Configure(id, displayName, description);
+                AssetDatabase.CreateAsset(zone, path);
+                return zone;
+            }
+
+            // 문서 기준 표시 정보를 동기화하면서 기존 에셋과 씬 참조는 보존한다.
+            zone.Configure(id, displayName, description);
+            EditorUtility.SetDirty(zone);
+            return zone;
+        }
+
+        private static void EnsureWorldZoneFolder()
+        {
+            // AssetDatabase API로 폴더를 생성해 Unity 메타 GUID를 안정적으로 관리한다.
+            if (!AssetDatabase.IsValidFolder(WorldZoneFolderPath))
+            {
+                AssetDatabase.CreateFolder(
+                    "Assets/Settings",
+                    "WorldZones");
             }
         }
 

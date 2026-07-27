@@ -55,6 +55,9 @@ namespace GameSkill.Tests
             PlayerCheckpointState checkpointState =
                 player.GetComponent<PlayerCheckpointState>();
             Assert.That(checkpointState, Is.Not.Null);
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            Assert.That(worldState, Is.Not.Null);
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);
@@ -111,6 +114,37 @@ namespace GameSkill.Tests
             Assert.That(
                 GameObject.Find("Backtrack_Reward").transform.position,
                 Is.EqualTo(new Vector3(-11f, 6.5f, 0f)));
+
+            // 세 Graybox 구역의 맞닿는 Trigger와 영구 ID 기반 방문 흐름을 실제 씬에서 검증한다.
+            WorldZoneVolume startHall =
+                GameObject.Find("Zone_StartHall")
+                    .GetComponent<WorldZoneVolume>();
+            WorldZoneVolume traversalLab =
+                GameObject.Find("Zone_TraversalLab")
+                    .GetComponent<WorldZoneVolume>();
+            WorldZoneVolume backtrackShaft =
+                GameObject.Find("Zone_BacktrackShaft")
+                    .GetComponent<WorldZoneVolume>();
+            Assert.That(startHall, Is.Not.Null);
+            Assert.That(traversalLab, Is.Not.Null);
+            Assert.That(backtrackShaft, Is.Not.Null);
+            Assert.That(startHall.Zone.Id, Is.EqualTo("start_hall"));
+            Assert.That(
+                traversalLab.Zone.Id,
+                Is.EqualTo("traversal_lab"));
+            Assert.That(
+                backtrackShaft.Zone.Id,
+                Is.EqualTo("backtrack_shaft"));
+            Assert.That(
+                startHall.GetComponent<Collider>().isTrigger,
+                Is.True);
+            worldState.ConfigureInitialZones(null);
+            Assert.That(worldState.VisitedCount, Is.Zero);
+            Assert.That(startHall.Enter(worldState), Is.True);
+            Assert.That(startHall.Enter(worldState), Is.False);
+            Assert.That(traversalLab.Enter(worldState), Is.True);
+            Assert.That(backtrackShaft.Enter(worldState), Is.True);
+            Assert.That(worldState.VisitedCount, Is.EqualTo(3));
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
             Health dummyHealth = dummy.GetComponent<Health>();
