@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 가장 작은 플레이 가능한 2.5D Showcase 씬을 생성하고 마이그레이션한다.
-// 책임: 플레이어·그레이박스·카메라·전투 더미와 에디터 메뉴를 생성한다.
+// 책임: 플레이어·그레이박스·카메라·전투 더미·능력 진행 루프와 에디터 메뉴를 생성한다.
 // 불변식: 빌더를 다시 실행해도 자신이 만든 이름의 프로토타입 루트만 제거한다.
 // 선택 이유: 씬 생성은 에디터 전용으로 두어 런타임 스크립트를 게임플레이에 집중시킨다.
 using UnityEditor;
@@ -18,6 +18,11 @@ namespace GameSkill.Editor
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string GroundMaterialPath = "Assets/Materials/PrototypeGround.mat";
         private const string AccentMaterialPath = "Assets/Materials/PrototypeAccent.mat";
+        private const string AbilityFolderPath = "Assets/Settings/Abilities";
+        private const string DoubleJumpAbilityPath =
+            AbilityFolderPath + "/Ability_DoubleJump.asset";
+        private const string AirDashAbilityPath =
+            AbilityFolderPath + "/Ability_AirDash.asset";
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -109,7 +114,26 @@ namespace GameSkill.Editor
             Health health = player.AddComponent<Health>();
             health.Configure(5);
             player.AddComponent<PlayerCheckpointState>();
-            player.AddComponent<SideScrollerMotor>();
+            PlayerAbilityState abilityState =
+                player.AddComponent<PlayerAbilityState>();
+            AbilityDefinition doubleJumpAbility =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDashAbility =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+            SideScrollerMotor motor =
+                player.AddComponent<SideScrollerMotor>();
+            motor.ConfigureAbilityRequirements(
+                abilityState,
+                doubleJumpAbility,
+                airDashAbility);
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
             player.AddComponent<PlayerRespawnController>();
@@ -254,6 +278,14 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (player != null
+                && player.GetComponent<PlayerAbilityState>() == null)
+            {
+                // 능력 진행의 단일 런타임 원본을 기존 플레이어 루트에 추가한다.
+                player.AddComponent<PlayerAbilityState>();
+                changed = true;
+            }
+
             if (GameObject.Find("TrainingDummy") == null)
             {
                 GameObject root = GameObject.Find(GrayboxRootName);
@@ -290,6 +322,18 @@ namespace GameSkill.Editor
                 }
             }
 
+            GameObject grayboxRoot = GameObject.Find(GrayboxRootName);
+            Material abilityMaterial =
+                AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
+            if (EnsureAbilityPrototype(
+                player,
+                grayboxRoot,
+                abilityMaterial))
+            {
+                // 능력 에셋·픽업·게이트 중 하나라도 추가되면 씬을 저장 대상으로 표시한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -299,6 +343,161 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureAbilityPrototype(
+            GameObject player,
+            GameObject grayboxRoot,
+            Material material)
+        {
+            // 진행 루프의 필수 씬 참조가 없으면 부분 배치로 씬을 깨뜨리지 않고 재시도를 기다린다.
+            if (player == null || grayboxRoot == null || material == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            if (abilityState == null)
+            {
+                // 재생성하지 않은 오래된 씬에도 능력 보유 상태를 한 번만 추가한다.
+                abilityState = player.AddComponent<PlayerAbilityState>();
+                changed = true;
+            }
+
+            AbilityDefinition doubleJumpAbility =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDashAbility =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+
+            SideScrollerMotor motor =
+                player.GetComponent<SideScrollerMotor>();
+            if (motor != null
+                && motor.ConfigureAbilityRequirements(
+                    abilityState,
+                    doubleJumpAbility,
+                    airDashAbility))
+            {
+                // 이동 능력의 실제 사용 조건을 진행 상태와 연결하고 씬 직렬화 대상으로 표시한다.
+                EditorUtility.SetDirty(motor);
+                changed = true;
+            }
+
+            if (GameObject.Find("AbilityPickup_DoubleJump") == null)
+            {
+                // 위험 지대를 통과한 뒤 첫 능력을 얻도록 시작 지점 오른쪽에 배치한다.
+                CreateAbilityPickup(
+                    grayboxRoot.transform,
+                    "AbilityPickup_DoubleJump",
+                    new Vector3(7f, 1f, 0f),
+                    doubleJumpAbility,
+                    material);
+                changed = true;
+            }
+
+            if (GameObject.Find("AbilityPickup_AirDash") == null)
+            {
+                // 2단 점프로 계단과 높은 발판을 오른 뒤 다음 공중 능력을 얻게 한다.
+                CreateAbilityPickup(
+                    grayboxRoot.transform,
+                    "AbilityPickup_AirDash",
+                    new Vector3(20f, 4.2f, 0f),
+                    airDashAbility,
+                    material);
+                changed = true;
+            }
+
+            GameObject gateObject = GameObject.Find("Wall_Gate");
+            if (gateObject != null)
+            {
+                AbilityGate gate =
+                    gateObject.GetComponent<AbilityGate>();
+                if (gate == null)
+                {
+                    // 기존 물리 블록을 능력 요구 게이트로 승격해 레벨 배치를 중복하지 않는다.
+                    gate = gateObject.AddComponent<AbilityGate>();
+                    changed = true;
+                }
+
+                gate.Configure(
+                    doubleJumpAbility,
+                    abilityState,
+                    gateObject.GetComponentInChildren<Renderer>());
+                EditorUtility.SetDirty(gate);
+            }
+
+            return changed;
+        }
+
+        private static GameObject CreateAbilityPickup(
+            Transform parent,
+            string objectName,
+            Vector3 position,
+            AbilityDefinition ability,
+            Material material)
+        {
+            // 단순한 구체 프리미티브로 획득 Trigger와 시각 표현을 한눈에 검증하게 한다.
+            GameObject pickup =
+                GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            pickup.name = objectName;
+            pickup.transform.SetParent(parent);
+            pickup.transform.position = position;
+            pickup.transform.localScale = Vector3.one * 0.7f;
+            MeshRenderer renderer = pickup.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+
+            SphereCollider trigger = pickup.GetComponent<SphereCollider>();
+            trigger.isTrigger = true;
+            AbilityPickup pickupComponent =
+                pickup.AddComponent<AbilityPickup>();
+            pickupComponent.Configure(ability, renderer);
+            return pickup;
+        }
+
+        private static AbilityDefinition GetOrCreateAbilityDefinition(
+            string path,
+            string id,
+            string displayName,
+            string description)
+        {
+            // 능력 에셋 폴더가 없는 최초 실행에서도 결정적인 경로를 먼저 준비한다.
+            EnsureAbilityFolder();
+            AbilityDefinition ability =
+                AssetDatabase.LoadAssetAtPath<AbilityDefinition>(path);
+            if (ability == null)
+            {
+                // 에셋은 한 번만 만들고 이후 빌더 실행에서는 같은 GUID를 재사용한다.
+                ability =
+                    ScriptableObject.CreateInstance<AbilityDefinition>();
+                ability.Configure(id, displayName, description);
+                AssetDatabase.CreateAsset(ability, path);
+                return ability;
+            }
+
+            // 표시 문구를 코드 기준과 동기화하되 기존 에셋 참조와 GUID는 보존한다.
+            ability.Configure(id, displayName, description);
+            EditorUtility.SetDirty(ability);
+            return ability;
+        }
+
+        private static void EnsureAbilityFolder()
+        {
+            // AssetDatabase 폴더 API를 사용해야 Unity가 폴더 메타 GUID를 안정적으로 관리한다.
+            if (!AssetDatabase.IsValidFolder(AbilityFolderPath))
+            {
+                AssetDatabase.CreateFolder(
+                    "Assets/Settings",
+                    "Abilities");
+            }
         }
 
         private static GameObject CreateTrainingDummy(

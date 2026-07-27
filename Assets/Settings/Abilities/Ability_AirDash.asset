@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d26b8acbb92f4f3cba82a1622d5ba96, type: 3}
+  m_Name: Ability_AirDash
+  m_EditorClassIdentifier: GameSkill.Runtime::GameSkill.AbilityDefinition
+  abilityId: air_dash
+  displayName: "\uACF5\uC911 \uB300\uC2DC"
+  description: "\uACF5\uC911\uC5D0\uC11C \uC218\uD3C9 \uB300\uC2DC\uB97C \uD55C \uBC88
+    \uC0AC\uC6A9\uD55C\uB2E4."

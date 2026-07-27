@@ -34,8 +34,14 @@ namespace GameSkill.Tests
             Assert.That(motor, Is.Not.Null);
             Assert.That(motor.IsDashing, Is.False);
             Assert.That(motor.IsInvulnerable, Is.False);
-            Assert.That(motor.CanAirDash, Is.True);
+            Assert.That(motor.CanAirDash, Is.False);
+            Assert.That(motor.IsDoubleJumpUnlocked, Is.False);
+            Assert.That(motor.IsAirDashUnlocked, Is.False);
             Assert.That(motor.AirJumpsRemaining, Is.EqualTo(1));
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            Assert.That(abilityState, Is.Not.Null);
+            Assert.That(abilityState.UnlockedCount, Is.Zero);
             PlayerCombat combat = player.GetComponent<PlayerCombat>();
             Assert.That(combat, Is.Not.Null);
             SideScrollerTargeting targeting =
@@ -81,13 +87,41 @@ namespace GameSkill.Tests
             Assert.That(camera.orthographic, Is.True);
 
             Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
-            Assert.That(GameObject.Find("Wall_Gate"), Is.Not.Null);
+            GameObject gateObject = GameObject.Find("Wall_Gate");
+            Assert.That(gateObject, Is.Not.Null);
+            AbilityGate gate = gateObject.GetComponent<AbilityGate>();
+            Assert.That(gate, Is.Not.Null);
+            Assert.That(gate.IsLocked, Is.True);
+            Assert.That(gateObject.GetComponent<Collider>().enabled, Is.True);
             Assert.That(GameObject.Find("Slope_Test"), Is.Not.Null);
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
             Health dummyHealth = dummy.GetComponent<Health>();
             Assert.That(dummyHealth, Is.Not.Null);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
+
+            // 실제 픽업을 순서대로 소비해 보유 상태·이동 잠금·백트래킹 게이트를 함께 검증한다.
+            GameObject doubleJumpPickupObject =
+                GameObject.Find("AbilityPickup_DoubleJump");
+            Assert.That(doubleJumpPickupObject, Is.Not.Null);
+            AbilityPickup doubleJumpPickup =
+                doubleJumpPickupObject.GetComponent<AbilityPickup>();
+            Assert.That(doubleJumpPickup, Is.Not.Null);
+            Assert.That(doubleJumpPickup.Collect(abilityState), Is.True);
+            Assert.That(motor.IsDoubleJumpUnlocked, Is.True);
+            Assert.That(gate.IsLocked, Is.False);
+            Assert.That(gateObject.GetComponent<Collider>().enabled, Is.False);
+
+            GameObject airDashPickupObject =
+                GameObject.Find("AbilityPickup_AirDash");
+            Assert.That(airDashPickupObject, Is.Not.Null);
+            AbilityPickup airDashPickup =
+                airDashPickupObject.GetComponent<AbilityPickup>();
+            Assert.That(airDashPickup, Is.Not.Null);
+            Assert.That(airDashPickup.Collect(abilityState), Is.True);
+            Assert.That(motor.IsAirDashUnlocked, Is.True);
+            Assert.That(motor.CanAirDash, Is.True);
+            Assert.That(abilityState.UnlockedCount, Is.EqualTo(2));
 
             // 실제 Main 씬 체크포인트를 활성화해 플레이어 체력과 재시작 위치가 함께 갱신되는지 확인한다.
             GameObject checkpointObject = GameObject.Find("Checkpoint_Start");
@@ -137,6 +171,8 @@ namespace GameSkill.Tests
             Assert.That(player.transform.position, Is.EqualTo(checkpoint.RespawnPosition));
             Assert.That(motor.IsControlLocked, Is.False);
             Assert.That(combat.enabled, Is.True);
+            Assert.That(abilityState.UnlockedCount, Is.EqualTo(2));
+            Assert.That(gate.IsLocked, Is.False);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

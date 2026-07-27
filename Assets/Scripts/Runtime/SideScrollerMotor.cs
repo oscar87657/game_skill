@@ -29,6 +29,11 @@ namespace GameSkill
         [SerializeField, Min(0f)] private float jumpBufferTime = 0.12f;
         [SerializeField, Range(0, 2)] private int maxAirJumps = 1;
 
+        [Header("Ability Progression")]
+        [SerializeField] private PlayerAbilityState abilityState;
+        [SerializeField] private AbilityDefinition doubleJumpAbility;
+        [SerializeField] private AbilityDefinition airDashAbility;
+
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
         [SerializeField, Min(0f)] private float dashSpeed = 8f;
@@ -62,7 +67,11 @@ namespace GameSkill
         public bool IsDashing => dashTimer > 0f;
         public bool IsInvulnerable => invulnerabilityTimer > 0f;
         public bool IsAirAttackHovering => airAttackHoverTimer > 0f;
-        public bool CanAirDash => airDashAvailable;
+        public bool CanAirDash => airDashAvailable && IsAirDashUnlocked;
+        public bool IsDoubleJumpUnlocked =>
+            IsAbilityAvailable(doubleJumpAbility);
+        public bool IsAirDashUnlocked =>
+            IsAbilityAvailable(airDashAbility);
         public bool IsControlLocked { get; private set; }
         public int AirJumpsRemaining => airJumpsRemaining;
         public bool IsRunning { get; private set; }
@@ -82,6 +91,26 @@ namespace GameSkill
             dashAction = playerInput.actions.FindAction("Dash", true);
             airJumpsRemaining = maxAirJumps;
             lockedDepth = transform.position.z;
+        }
+
+        public bool ConfigureAbilityRequirements(
+            PlayerAbilityState state,
+            AbilityDefinition requiredDoubleJump,
+            AbilityDefinition requiredAirDash)
+        {
+            // 같은 참조로 다시 구성할 때 씬을 불필요하게 Dirty 상태로 만들지 않는다.
+            if (abilityState == state
+                && doubleJumpAbility == requiredDoubleJump
+                && airDashAbility == requiredAirDash)
+            {
+                return false;
+            }
+
+            // 에디터 빌더가 이동 코드의 private 직렬화 필드를 우회하지 않고 진행 조건을 연결한다.
+            abilityState = state;
+            doubleJumpAbility = requiredDoubleJump;
+            airDashAbility = requiredAirDash;
+            return true;
         }
 
         private void Update()
@@ -183,7 +212,9 @@ namespace GameSkill
             }
 
             bool isGrounded = IsGrounded;
-            if (!isGrounded && !airDashAvailable)
+            // 공중에서는 충전 횟수와 진행 능력을 모두 만족해야 대시를 시작할 수 있다.
+            if (!isGrounded
+                && (!airDashAvailable || !IsAirDashUnlocked))
             {
                 return;
             }
@@ -291,7 +322,9 @@ namespace GameSkill
             }
 
             bool canGroundJump = coyoteTimer > 0f;
-            bool canAirJump = !IsGrounded && airJumpsRemaining > 0;
+            bool canAirJump = !IsGrounded
+                && airJumpsRemaining > 0
+                && IsDoubleJumpUnlocked;
             if (canJump
                 && jumpBufferTimer > 0f
                 && (canGroundJump || canAirJump))
@@ -308,6 +341,17 @@ namespace GameSkill
             }
 
             verticalSpeed += gravity * deltaTime;
+        }
+
+        private bool IsAbilityAvailable(AbilityDefinition requirement)
+        {
+            // 요구 에셋이 없는 기존 씬은 이전 동작을 유지하고, 명시된 요구 조건은 보유 상태로 판정한다.
+            if (requirement == null || !requirement.IsConfigured)
+            {
+                return true;
+            }
+
+            return abilityState != null && abilityState.HasAbility(requirement);
         }
 
         private void UpdateFacing(float horizontalInput, float deltaTime)
