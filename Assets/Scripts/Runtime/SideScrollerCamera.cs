@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Follow the player on the fixed 2.5D plane without changing gameplay physics.
+// Responsibility: Compute a look-ahead target and smooth only camera position.
+// Invariant: Camera rotation and target depth remain fixed for side-scroller readability.
+// Design choice: SmoothDamp avoids frame-rate-dependent lerps and exposes tuning values to designers.
 using UnityEngine;
 
 namespace GameSkill
@@ -16,22 +21,26 @@ namespace GameSkill
 
         public void Configure(Transform followTarget)
         {
+            // Resolve the motor from the target once so look-ahead follows facing, not raw input.
             target = followTarget;
             motor = target != null ? target.GetComponent<SideScrollerMotor>() : null;
         }
 
         private void Awake()
         {
+            // Support both scene-authored references and editor-generated configuration.
             Configure(target);
         }
 
         private void Start()
         {
+            // Avoid a visible camera lerp from the origin on the first frame.
             SnapToTarget();
         }
 
         private void LateUpdate()
         {
+            // LateUpdate runs after player movement, preventing one-frame camera lag.
             if (target == null)
             {
                 return;
@@ -57,6 +66,7 @@ namespace GameSkill
 
         private void SnapToTarget()
         {
+            // Place the camera immediately when entering a scene or respawning.
             if (target == null)
             {
                 return;
@@ -69,6 +79,7 @@ namespace GameSkill
 
         private Vector3 TargetPosition(float facingDirection)
         {
+            // Look-ahead uses facing rather than velocity so the camera anticipates deliberate direction changes.
             return new Vector3(
                 target.position.x + offset.x + facingDirection * horizontalLookAhead,
                 target.position.y + offset.y,

@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Translate gameplay state into Animator parameters only.
+// Responsibility: Read motor/combat state and write animation parameters every frame.
+// Invariant: This component never decides movement, damage, or transitions itself.
+// Design choice: Hash IDs avoid repeated string lookups while keeping Animator setup data-driven.
 using UnityEngine;
 
 namespace GameSkill
@@ -20,11 +25,13 @@ namespace GameSkill
 
         public void Configure(Animator targetAnimator)
         {
+            // Editor builders call this after instantiating a visual model at runtime/editor time.
             animator = targetAnimator;
         }
 
         private void Awake()
         {
+            // Cache dependencies once; GetComponentInChildren is intentionally a setup fallback.
             motor = GetComponent<SideScrollerMotor>();
             combat = GetComponent<PlayerCombat>();
             animator ??= GetComponentInChildren<Animator>();
@@ -32,6 +39,7 @@ namespace GameSkill
 
         private void Update()
         {
+            // Animation is a presentation projection of state, so it must not mutate gameplay state.
             if (animator == null)
             {
                 return;

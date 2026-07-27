@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Build reproducible Humanoid visuals and Animator assets in the Unity Editor.
+// Responsibility: Import source assets, create materials/controllers, and save Main.unity.
+// Invariant: Editor automation must be idempotent and must not run while entering Play Mode.
+// Design choice: AssetDatabase-driven generation keeps binary setup reproducible from source code.
 using System;
 using System.Linq;
 using UnityEditor;
@@ -33,6 +38,7 @@ namespace GameSkill.Editor
         [InitializeOnLoadMethod]
         private static void BuildMissingCharacterSetup()
         {
+            // Register deferred work only when the controller is absent or missing required states.
             AnimatorController controller =
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (controller != null && HasActionSetup(controller))
@@ -46,6 +52,7 @@ namespace GameSkill.Editor
 
         private static void TryBuildMissingCharacterSetup()
         {
+            // Delay until edit mode so asset writes cannot invalidate a running player.
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 return;
@@ -57,6 +64,7 @@ namespace GameSkill.Editor
 
         private static void HandlePlayModeStateChanged(PlayModeStateChange state)
         {
+            // Retry deferred setup after Unity returns to a safe editable state.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
                 TryBuildMissingCharacterSetup();
@@ -66,6 +74,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Build Character Animation")]
         public static void Build()
         {
+            // Rebuild the complete visual pipeline from canonical asset paths.
             ConfigureModelImporters();
             Material bodyMaterial = GetOrCreateCharacterMaterial(
                 CharacterBodyMaterialPath,
@@ -96,6 +105,7 @@ namespace GameSkill.Editor
 
         public static void ConfigurePlayerVisual(GameObject player)
         {
+            // Public convenience entry point used by the scene builder.
             ConfigureModelImporters();
             ConfigurePlayerVisual(
                 player,
@@ -114,6 +124,7 @@ namespace GameSkill.Editor
             Material eyeMaterial,
             RuntimeAnimatorController controller)
         {
+            // Replace generated visual children so repeated builds remain deterministic.
             Transform existingVisual = player.transform.Find("Visual");
             if (existingVisual != null)
             {
@@ -139,9 +150,11 @@ namespace GameSkill.Editor
             model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
             model.transform.localScale = Vector3.one;
 
+            // Apply portfolio materials to every renderer in the imported model hierarchy.
             foreach (Renderer renderer in model.GetComponentsInChildren<Renderer>(true))
             {
                 var materials = new Material[renderer.sharedMaterials.Length];
+                // Preserve material slots while swapping only the authored prototype materials.
                 for (int index = 0; index < materials.Length; index++)
                 {
                     string sourceName = renderer.sharedMaterials[index] != null
@@ -177,12 +190,14 @@ namespace GameSkill.Editor
 
         private static void ConfigureModelImporters()
         {
+            // Force both model sources into the same Humanoid import contract.
             ConfigureModelImporter(CharacterModelPath, false);
             ConfigureModelImporter(AnimationSourcePath, true);
         }
 
         private static void ConfigureModelImporter(string assetPath, bool importAnimations)
         {
+            // Normalize one FBX importer and reimport only when settings changed.
             var importer = AssetImporter.GetAtPath(assetPath) as ModelImporter;
             if (importer == null)
             {
@@ -212,6 +227,7 @@ namespace GameSkill.Editor
             ModelImporterClipAnimation[] clips = importer.clipAnimations.Length > 0
                 ? importer.clipAnimations
                 : importer.defaultClipAnimations;
+            // Loop only locomotion clips; one-shot actions must retain their authored exit.
             foreach (ModelImporterClipAnimation clip in clips)
             {
                 string clipName = NormalizeClipName(clip.name);
@@ -237,6 +253,7 @@ namespace GameSkill.Editor
 
         private static AnimatorController CreateAnimatorController()
         {
+            // Create or incrementally upgrade the controller without duplicating states.
             AnimatorController existingController =
                 AssetDatabase.LoadAssetAtPath<AnimatorController>(AnimatorControllerPath);
             if (existingController != null)
@@ -322,6 +339,7 @@ namespace GameSkill.Editor
 
         private static bool HasActionSetup(AnimatorController controller)
         {
+            // Treat parameters and state names as the controller's migration version.
             bool hasDashParameter = controller.parameters.Any(
                 parameter => parameter.name == "Dodging"
                     && parameter.type == AnimatorControllerParameterType.Bool);
@@ -342,6 +360,7 @@ namespace GameSkill.Editor
 
         private static void EnsureActionSetup(AnimatorController controller)
         {
+            // Add missing gameplay states in place so existing scene references survive upgrades.
             if (!controller.parameters.Any(parameter => parameter.name == "Dodging"))
             {
                 controller.AddParameter(
@@ -403,6 +422,7 @@ namespace GameSkill.Editor
             AnimatorState fall,
             AnimationClip dashClip)
         {
+            // Dash uses a locomotion clip while gameplay owns the actual displacement curve.
             AnimatorState dash = stateMachine.AddState("Dash");
             dash.motion = dashClip;
             dash.speed = 1.35f;
@@ -433,6 +453,7 @@ namespace GameSkill.Editor
             AnimatorState fall,
             AnimationClip attackClip)
         {
+            // Attack is an interruptible presentation state driven by a single bool parameter.
             AnimatorState attack = stateMachine.AddState("Attack");
             attack.motion = attackClip;
             attack.speed = Mathf.Max(1f, attackClip.length / 0.38f);
@@ -462,6 +483,7 @@ namespace GameSkill.Editor
             AnimatorState to,
             params TransitionCondition[] conditions)
         {
+            // Keep transition defaults consistent across every generated state.
             AnimatorStateTransition transition = from.AddTransition(to);
             ConfigureTransition(transition, 0.1f, conditions);
         }
@@ -471,10 +493,12 @@ namespace GameSkill.Editor
             float duration,
             params TransitionCondition[] conditions)
         {
+            // Apply timing and conditions in one place to avoid subtle Animator differences.
             transition.hasExitTime = false;
             transition.hasFixedDuration = true;
             transition.duration = duration;
 
+            // Multiple conditions form an AND gate in Unity's Animator transition system.
             foreach (TransitionCondition condition in conditions)
             {
                 transition.AddCondition(
@@ -488,6 +512,7 @@ namespace GameSkill.Editor
             AnimatorStateMachine stateMachine,
             string name)
         {
+            // Search only the base layer because this prototype intentionally has one layer.
             return stateMachine.states
                 .Select(childState => childState.state)
                 .FirstOrDefault(state => state.name == name);
@@ -495,6 +520,7 @@ namespace GameSkill.Editor
 
         private static AnimationClip[] LoadAnimationClips()
         {
+            // Collect clips from both model assets and discard Unity preview artifacts.
             return AssetDatabase.LoadAllAssetsAtPath(CharacterModelPath)
                 .Concat(AssetDatabase.LoadAllAssetsAtPath(AnimationSourcePath))
                 .OfType<AnimationClip>()
@@ -508,6 +534,7 @@ namespace GameSkill.Editor
             AnimationClip[] clips,
             string name)
         {
+            // Fail early with an actionable asset name instead of creating a broken controller.
             AnimationClip clip = clips.FirstOrDefault(
                 candidate => NormalizeClipName(candidate.name).Equals(
                     name,
@@ -531,6 +558,7 @@ namespace GameSkill.Editor
             string materialPath,
             string texturePath)
         {
+            // Reuse material assets so scene references remain stable across rebuilds.
             Material material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (material == null)
             {
@@ -551,6 +579,7 @@ namespace GameSkill.Editor
             float groundHeight,
             float targetHeight)
         {
+            // Fit imported art to the gameplay capsule without changing the player's collision size.
             Renderer[] renderers = model.GetComponentsInChildren<Renderer>(true);
             if (renderers.Length == 0)
             {
@@ -558,6 +587,7 @@ namespace GameSkill.Editor
             }
 
             Bounds bounds = renderers[0].bounds;
+            // Encapsulate all renderers to calculate the complete visual bounds.
             for (int index = 1; index < renderers.Length; index++)
             {
                 bounds.Encapsulate(renderers[index].bounds);
@@ -571,6 +601,7 @@ namespace GameSkill.Editor
             model.localScale = Vector3.one * (targetHeight / bounds.size.y);
 
             bounds = renderers[0].bounds;
+            // Recalculate bounds after scaling so the feet can be aligned to groundHeight.
             for (int index = 1; index < renderers.Length; index++)
             {
                 bounds.Encapsulate(renderers[index].bounds);

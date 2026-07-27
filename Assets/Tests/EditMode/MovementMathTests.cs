@@ -1,3 +1,7 @@
+// GOLDEN STANDARD
+// Purpose: Verify deterministic movement formulas without loading a scene.
+// Responsibility: Cover normal values, dead zones, facing, dash direction, and invalid physics input.
+// Invariant: These tests remain independent from frame timing and Unity scene state.
 using NUnit.Framework;
 using UnityEngine;
 
@@ -8,6 +12,7 @@ namespace GameSkill.Tests
         [Test]
         public void HorizontalInput_UsesOnlyHorizontalAxis()
         {
+            // Regression guard: vertical stick noise must never affect side-scroller movement.
             float horizontal = MovementMath.HorizontalInput(
                 new Vector2(0.75f, 1f),
                 0.1f);
@@ -18,6 +23,7 @@ namespace GameSkill.Tests
         [Test]
         public void HorizontalInput_AppliesDeadZone()
         {
+            // Regression guard: tiny analog drift should resolve to a neutral input.
             float horizontal = MovementMath.HorizontalInput(
                 new Vector2(0.05f, 0f),
                 0.1f);
@@ -32,6 +38,7 @@ namespace GameSkill.Tests
             float direction,
             float expectedYaw)
         {
+            // The two expected yaws are the only valid visual orientations in this prototype.
             Assert.That(
                 MovementMath.SideScrollerFacingYaw(direction),
                 Is.EqualTo(expectedYaw));
@@ -46,6 +53,7 @@ namespace GameSkill.Tests
             float facingDirection,
             float expectedDirection)
         {
+            // Direction should follow current intent, or facing when the stick is neutral.
             Assert.That(
                 MovementMath.DodgeDirection(horizontalInput, facingDirection),
                 Is.EqualTo(expectedDirection));
@@ -54,6 +62,7 @@ namespace GameSkill.Tests
         [Test]
         public void JumpSpeed_ReturnsExpectedBallisticSpeed()
         {
+            // Compare against the analytical projectile formula rather than a scene simulation.
             float speed = MovementMath.JumpSpeed(2f, -9.81f);
 
             Assert.That(speed, Is.EqualTo(Mathf.Sqrt(39.24f)).Within(0.0001f));
@@ -64,12 +73,14 @@ namespace GameSkill.Tests
         [TestCase(-1f, -9.81f)]
         public void JumpSpeed_ReturnsZeroForInvalidConfiguration(float height, float gravity)
         {
+            // Invalid designer values must fail safely instead of producing NaN.
             Assert.That(MovementMath.JumpSpeed(height, gravity), Is.Zero);
         }
 
         [Test]
         public void Health_TakeDamageClampsAndReportsDeath()
         {
+            // Verify damage, death notification, clamping, and post-death rejection as one contract.
             var target = new GameObject("HealthTestTarget");
             try
             {

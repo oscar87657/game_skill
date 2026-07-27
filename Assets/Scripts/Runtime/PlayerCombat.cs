@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Coordinate a small, testable player attack loop for the prototype.
+// Responsibility: Read attack input, manage timing, query hitboxes, and send damage to Health.
+// Invariant: Each attack damages a target at most once and never changes locomotion directly.
+// Design choice: Physics.OverlapBox keeps hit timing deterministic while leaving animation presentation separate.
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -34,12 +39,14 @@ namespace GameSkill
 
         private void Awake()
         {
+            // Cache dependencies once; combat reads movement state but does not own movement.
             motor = GetComponent<SideScrollerMotor>();
             attackAction = GetComponent<PlayerInput>().actions.FindAction("Attack", true);
         }
 
         private void Update()
         {
+            // Resolve cooldown and active attack before accepting a new attack input.
             float deltaTime = Time.deltaTime;
             cooldownTimer = Mathf.Max(0f, cooldownTimer - deltaTime);
 
@@ -61,6 +68,7 @@ namespace GameSkill
 
         private void StartAttack()
         {
+            // Reset per-swing state so a new attack cannot inherit an old target set.
             attackTimer = attackDuration;
             hitTimer = Mathf.Min(hitDelay, attackDuration);
             cooldownTimer = attackCooldown;
@@ -76,6 +84,7 @@ namespace GameSkill
 
         private void UpdateActiveAttack(float deltaTime)
         {
+            // Decrement both animation duration and hit delay using the same frame clock.
             if (!IsAttacking)
             {
                 return;
@@ -93,6 +102,7 @@ namespace GameSkill
 
         private void ApplyHit()
         {
+            // Query once at the authored hit moment; the HashSet below prevents multi-hit overlap.
             Vector3 facingOffset = hitBoxOffset;
             facingOffset.x *= motor.FacingDirection;
             Vector3 center = transform.position + facingOffset;
@@ -104,6 +114,7 @@ namespace GameSkill
                 damageLayers,
                 QueryTriggerInteraction.Collide);
 
+            // Iterate every collider because compound enemies may expose multiple body colliders.
             foreach (Collider hit in hits)
             {
                 Health target = hit.GetComponentInParent<Health>();
@@ -120,6 +131,7 @@ namespace GameSkill
 
         private void CancelAttack()
         {
+            // Interruptions such as dashing must clear all transient attack state.
             attackTimer = 0f;
             hitTimer = 0f;
             hitApplied = false;

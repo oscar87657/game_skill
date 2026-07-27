@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Keep deterministic movement formulas independent from MonoBehaviour state.
+// Responsibility: Normalize input, calculate facing, dash direction, and ballistic jump speed.
+// Invariant: Invalid physical parameters return a safe value instead of NaN or Infinity.
+// Design choice: Pure static functions are easy to unit-test and reusable by alternate movement controllers.
 using UnityEngine;
 
 namespace GameSkill
@@ -6,6 +11,7 @@ namespace GameSkill
     {
         public static float HorizontalInput(Vector2 input, float deadZone)
         {
+            // Clamp first, then apply the dead zone so keyboard and analog input share one contract.
             float clampedInput = Mathf.Clamp(input.x, -1f, 1f);
             return Mathf.Abs(clampedInput) < Mathf.Clamp01(deadZone)
                 ? 0f
@@ -14,6 +20,7 @@ namespace GameSkill
 
         public static float SideScrollerFacingYaw(float horizontalDirection)
         {
+            // A side-scroller only needs two visual orientations, so map sign directly to yaw.
             return horizontalDirection < 0f ? -90f : 90f;
         }
 
@@ -21,6 +28,7 @@ namespace GameSkill
             float horizontalInput,
             float facingDirection)
         {
+            // Player intent wins; when there is no input, preserve the character's last facing direction.
             if (Mathf.Abs(horizontalInput) > Mathf.Epsilon)
             {
                 return Mathf.Sign(horizontalInput);
@@ -31,6 +39,7 @@ namespace GameSkill
 
         public static float JumpSpeed(float jumpHeight, float gravity)
         {
+            // Derive the initial velocity from v² = u² + 2as; gravity must point downward.
             if (jumpHeight <= 0f || gravity >= 0f)
             {
                 return 0f;

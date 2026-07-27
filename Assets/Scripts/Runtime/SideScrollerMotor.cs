@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Own player locomotion on the X/Y plane for the 2.5D prototype.
+// Responsibility: Read movement actions, resolve jump/dash state, and move CharacterController.
+// Invariant: Z depth stays locked; movement abilities never directly own combat or animation.
+// Design choice: Explicit timers make coyote time, buffering, cooldowns, and invulnerability inspectable and testable.
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
@@ -67,6 +72,7 @@ namespace GameSkill
 
         private void Awake()
         {
+            // Cache input actions and initialize counters before the first Update tick.
             characterController = GetComponent<CharacterController>();
             PlayerInput playerInput = GetComponent<PlayerInput>();
 
@@ -79,6 +85,7 @@ namespace GameSkill
 
         private void Update()
         {
+            // Update is organized as timers → input decisions → velocity → collision move.
             float deltaTime = Time.deltaTime;
             UpdateDashTimers(deltaTime);
             airAttackHoverTimer = Mathf.Max(0f, airAttackHoverTimer - deltaTime);
@@ -150,6 +157,7 @@ namespace GameSkill
 
         private void UpdateDashTimers(float deltaTime)
         {
+            // Clamp timers at zero so callers can use simple > 0 checks without negative drift.
             dashTimer = Mathf.Max(0f, dashTimer - deltaTime);
             dashCooldownTimer = Mathf.Max(0f, dashCooldownTimer - deltaTime);
             invulnerabilityTimer = Mathf.Max(0f, invulnerabilityTimer - deltaTime);
@@ -157,6 +165,7 @@ namespace GameSkill
 
         private void TryStartDash(float horizontalInput)
         {
+            // A dash begins only on a press, never from a held key after its cooldown expires.
             if (!dashAction.WasPressedThisFrame()
                 || IsDashing
                 || dashCooldownTimer > 0f)
@@ -189,6 +198,7 @@ namespace GameSkill
 
         public void RequestAirAttackHover(float duration, float maximumDuration)
         {
+            // Combat requests a small vertical assist; horizontal locomotion remains motor-owned.
             if (!IsGrounded && !IsDashing)
             {
                 airAttackHoverTimer = Mathf.Clamp(
@@ -200,11 +210,13 @@ namespace GameSkill
 
         public void StopAirAttackHover()
         {
+            // Explicit cancellation is useful when a dash, landing, or future stun interrupts combat.
             airAttackHoverTimer = 0f;
         }
 
         private void UpdateVerticalSpeed(float deltaTime, bool canJump)
         {
+            // Jump buffering and coyote time are resolved before gravity is integrated for this frame.
             if (jumpAction.WasPressedThisFrame())
             {
                 jumpBufferTimer = jumpBufferTime;
@@ -250,6 +262,7 @@ namespace GameSkill
 
         private void UpdateFacing(float horizontalInput, float deltaTime)
         {
+            // Facing follows meaningful horizontal intent and rotates at a designer-tunable rate.
             if (Mathf.Abs(horizontalInput) <= Mathf.Epsilon)
             {
                 return;

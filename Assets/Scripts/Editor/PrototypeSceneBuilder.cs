@@ -1,3 +1,8 @@
+// GOLDEN STANDARD
+// Purpose: Generate and migrate the smallest playable 2.5D showcase scene.
+// Responsibility: Create player, graybox, camera, combat dummy, and editor menu commands.
+// Invariant: Re-running the builder removes only its own named prototype roots.
+// Design choice: Editor-only scene generation keeps runtime scripts focused on gameplay.
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -17,12 +22,14 @@ namespace GameSkill.Editor
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
         {
+            // Defer migration until Unity finishes loading the active scene and assemblies.
             EditorApplication.delayCall += TryMigrateOpenPrototype;
             EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
         }
 
         private static void TryMigrateOpenPrototype()
         {
+            // Never mutate a scene while entering Play Mode.
             if (EditorApplication.isPlayingOrWillChangePlaymode)
             {
                 return;
@@ -45,6 +52,7 @@ namespace GameSkill.Editor
 
         private static void HandlePlayModeStateChanged(PlayModeStateChange state)
         {
+            // Re-run migration when the editor becomes writable again.
             if (state == PlayModeStateChange.EnteredEditMode)
             {
                 TryMigrateOpenPrototype();
@@ -54,6 +62,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Build Side-Scroller Prototype")]
         public static void Build()
         {
+            // Recreate the canonical graybox from deterministic dimensions and asset paths.
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             RemoveExistingPrototypeRoots();
 
@@ -77,6 +86,7 @@ namespace GameSkill.Editor
 
         private static GameObject CreatePlayer()
         {
+            // Assemble only gameplay components here; the animation builder owns the visual child.
             var player = new GameObject("Player");
             player.transform.position = new Vector3(0f, 0.05f, 0f);
 
@@ -102,6 +112,7 @@ namespace GameSkill.Editor
 
         private static void ConfigureCamera(GameObject player)
         {
+            // Reuse Main Camera when present so scene references and tags remain stable.
             Camera camera = Camera.main;
             if (camera == null)
             {
@@ -127,6 +138,7 @@ namespace GameSkill.Editor
 
         private static void CreateGraybox(Material groundMaterial, Material accentMaterial)
         {
+            // Compose a traversal test space with steps, gate, reward, and combat target.
             var root = new GameObject(GrayboxRootName);
 
             CreateBlock(
@@ -171,6 +183,7 @@ namespace GameSkill.Editor
         [MenuItem("Game Skill/Add Combat Prototype")]
         public static void AddCombatPrototype()
         {
+            // Public menu command for adding combat without rebuilding the whole scene.
             Scene scene = EditorSceneManager.OpenScene(ScenePath, OpenSceneMode.Single);
             if (!EnsureCombatPrototype())
             {
@@ -185,6 +198,7 @@ namespace GameSkill.Editor
 
         private static bool EnsureCombatPrototype()
         {
+            // Migrate existing scenes idempotently and report whether anything changed.
             bool changed = false;
             GameObject player = GameObject.Find("Player");
             if (player != null && player.GetComponent<PlayerCombat>() == null)
@@ -220,6 +234,7 @@ namespace GameSkill.Editor
             Transform parent,
             Material material)
         {
+            // Create a visible, collidable Health target for attack demonstrations.
             GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             dummy.name = "TrainingDummy";
             dummy.transform.SetParent(parent);
@@ -240,6 +255,7 @@ namespace GameSkill.Editor
             Vector3 scale,
             Material material)
         {
+            // Centralize graybox primitive creation so every platform shares collider/material rules.
             GameObject block = GameObject.CreatePrimitive(PrimitiveType.Cube);
             block.name = name;
             block.transform.SetParent(parent);

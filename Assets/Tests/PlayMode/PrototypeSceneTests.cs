@@ -1,3 +1,7 @@
+// GOLDEN STANDARD
+// Purpose: Smoke-test the integrated Main scene as a playable portfolio showcase.
+// Responsibility: Verify required components, assets, animation parameters, and demo targets.
+// Invariant: This test checks wiring, not fine-grained movement timing.
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
@@ -12,6 +16,7 @@ namespace GameSkill.Tests
         [UnityTest]
         public IEnumerator MainScene_HasPlayablePrototype()
         {
+            // Load the same scene a portfolio viewer would launch, then validate its public contract.
             SceneManager.LoadScene("Main", LoadSceneMode.Single);
             yield return null;
 
