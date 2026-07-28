@@ -51,7 +51,7 @@ namespace GameSkill
         [FormerlySerializedAs("dodgeCooldown")]
         [SerializeField, Min(0f)] private float dashCooldown = 0.48f;
         [FormerlySerializedAs("dodgeInvulnerabilityDuration")]
-        [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.2f;
+        [SerializeField, Min(0f)] private float dashInvulnerabilityDuration = 0.3f;
 
         private CharacterController characterController;
         private InputAction moveAction;
@@ -98,6 +98,9 @@ namespace GameSkill
         public float NormalizedSpeed { get; private set; }
         public float VerticalSpeed => verticalSpeed;
         public float FacingDirection { get; private set; } = 1f;
+        public float DashDuration => dashDuration;
+        public float DashInvulnerabilityDuration =>
+            dashInvulnerabilityDuration;
 
         private void Awake()
         {
@@ -133,6 +136,38 @@ namespace GameSkill
             doubleJumpAbility = requiredDoubleJump;
             airDashAbility = requiredAirDash;
             wallTraversalAbility = requiredWallTraversal;
+            return true;
+        }
+
+        public bool ConfigureDashTiming(
+            float duration,
+            float cooldown,
+            float invulnerabilityDuration)
+        {
+            // 빌더와 테스트가 private 직렬화 필드를 우회하지 않고 같은 대시 시간 계약을 사용하게 한다.
+            float safeDuration =
+                Mathf.Max(0.01f, duration);
+            float safeCooldown =
+                Mathf.Max(0f, cooldown);
+            float safeInvulnerabilityDuration =
+                Mathf.Max(0f, invulnerabilityDuration);
+            if (Mathf.Approximately(
+                    dashDuration,
+                    safeDuration)
+                && Mathf.Approximately(
+                    dashCooldown,
+                    safeCooldown)
+                && Mathf.Approximately(
+                    dashInvulnerabilityDuration,
+                    safeInvulnerabilityDuration))
+            {
+                return false;
+            }
+
+            dashDuration = safeDuration;
+            dashCooldown = safeCooldown;
+            dashInvulnerabilityDuration =
+                safeInvulnerabilityDuration;
             return true;
         }
 
@@ -262,9 +297,9 @@ namespace GameSkill
             dashTimer = dashDuration;
             dashElapsed = 0f;
             dashCooldownTimer = dashCooldown;
-            invulnerabilityTimer = Mathf.Min(
-                dashInvulnerabilityDuration,
-                dashDuration);
+            // 이동이 끝난 직후에도 짧은 회피 여유를 허용하므로 무적 시간을 대시 이동 시간에 제한하지 않는다.
+            invulnerabilityTimer =
+                dashInvulnerabilityDuration;
             dashRunChainActive = true;
             jumpBufferTimer = 0f;
             if (!isGrounded)

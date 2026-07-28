@@ -55,6 +55,13 @@ namespace GameSkill.Editor
             "Assets/Materials/ZoneBackdrop_Traversal.mat";
         private const float CameraVerticalHalfExtent = 5.2f;
         private const float CameraPerspectiveFieldOfView = 35f;
+        private const float DashMovementDuration = 0.2f;
+        private const float DashCooldownDuration = 0.48f;
+        private const float DashInvulnerabilityDuration = 0.3f;
+        private const float MeleeAttackWindupDuration = 0.55f;
+        private const float MeleeAttackRecoveryDuration = 0.7f;
+        private const float RangedAttackWindupDuration = 0.8f;
+        private const float RangedAttackRecoveryDuration = 1.6f;
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -203,6 +210,10 @@ namespace GameSkill.Editor
                 doubleJumpAbility,
                 airDashAbility,
                 wallTraversalAbility);
+            motor.ConfigureDashTiming(
+                DashMovementDuration,
+                DashCooldownDuration,
+                DashInvulnerabilityDuration);
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
             player.AddComponent<PlayerRespawnController>();
@@ -276,7 +287,7 @@ namespace GameSkill.Editor
                 root.transform,
                 "High_Platform",
                 new Vector3(20f, 3.2f, 0f),
-                new Vector3(7f, 0.6f, 3f),
+                new Vector3(12f, 0.6f, 3f),
                 groundMaterial);
             CreateBlock(
                 root.transform,
@@ -427,6 +438,13 @@ namespace GameSkill.Editor
                 AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
             Material groundMaterial =
                 AssetDatabase.LoadAssetAtPath<Material>(GroundMaterialPath);
+            if (EnsureHighPlatformCombatWidth(
+                grayboxRoot))
+            {
+                // 기존 Main 씬의 높은 발판도 돌진·탄환 회피를 반복할 수 있는 폭으로 마이그레이션한다.
+                changed = true;
+            }
+
             if (EnsureMeleeEnemyPrototype(
                 player,
                 grayboxRoot,
@@ -507,6 +525,25 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureHighPlatformCombatWidth(
+            GameObject grayboxRoot)
+        {
+            // 돌진 적 양쪽으로 회피할 공간이 생기도록 기존 높은 발판의 배치와 폭을 멱등적으로 맞춘다.
+            if (grayboxRoot == null)
+            {
+                return false;
+            }
+
+            Transform highPlatform =
+                grayboxRoot.transform.Find(
+                    "High_Platform");
+            return highPlatform != null
+                && SetTransformIfDifferent(
+                    highPlatform,
+                    new Vector3(20f, 3.2f, 0f),
+                    new Vector3(12f, 0.6f, 3f));
         }
 
         private static bool EnsureWorldMapPrototype(
@@ -1471,6 +1508,17 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (motor != null
+                && motor.ConfigureDashTiming(
+                    DashMovementDuration,
+                    DashCooldownDuration,
+                    DashInvulnerabilityDuration))
+            {
+                // 대시 이동보다 0.1초 긴 무적 시간을 저장해 교차 회피의 입력 오차를 완화한다.
+                EditorUtility.SetDirty(motor);
+                changed = true;
+            }
+
             if (GameObject.Find("AbilityPickup_DoubleJump") == null)
             {
                 // 위험 지대를 통과한 뒤 첫 능력을 얻도록 시작 지점 오른쪽에 배치한다.
@@ -1974,9 +2022,9 @@ namespace GameSkill.Editor
             }
 
             Vector3 indicatorLocalPosition =
-                new(-1.05f, 0.9f, 0f);
+                new(-1.15f, 0.9f, 0f);
             Vector3 indicatorLocalScale =
-                Vector3.one * 0.42f;
+                Vector3.one * 0.65f;
             if ((indicatorTransform.localPosition
                     - indicatorLocalPosition).sqrMagnitude
                     > 0.000001f
@@ -2066,6 +2114,15 @@ namespace GameSkill.Editor
                 indicatorRenderer))
             {
                 // 씬 참조 변경만 Dirty로 표시해 멱등 빌더가 매 실행마다 씬을 수정하지 않게 한다.
+                EditorUtility.SetDirty(enemyController);
+                changed = true;
+            }
+
+            if (enemyController.ConfigureAttackTiming(
+                MeleeAttackWindupDuration,
+                MeleeAttackRecoveryDuration))
+            {
+                // 읽기 쉬운 선딜과 반격 가능한 후딜이 바뀐 경우 씬 직렬화 대상으로 표시한다.
                 EditorUtility.SetDirty(enemyController);
                 changed = true;
             }
@@ -2278,6 +2335,15 @@ namespace GameSkill.Editor
                 material))
             {
                 // 직렬화 참조가 달라진 경우에만 멱등 마이그레이션 결과를 저장한다.
+                EditorUtility.SetDirty(controller);
+                changed = true;
+            }
+
+            if (controller.ConfigureAttackTiming(
+                RangedAttackWindupDuration,
+                RangedAttackRecoveryDuration))
+            {
+                // 연속 탄막이 되지 않도록 늘린 충전과 발사 후 간격을 씬에 저장한다.
                 EditorUtility.SetDirty(controller);
                 changed = true;
             }

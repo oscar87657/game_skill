@@ -29,8 +29,8 @@ namespace GameSkill
         [SerializeField, Min(0f)] private float verticalTolerance = 3.8f;
 
         [Header("Attack")]
-        [SerializeField, Min(0f)] private float attackWindup = 0.6f;
-        [SerializeField, Min(0f)] private float attackRecovery = 1f;
+        [SerializeField, Min(0f)] private float attackWindup = 0.8f;
+        [SerializeField, Min(0f)] private float attackRecovery = 1.6f;
         [SerializeField, Min(0f)] private float hitStunDuration = 0.16f;
         [SerializeField, Min(0f)] private float projectileSpeed = 7f;
         [SerializeField, Min(0.01f)] private float projectileLifetime = 2.5f;
@@ -59,6 +59,8 @@ namespace GameSkill
         public int FiredProjectileCount { get; private set; }
         public int ActiveProjectileCount =>
             activeProjectiles.Count;
+        public float AttackWindupDuration => attackWindup;
+        public float AttackRecoveryDuration => attackRecovery;
 
         private void Awake()
         {
@@ -130,6 +132,30 @@ namespace GameSkill
             ResolveTargetComponents();
             SubscribeTargetEvents();
             return changed;
+        }
+
+        public bool ConfigureAttackTiming(
+            float windupDuration,
+            float recoveryDuration)
+        {
+            // 발사 템포를 씬 빌더와 테스트가 같은 공개 경계에서 조정하도록 음수 시간을 제한한다.
+            float safeWindup =
+                Mathf.Max(0f, windupDuration);
+            float safeRecovery =
+                Mathf.Max(0f, recoveryDuration);
+            if (Mathf.Approximately(
+                    attackWindup,
+                    safeWindup)
+                && Mathf.Approximately(
+                    attackRecovery,
+                    safeRecovery))
+            {
+                return false;
+            }
+
+            attackWindup = safeWindup;
+            attackRecovery = safeRecovery;
+            return true;
         }
 
         public void Tick(float deltaTime)

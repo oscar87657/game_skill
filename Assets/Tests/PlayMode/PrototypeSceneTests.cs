@@ -53,6 +53,15 @@ namespace GameSkill.Tests
             Assert.That(motor.IsWallClinging, Is.False);
             Assert.That(motor.IsWallSliding, Is.False);
             Assert.That(motor.AirJumpsRemaining, Is.EqualTo(1));
+            Assert.That(
+                motor.DashDuration,
+                Is.EqualTo(0.2f).Within(0.001f));
+            Assert.That(
+                motor.DashInvulnerabilityDuration,
+                Is.EqualTo(0.3f).Within(0.001f));
+            Assert.That(
+                motor.DashInvulnerabilityDuration,
+                Is.GreaterThan(motor.DashDuration));
             PlayerAbilityState abilityState =
                 player.GetComponent<PlayerAbilityState>();
             Assert.That(abilityState, Is.Not.Null);
@@ -300,6 +309,12 @@ namespace GameSkill.Tests
                 meleeEnemy.CurrentState,
                 Is.EqualTo(EnemyState.Idle));
             Assert.That(
+                meleeEnemy.AttackWindupDuration,
+                Is.EqualTo(0.55f).Within(0.001f));
+            Assert.That(
+                meleeEnemy.AttackRecoveryDuration,
+                Is.EqualTo(0.7f).Within(0.001f));
+            Assert.That(
                 meleeEnemyObject.transform.localScale,
                 Is.EqualTo(Vector3.one));
             Transform meleeEnemyVisual =
@@ -320,6 +335,9 @@ namespace GameSkill.Tests
                 attackIndicator
                     .GetComponent<Renderer>().enabled,
                 Is.False);
+            Assert.That(
+                attackIndicator.localScale.x,
+                Is.EqualTo(0.65f).Within(0.001f));
             Assert.That(
                 meleeEnemyObject.transform.position.z,
                 Is.Zero.Within(0.0001f));
@@ -345,6 +363,12 @@ namespace GameSkill.Tests
             Assert.That(
                 rangedEnemy.CurrentState,
                 Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                rangedEnemy.AttackWindupDuration,
+                Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(
+                rangedEnemy.AttackRecoveryDuration,
+                Is.EqualTo(1.6f).Within(0.001f));
             CapsuleCollider rangedBody =
                 rangedEnemyObject
                     .GetComponent<CapsuleCollider>();
@@ -424,7 +448,7 @@ namespace GameSkill.Tests
             Assert.That(
                 rangedMuzzleRenderer.enabled,
                 Is.True);
-            rangedEnemy.Tick(0.61f);
+            rangedEnemy.Tick(0.81f);
             Assert.That(
                 rangedEnemy.CurrentState,
                 Is.EqualTo(EnemyState.AttackRecovery));
@@ -593,6 +617,10 @@ namespace GameSkill.Tests
             Assert.That(
                 GameObject.Find("Step_A").transform.position.x,
                 Is.EqualTo(10f).Within(0.001f));
+            Assert.That(
+                GameObject.Find("High_Platform")
+                    .transform.localScale.x,
+                Is.EqualTo(12f).Within(0.001f));
             respawnController.Configure(0f);
             motor.Teleport(new Vector3(4.5f, 0.05f, 0f));
             Assert.That(hazard.TryApply(player), Is.True);

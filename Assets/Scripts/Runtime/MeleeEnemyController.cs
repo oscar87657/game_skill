@@ -32,8 +32,8 @@ namespace GameSkill
         [SerializeField] private float gravity = -25f;
 
         [Header("Attack")]
-        [SerializeField, Min(0f)] private float attackWindup = 0.3f;
-        [SerializeField, Min(0f)] private float attackRecovery = 0.55f;
+        [SerializeField, Min(0f)] private float attackWindup = 0.55f;
+        [SerializeField, Min(0f)] private float attackRecovery = 0.7f;
         [SerializeField, Min(0f)] private float hitStunDuration = 0.16f;
         [SerializeField, Min(1)] private int attackDamage = 1;
 
@@ -60,6 +60,8 @@ namespace GameSkill
             EnemyState.Idle;
         public int FacingDirection { get; private set; } = -1;
         public int SuccessfulAttackCount { get; private set; }
+        public float AttackWindupDuration => attackWindup;
+        public float AttackRecoveryDuration => attackRecovery;
 
         private void Awake()
         {
@@ -123,6 +125,30 @@ namespace GameSkill
             ResolveTargetComponents();
             SubscribeTargetEvents();
             return changed;
+        }
+
+        public bool ConfigureAttackTiming(
+            float windupDuration,
+            float recoveryDuration)
+        {
+            // 난이도 튜닝도 빌더와 테스트가 같은 공개 경계를 사용하도록 음수 시간을 제한해 저장한다.
+            float safeWindup =
+                Mathf.Max(0f, windupDuration);
+            float safeRecovery =
+                Mathf.Max(0f, recoveryDuration);
+            if (Mathf.Approximately(
+                    attackWindup,
+                    safeWindup)
+                && Mathf.Approximately(
+                    attackRecovery,
+                    safeRecovery))
+            {
+                return false;
+            }
+
+            attackWindup = safeWindup;
+            attackRecovery = safeRecovery;
+            return true;
         }
 
         public void ResetToSpawn()
@@ -581,7 +607,7 @@ namespace GameSkill
 
             attackIndicatorRenderer.transform.localPosition =
                 new Vector3(
-                    FacingDirection * 1.05f,
+                    FacingDirection * 1.15f,
                     0.9f,
                     0f);
             attackIndicatorProperties ??=

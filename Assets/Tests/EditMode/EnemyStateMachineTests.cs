@@ -439,6 +439,9 @@ namespace GameSkill.Tests
                 controller.Configure(
                     target.transform,
                     enemy.GetComponent<Renderer>());
+                controller.ConfigureAttackTiming(
+                    0.55f,
+                    0.7f);
 
                 controller.Tick(0.01f);
                 Assert.That(
@@ -448,7 +451,7 @@ namespace GameSkill.Tests
                     targetHealth.CurrentHealth,
                     Is.EqualTo(5));
 
-                controller.Tick(0.31f);
+                controller.Tick(0.56f);
 
                 Assert.That(
                     controller.CurrentState,
