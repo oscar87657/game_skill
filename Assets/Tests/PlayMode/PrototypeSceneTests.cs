@@ -97,11 +97,18 @@ namespace GameSkill.Tests
                 saveController.WorldZoneCatalogCount,
                 Is.EqualTo(4));
             Assert.That(
+                saveController.SavePath,
+                Does.EndWith(
+                    "game_skill_save.json"));
+            Assert.That(
                 saveController.CaptureJson(),
-                Does.Contain("\"version\": 1"));
+                Does.Contain("\"version\": 2"));
             Assert.That(
                 saveController.CaptureJson(),
                 Does.Contain("\"visitedZoneIds\""));
+            Assert.That(
+                saveController.CaptureJson(),
+                Does.Contain("\"defeatedBossIds\""));
             PlayerWorldState worldState =
                 player.GetComponent<PlayerWorldState>();
             Assert.That(worldState, Is.Not.Null);
@@ -598,6 +605,12 @@ namespace GameSkill.Tests
             Assert.That(
                 boss.IsAbilityGateSatisfied,
                 Is.False);
+            Assert.That(
+                boss.BossId,
+                Is.EqualTo("ability_warden"));
+            Assert.That(
+                boss.IsPersistentlyDefeated,
+                Is.False);
             Transform bossVisual =
                 bossObject.transform.Find(
                     "Boss_Visual");
@@ -839,6 +852,13 @@ namespace GameSkill.Tests
             Assert.That(
                 boss.CurrentState,
                 Is.EqualTo(EnemyState.Dead));
+            Assert.That(
+                worldState.IsBossDefeated(
+                    "ability_warden"),
+                Is.True);
+            Assert.That(
+                boss.IsPersistentlyDefeated,
+                Is.True);
             bossObject.transform.position +=
                 new Vector3(2f, 1f, 0f);
             GameObject hazardObject = GameObject.Find("RespawnHazard");
@@ -940,22 +960,22 @@ namespace GameSkill.Tests
             Assert.That(
                 chargeBody.enabled,
                 Is.True);
-            Assert.That(bossHealth.IsDead, Is.False);
+            Assert.That(bossHealth.IsDead, Is.True);
             Assert.That(
                 bossHealth.CurrentHealth,
-                Is.EqualTo(12));
+                Is.Zero);
             Assert.That(
                 boss.CurrentState,
-                Is.EqualTo(EnemyState.Idle));
+                Is.EqualTo(EnemyState.Dead));
             Assert.That(
                 bossObject.transform.position,
-                Is.EqualTo(bossSpawnPosition));
+                Is.Not.EqualTo(bossSpawnPosition));
             Assert.That(
                 bossRenderer.enabled,
-                Is.True);
+                Is.False);
             Assert.That(
                 bossBody.enabled,
-                Is.True);
+                Is.False);
             Assert.That(
                 boss.ActiveProjectileCount,
                 Is.Zero);

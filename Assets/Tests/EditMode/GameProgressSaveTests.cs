@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 능력·체크포인트 저장 데이터의 버전형 JSON 왕복과 안전한 복원을 검증한다.
-// 책임: 캡처, 직렬화, 알려진 능력 필터, 체크포인트 좌표와 손상·이전 버전 거부를 확인한다.
+// 책임: 캡처, 직렬화, 알려진 ID 필터, 체크포인트 좌표와 v1→v2 이전·손상 거부를 확인한다.
 // 불변식: 각 테스트는 생성한 GameObject와 ScriptableObject를 종료 전에 모두 정리한다.
 // 선택 이유: 파일 시스템과 분리된 Codec 테스트로 저장 계약 오류를 빠르고 결정적으로 찾는다.
 using NUnit.Framework;
@@ -45,6 +45,9 @@ namespace GameSkill.Tests
                         GameProgressSaveCodec.Capture(
                             sourceAbilities,
                             sourceCheckpoint));
+                Assert.That(
+                    json,
+                    Does.Contain("\"version\": 2"));
                 Assert.That(
                     GameProgressSaveCodec.TryFromJson(
                         json,
@@ -91,9 +94,9 @@ namespace GameSkill.Tests
         }
 
         [Test]
-        public void TryFromJson_RejectsUnsupportedVersionAndDamage()
+        public void TryFromJson_RejectsFutureVersionAndDamage()
         {
-            // 알 수 없는 버전과 잘린 JSON이 현재 진행 상태에 적용 가능한 데이터로 통과하지 않는지 확인한다.
+            // 미래 버전, 잘린 현재 JSON과 버전 없는 데이터가 적용 가능한 진행으로 통과하지 않는지 확인한다.
             Assert.That(
                 GameProgressSaveCodec.TryFromJson(
                     "{\"version\":999}",
@@ -101,7 +104,7 @@ namespace GameSkill.Tests
                 Is.False);
             Assert.That(
                 GameProgressSaveCodec.TryFromJson(
-                    "{\"version\":1",
+                    "{\"version\":2",
                     out _),
                 Is.False);
             Assert.That(
@@ -109,6 +112,147 @@ namespace GameSkill.Tests
                     "{}",
                     out _),
                 Is.False);
+        }
+
+        [Test]
+        public void TryFromJson_MigratesVersionOneToVersionTwo()
+        {
+            // v1의 모든 기존 필드를 보존하면서 새 보스 처치 목록만 안전한 빈 값으로 추가하는지 검증한다.
+            const string legacyJson =
+                "{\"version\":1,"
+                + "\"unlockedAbilityIds\":[\"double_jump\"],"
+                + "\"hasCheckpoint\":true,"
+                + "\"checkpointId\":\"start_hall\","
+                + "\"respawnX\":2.0,"
+                + "\"respawnY\":1.25,"
+                + "\"respawnZ\":0.0,"
+                + "\"visitedZoneIds\":[\"start_hall\"],"
+                + "\"unlockedShortcutIds\":[\"shortcut_shaft_return\"],"
+                + "\"collectedRewardIds\":[\"reward_shaft_health_fragment\"]}";
+
+            Assert.That(
+                GameProgressSaveCodec.TryFromJson(
+                    legacyJson,
+                    out GameProgressSaveData migrated),
+                Is.True);
+            Assert.That(
+                migrated.version,
+                Is.EqualTo(
+                    GameProgressSaveData
+                        .CurrentVersion));
+            Assert.That(
+                migrated.unlockedAbilityIds,
+                Is.EqualTo(
+                    new[]
+                    {
+                        "double_jump"
+                    }));
+            Assert.That(
+                migrated.hasCheckpoint,
+                Is.True);
+            Assert.That(
+                migrated.checkpointId,
+                Is.EqualTo("start_hall"));
+            Assert.That(
+                migrated.respawnY,
+                Is.EqualTo(1.25f)
+                    .Within(0.001f));
+            Assert.That(
+                migrated.visitedZoneIds,
+                Is.EqualTo(
+                    new[]
+                    {
+                        "start_hall"
+                    }));
+            Assert.That(
+                migrated.unlockedShortcutIds,
+                Is.EqualTo(
+                    new[]
+                    {
+                        "shortcut_shaft_return"
+                    }));
+            Assert.That(
+                migrated.collectedRewardIds,
+                Is.EqualTo(
+                    new[]
+                    {
+                        "reward_shaft_health_fragment"
+                    }));
+            Assert.That(
+                migrated.defeatedBossIds,
+                Is.Empty);
+
+            string rewrittenJson =
+                GameProgressSaveCodec.ToJson(
+                    migrated);
+            Assert.That(
+                rewrittenJson,
+                Does.Contain("\"version\": 2"));
+            Assert.That(
+                rewrittenJson,
+                Does.Contain(
+                    "\"defeatedBossIds\""));
+        }
+
+        [Test]
+        public void SaveController_AppliesVersionOneThroughCurrentCatalog()
+        {
+            // 실제 UI가 호출하는 Controller 경계에서도 v1 변환 후 알려진 능력과 체크포인트가 적용되는지 확인한다.
+            AbilityDefinition doubleJump =
+                CreateAbility("double_jump");
+            var player =
+                new GameObject(
+                    "LegacySaveControllerPlayer");
+            try
+            {
+                PlayerAbilityState abilityState =
+                    player.AddComponent<PlayerAbilityState>();
+                PlayerCheckpointState checkpointState =
+                    player.AddComponent<PlayerCheckpointState>();
+                player.AddComponent<PlayerWorldState>();
+                GameProgressSaveController controller =
+                    player.AddComponent<GameProgressSaveController>();
+                controller.Configure(
+                    new[]
+                    {
+                        doubleJump
+                    });
+                const string legacyJson =
+                    "{\"version\":1,"
+                    + "\"unlockedAbilityIds\":[\"double_jump\"],"
+                    + "\"hasCheckpoint\":true,"
+                    + "\"checkpointId\":\"legacy_hall\","
+                    + "\"respawnX\":3.0,"
+                    + "\"respawnY\":2.0,"
+                    + "\"respawnZ\":0.0}";
+
+                Assert.That(
+                    controller.ApplyJson(
+                        legacyJson),
+                    Is.True);
+                Assert.That(
+                    abilityState.HasAbility(
+                        doubleJump),
+                    Is.True);
+                Assert.That(
+                    checkpointState
+                        .LastCheckpointId,
+                    Is.EqualTo("legacy_hall"));
+                Assert.That(
+                    controller.SavePath,
+                    Does.EndWith(
+                        "game_skill_save.json"));
+                Assert.That(
+                    controller
+                        .LegacyVersionOneSavePath,
+                    Does.EndWith(
+                        "game_skill_save_v1.json"));
+            }
+            finally
+            {
+                Object.DestroyImmediate(player);
+                Object.DestroyImmediate(doubleJump);
+            }
         }
 
         [Test]
@@ -313,6 +457,10 @@ namespace GameSkill.Tests
                     sourceWorld.TryCollectReward(
                         "reward_shaft_health_fragment"),
                     Is.True);
+                Assert.That(
+                    sourceWorld.TryDefeatBoss(
+                        "ability_warden"),
+                    Is.True);
 
                 string json =
                     GameProgressSaveCodec.ToJson(
@@ -405,6 +553,14 @@ namespace GameSkill.Tests
                     destinationWorld.HasVisitedId(
                         "removed_zone"),
                     Is.False);
+                Assert.That(
+                    destinationWorld.IsBossDefeated(
+                        "ability_warden"),
+                    Is.True);
+                Assert.That(
+                    destinationWorld
+                        .DefeatedBossCount,
+                    Is.EqualTo(1));
                 Assert.That(gate.IsLocked, Is.False);
                 Assert.That(activator.IsActivated, Is.True);
                 Assert.That(reward.IsCollected, Is.True);
@@ -437,6 +593,10 @@ namespace GameSkill.Tests
                 Assert.That(gate.IsLocked, Is.True);
                 Assert.That(activator.IsActivated, Is.False);
                 Assert.That(reward.IsCollected, Is.False);
+                Assert.That(
+                    destinationWorld.IsBossDefeated(
+                        "ability_warden"),
+                    Is.False);
                 Assert.That(
                     destinationHealth.MaxHealth,
                     Is.EqualTo(5));

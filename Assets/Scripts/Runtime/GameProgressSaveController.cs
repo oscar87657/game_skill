@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 플레이어 진행 스냅샷과 로컬 JSON 파일 사이의 명시적인 저장·불러오기 경계를 제공한다.
-// 책임: 저장 경로 계산, 능력·구역 카탈로그, 파일 입출력과 Codec 적용 결과를 관리한다.
+// 책임: 현재·레거시 저장 경로 계산, 능력·구역 카탈로그, 파일 입출력과 Codec 적용 결과를 관리한다.
 // 불변식: 자동 저장이나 자동 불러오기를 수행하지 않으며 성공한 전체 JSON만 런타임 상태에 적용한다.
 // 선택 이유: 명시적 API부터 제공하면 테스트와 UI가 저장 시점을 통제하고 개발 중 세이브 덮어쓰기를 피할 수 있다.
 using System;
@@ -16,12 +16,18 @@ namespace GameSkill
     [RequireComponent(typeof(PlayerWorldState))]
     public sealed class GameProgressSaveController : MonoBehaviour
     {
+        private const string DefaultSaveFileName =
+            "game_skill_save.json";
+        private const string LegacyVersionOneFileName =
+            "game_skill_save_v1.json";
+
         [SerializeField]
         private List<AbilityDefinition> abilityCatalog = new();
         [SerializeField]
         private List<WorldZoneDefinition> worldZoneCatalog = new();
         [SerializeField]
-        private string saveFileName = "game_skill_save_v1.json";
+        private string saveFileName =
+            DefaultSaveFileName;
 
         private PlayerAbilityState abilityState;
         private PlayerCheckpointState checkpointState;
@@ -31,6 +37,10 @@ namespace GameSkill
             Path.Combine(
                 Application.persistentDataPath,
                 saveFileName);
+        public string LegacyVersionOneSavePath =>
+            Path.Combine(
+                Application.persistentDataPath,
+                LegacyVersionOneFileName);
         public int AbilityCatalogCount =>
             abilityCatalog.Count;
         public int WorldZoneCatalogCount =>
@@ -50,16 +60,16 @@ namespace GameSkill
         public bool Configure(
             IEnumerable<AbilityDefinition> knownAbilities,
             IEnumerable<WorldZoneDefinition> knownZones = null,
-            string fileName = "game_skill_save_v1.json")
+            string fileName = DefaultSaveFileName)
         {
             // 파일명은 디렉터리 탈출을 막기 위해 마지막 경로 요소만 허용한다.
             string requestedFileName =
                 string.IsNullOrWhiteSpace(fileName)
-                    ? "game_skill_save_v1.json"
+                    ? DefaultSaveFileName
                     : Path.GetFileName(fileName.Trim());
             string normalizedFileName =
                 string.IsNullOrWhiteSpace(requestedFileName)
-                    ? "game_skill_save_v1.json"
+                    ? DefaultSaveFileName
                     : requestedFileName;
             var requestedCatalog =
                 new List<AbilityDefinition>();
@@ -163,12 +173,26 @@ namespace GameSkill
 
         public bool LoadNow()
         {
-            // 파일이 없거나 읽기 실패한 경우 현재 런타임 진행 상태를 그대로 보존한다.
+            // 현재 파일을 우선하고 없을 때만 v1 기본 파일을 찾아 기존 사용자의 진행을 이어받는다.
             try
             {
-                return File.Exists(SavePath)
-                    && ApplyJson(
-                        File.ReadAllText(SavePath));
+                string loadPath =
+                    ResolveExistingLoadPath();
+                if (string.IsNullOrEmpty(loadPath)
+                    || !ApplyJson(
+                        File.ReadAllText(loadPath)))
+                {
+                    return false;
+                }
+
+                if (loadPath
+                    == LegacyVersionOneSavePath)
+                {
+                    // 성공적으로 적용된 레거시 데이터는 원본을 보존한 채 현재 파일명과 v2 JSON으로 다시 기록한다.
+                    SaveNow();
+                }
+
+                return true;
             }
             catch (Exception exception)
                 when (exception is IOException
@@ -180,6 +204,22 @@ namespace GameSkill
                     this);
                 return false;
             }
+        }
+
+        private string ResolveExistingLoadPath()
+        {
+            // 명시적으로 구성된 세이브 슬롯은 다른 기본 레거시 파일과 섞지 않고 자신의 경로만 사용한다.
+            if (File.Exists(SavePath))
+            {
+                return SavePath;
+            }
+
+            return saveFileName
+                    == DefaultSaveFileName
+                && File.Exists(
+                    LegacyVersionOneSavePath)
+                    ? LegacyVersionOneSavePath
+                    : string.Empty;
         }
 
         private void EnsureStateReferences()

@@ -3744,6 +3744,15 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (bossController.ConfigureProgress(
+                "ability_warden",
+                player.GetComponent<PlayerWorldState>()))
+            {
+                // 보스 처치 ID를 플레이어 월드 상태에 연결해 v2 저장 데이터로 영구 복원한다.
+                EditorUtility.SetDirty(bossController);
+                changed = true;
+            }
+
             return changed;
         }
 

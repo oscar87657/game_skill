@@ -1,7 +1,7 @@
 // GOLDEN STANDARD
 // 목적: 세 이동 능력을 전투 회피에 활용하게 만드는 첫 포트폴리오 보스를 제어한다.
-// 책임: 능력 관문·패턴 순환·투사체·지면 충격·페이즈·피격·사망·재시작 복원을 연결한다.
-// 불변식: 모든 요구 능력 전에는 공격하지 않고 활성 투사체는 재시작과 비활성화 때 모두 제거한다.
+// 책임: 능력 관문·패턴 순환·투사체·지면 충격·페이즈·피격·사망·영구 처치 복원을 연결한다.
+// 불변식: 모든 요구 능력 전에는 공격하지 않고 영구 처치된 보스는 재시작과 저장 복원 뒤 되살아나지 않는다.
 // 선택 이유: 일반 적의 공통 Health·DamageRules·EnemyProjectile을 재사용하면서 패턴 선택만 별도 계층으로 확장한다.
 using System;
 using System.Collections.Generic;
@@ -23,6 +23,12 @@ namespace GameSkill
         [SerializeField] private AbilityDefinition doubleJumpAbility;
         [SerializeField] private AbilityDefinition airDashAbility;
         [SerializeField] private AbilityDefinition wallTraversalAbility;
+
+        [Header("Persistent Progress")]
+        [SerializeField] private string bossId =
+            "ability_warden";
+        [SerializeField]
+        private PlayerWorldState worldState;
 
         [Header("Presentation")]
         [SerializeField] private Renderer visualRenderer;
@@ -55,6 +61,7 @@ namespace GameSkill
         private float stateTimer;
         private bool healthEventsSubscribed;
         private bool targetEventsSubscribed;
+        private bool worldEventsSubscribed;
         private bool initialSpawnCaptured;
         private MaterialPropertyBlock visualProperties;
         private MaterialPropertyBlock warningProperties;
@@ -71,6 +78,11 @@ namespace GameSkill
             activeProjectiles.Count;
         public bool IsAbilityGateSatisfied =>
             HasAllRequiredAbilities();
+        public string BossId => bossId;
+        public bool IsPersistentlyDefeated =>
+            worldState != null
+            && worldState.IsBossDefeated(
+                bossId);
         public bool IsSecondPhase =>
             ownHealth != null
             && BossPatternDecisionMath.IsSecondPhase(
@@ -91,6 +103,7 @@ namespace GameSkill
             ResolveTargetComponents();
             SubscribeHealthEvents();
             SubscribeTargetEvents();
+            SubscribeWorldEvents();
         }
 
         private void Start()
@@ -98,6 +111,8 @@ namespace GameSkill
             // 씬 역직렬화가 끝난 참조를 다시 확인하고 잠금 또는 대기 표현을 적용한다.
             ResolveTargetComponents();
             SubscribeTargetEvents();
+            SubscribeWorldEvents();
+            ApplyPersistentProgress();
             ApplyStatePresentation(CurrentState);
         }
 
@@ -112,6 +127,7 @@ namespace GameSkill
             // Scene 종료 뒤 오래된 이벤트와 투사체가 남지 않게 구독과 생성물을 함께 정리한다.
             UnsubscribeHealthEvents();
             UnsubscribeTargetEvents();
+            UnsubscribeWorldEvents();
             CancelActiveProjectiles();
         }
 
@@ -167,6 +183,33 @@ namespace GameSkill
             return changed;
         }
 
+        public bool ConfigureProgress(
+            string persistentBossId,
+            PlayerWorldState playerWorldState)
+        {
+            // 저장 키나 상태 소유자가 바뀌기 전에 이전 복원 이벤트 연결을 해제한다.
+            string normalizedId =
+                string.IsNullOrWhiteSpace(
+                    persistentBossId)
+                    ? "ability_warden"
+                    : persistentBossId.Trim();
+            bool changed =
+                bossId != normalizedId
+                || worldState
+                    != playerWorldState;
+            if (!changed)
+            {
+                return false;
+            }
+
+            UnsubscribeWorldEvents();
+            bossId = normalizedId;
+            worldState = playerWorldState;
+            SubscribeWorldEvents();
+            ApplyPersistentProgress();
+            return true;
+        }
+
         public void Tick(float deltaTime)
         {
             // 음수 시간은 선딜과 후딜을 역행시키므로 0으로 제한한다.
@@ -199,6 +242,13 @@ namespace GameSkill
         public void ResetToSpawn()
         {
             // 플레이어 재시작 때 보스·패턴·투사체를 최초 조우와 같은 원자적 상태로 복원한다.
+            if (IsPersistentlyDefeated)
+            {
+                // 이미 저장 가능한 처치 상태라면 재시작이 보스를 부활시키지 않도록 사망 표현만 재확정한다.
+                ApplyPersistentProgress();
+                return;
+            }
+
             CacheComponents();
             CancelActiveProjectiles();
             transform.position = initialSpawnPosition;
@@ -619,6 +669,35 @@ namespace GameSkill
             targetEventsSubscribed = false;
         }
 
+        private void SubscribeWorldEvents()
+        {
+            // 저장 복원 이벤트를 한 번만 구독해 보스 표현이 중복 재구성되지 않게 한다.
+            if (worldEventsSubscribed
+                || worldState == null)
+            {
+                return;
+            }
+
+            worldState.WorldStateRestored +=
+                HandleWorldStateRestored;
+            worldEventsSubscribed = true;
+        }
+
+        private void UnsubscribeWorldEvents()
+        {
+            // Scene 종료나 상태 소유자 교체 뒤 이전 월드 복원이 보스를 변경하지 못하게 한다.
+            if (!worldEventsSubscribed
+                || worldState == null)
+            {
+                worldEventsSubscribed = false;
+                return;
+            }
+
+            worldState.WorldStateRestored -=
+                HandleWorldStateRestored;
+            worldEventsSubscribed = false;
+        }
+
         private void HandleDamaged(
             int currentHealth,
             int maximumHealth)
@@ -635,6 +714,8 @@ namespace GameSkill
         private void HandleDied()
         {
             // 사망 즉시 몸 판정·표현·활성 투사체를 모두 중단한다.
+            worldState?.TryDefeatBoss(
+                bossId);
             CancelActiveProjectiles();
             EnterState(EnemyState.Dead, 0f);
         }
@@ -642,8 +723,67 @@ namespace GameSkill
         private void HandleTargetRespawned(
             Vector3 respawnPosition)
         {
-            // 플레이어 도착 위치와 무관하게 보스는 최초 조우 상태로 돌아간다.
-            ResetToSpawn();
+            // 플레이어 도착 위치와 무관하게 미처치 보스만 최초 조우 상태로 되돌린다.
+            if (IsPersistentlyDefeated)
+            {
+                ApplyPersistentProgress();
+            }
+            else
+            {
+                ResetToSpawn();
+            }
+        }
+
+        private void HandleWorldStateRestored()
+        {
+            // 저장 데이터 전체 적용이 끝난 뒤 보스의 생존·사망 표현을 복원된 ID와 동기화한다.
+            ApplyPersistentProgress();
+        }
+
+        private void ApplyPersistentProgress()
+        {
+            // 진행 상태가 연결되지 않은 독립 테스트 보스는 기존 생존 주기를 그대로 사용한다.
+            if (worldState == null
+                || string.IsNullOrWhiteSpace(
+                    bossId))
+            {
+                return;
+            }
+
+            CacheComponents();
+            if (!IsPersistentlyDefeated)
+            {
+                // 더 이른 저장 데이터를 불러와 처치 ID가 사라졌다면 보스를 정상 초기 상태로 복구한다.
+                if (CurrentState
+                        == EnemyState.Dead
+                    || (ownHealth != null
+                        && ownHealth.IsDead))
+                {
+                    ResetToSpawn();
+                }
+
+                return;
+            }
+
+            CancelActiveProjectiles();
+            if (ownHealth != null
+                && !ownHealth.IsDead)
+            {
+                // Health도 0으로 만들어 보스 상태와 공통 생존 계약이 서로 어긋나지 않게 한다.
+                ownHealth.TakeDamage(
+                    ownHealth.CurrentHealth);
+            }
+
+            EnterState(
+                EnemyState.Dead,
+                0f);
+            if (bodyCollider != null)
+            {
+                bodyCollider.enabled = false;
+            }
+
+            ApplyStatePresentation(
+                EnemyState.Dead);
         }
 
         private void EnterState(

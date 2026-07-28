@@ -18,7 +18,7 @@
 | AI | 고정형 원거리 적·직선 투사체 | 기본 구현 완료 | [Ranged Enemy](Features/RangedEnemy.md) |
 | AI | 방향 잠금 돌진 적·발판 끝 중단 | 기본 구현 완료 | [Charge Enemy](Features/ChargeEnemy.md) |
 | 보스 | 세 이동 능력을 시험하는 순환 패턴 보스 | 기본 구현 완료 | [Ability Trial Boss](Features/AbilityTrialBoss.md) |
-| 저장 | 능력·체크포인트·월드 상태 JSON | 기본 구현 완료 | [Progress Save](Features/ProgressSave.md) |
+| 저장 | 능력·체크포인트·월드·보스 상태와 v1→v2 이전 | 기본 구현 완료 | [Progress Save](Features/ProgressSave.md) |
 | UI | 체력·능력·저장 상태 HUD | 기본 구현 완료 | [Progress HUD](Features/ProgressHud.md) |
 | UI | 일시정지·저장 메뉴·마스터 음량 | 기본 구현 완료 | [Pause & Options](Features/PauseAndOptions.md) |
 

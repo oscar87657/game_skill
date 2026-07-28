@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 플레이어의 구역 방문·현재 위치·영구 지름길·수집 보상을 단일 런타임 원본으로 관리한다.
-// 책임: 구역 방문, 지름길·보상 ID의 조회·복사·전체 복원과 변경 이벤트를 제공한다.
+// 목적: 플레이어의 구역 방문·현재 위치·영구 지름길·수집 보상·보스 처치를 단일 런타임 원본으로 관리한다.
+// 책임: 구역 방문, 지름길·보상·보스 ID의 조회·복사·전체 복원과 변경 이벤트를 제공한다.
 // 불변식: 같은 진행 ID는 한 번만 기록하며 중복 변경은 상태와 이벤트를 바꾸지 않는다.
 // 선택 이유: HashSet 기반 ID 상태는 지도·월드 게이트·저장 데이터에 동일한 계약을 제공한다.
 using System;
@@ -18,6 +18,8 @@ namespace GameSkill
         private List<string> initiallyUnlockedShortcutIds = new();
         [SerializeField]
         private List<string> initiallyCollectedRewardIds = new();
+        [SerializeField]
+        private List<string> initiallyDefeatedBossIds = new();
 
         private readonly HashSet<string> visitedZoneIds =
             new(StringComparer.Ordinal);
@@ -25,16 +27,20 @@ namespace GameSkill
             new(StringComparer.Ordinal);
         private readonly HashSet<string> collectedRewardIds =
             new(StringComparer.Ordinal);
+        private readonly HashSet<string> defeatedBossIds =
+            new(StringComparer.Ordinal);
 
         public event Action<WorldZoneDefinition> ZoneVisited;
         public event Action<WorldZoneDefinition> ZoneEntered;
         public event Action<string> ShortcutUnlocked;
         public event Action<string> RewardCollected;
+        public event Action<string> BossDefeated;
         public event Action WorldStateRestored;
 
         public int VisitedCount => visitedZoneIds.Count;
         public int UnlockedShortcutCount => unlockedShortcutIds.Count;
         public int CollectedRewardCount => collectedRewardIds.Count;
+        public int DefeatedBossCount => defeatedBossIds.Count;
         public WorldZoneDefinition CurrentZone { get; private set; }
 
         private void Awake()
@@ -164,12 +170,46 @@ namespace GameSkill
             return true;
         }
 
+        public bool IsBossDefeated(string bossId)
+        {
+            // 저장 키로 사용할 수 없는 빈 보스 ID는 처치 상태로 판단하지 않는다.
+            if (string.IsNullOrWhiteSpace(bossId))
+            {
+                return false;
+            }
+
+            return defeatedBossIds.Contains(
+                bossId.Trim());
+        }
+
+        public bool TryDefeatBoss(string bossId)
+        {
+            // 영구 ID가 없는 보스는 저장과 재실행에서 같은 대상을 식별할 수 없으므로 거부한다.
+            if (string.IsNullOrWhiteSpace(bossId))
+            {
+                return false;
+            }
+
+            string normalizedId =
+                bossId.Trim();
+            // 최초 처치만 기록하고 보상·문 개방 같은 구독 효과가 중복 실행되지 않게 한다.
+            if (!defeatedBossIds.Add(
+                normalizedId))
+            {
+                return false;
+            }
+
+            BossDefeated?.Invoke(normalizedId);
+            return true;
+        }
+
         public void RebuildInitialState()
         {
             // 씬 재시작과 테스트 초기화가 이전 런타임 진행 기록을 남기지 않게 먼저 비운다.
             visitedZoneIds.Clear();
             unlockedShortcutIds.Clear();
             collectedRewardIds.Clear();
+            defeatedBossIds.Clear();
             CurrentZone = null;
 
             // 직렬화 목록의 null과 중복을 검증하며 유효한 영구 ID만 집합에 넣는다.
@@ -199,6 +239,17 @@ namespace GameSkill
                 }
             }
 
+            // 보스 처치 목록도 공백을 제거하고 중복 없는 영구 ID 집합으로 초기화한다.
+            foreach (string bossId
+                in initiallyDefeatedBossIds)
+            {
+                if (!string.IsNullOrWhiteSpace(bossId))
+                {
+                    defeatedBossIds.Add(
+                        bossId.Trim());
+                }
+            }
+
             WorldStateRestored?.Invoke();
         }
 
@@ -220,11 +271,18 @@ namespace GameSkill
             return CopySortedIds(collectedRewardIds);
         }
 
+        public List<string> CopyDefeatedBossIds()
+        {
+            // 보스 ID도 결정적인 JSON을 위해 내부 HashSet과 분리된 사전순 목록으로 복사한다.
+            return CopySortedIds(defeatedBossIds);
+        }
+
         public bool RestoreProgress(
             IEnumerable<WorldZoneDefinition> knownZones,
             IEnumerable<string> savedVisitedZoneIds,
             IEnumerable<string> savedShortcutIds,
-            IEnumerable<string> savedRewardIds)
+            IEnumerable<string> savedRewardIds,
+            IEnumerable<string> savedDefeatedBossIds = null)
         {
             // 구역은 현재 빌드의 정의 카탈로그와 대조해 제거된 ID가 지도 상태에 남지 않게 한다.
             if (knownZones == null)
@@ -246,6 +304,7 @@ namespace GameSkill
             visitedZoneIds.Clear();
             unlockedShortcutIds.Clear();
             collectedRewardIds.Clear();
+            defeatedBossIds.Clear();
             RestoreKnownIds(
                 visitedZoneIds,
                 savedVisitedZoneIds,
@@ -256,6 +315,9 @@ namespace GameSkill
             RestoreNormalizedIds(
                 collectedRewardIds,
                 savedRewardIds);
+            RestoreNormalizedIds(
+                defeatedBossIds,
+                savedDefeatedBossIds);
 
             // 불러오기 중인 실제 플레이어 위치는 바꾸지 않고 현재 구역이 있다면 방문 상태와 일치시킨다.
             if (CurrentZone != null
@@ -319,6 +381,24 @@ namespace GameSkill
             RebuildInitialState();
         }
 
+        public void ConfigureInitialDefeatedBossIds(
+            IEnumerable<string> bossIds)
+        {
+            // 테스트와 제작용 초기 보스 목록을 복사해 외부 컬렉션 변경이 런타임 상태에 새지 않게 한다.
+            initiallyDefeatedBossIds.Clear();
+            if (bossIds != null)
+            {
+                // 공백과 중복 검사는 공통 초기화 경로에서 수행해 저장 복원과 같은 규칙을 사용한다.
+                foreach (string bossId in bossIds)
+                {
+                    initiallyDefeatedBossIds.Add(
+                        bossId);
+                }
+            }
+
+            RebuildInitialState();
+        }
+
         private static List<string> CopySortedIds(
             IEnumerable<string> source)
         {
@@ -358,7 +438,7 @@ namespace GameSkill
             ISet<string> destination,
             IEnumerable<string> savedIds)
         {
-            // 별도 정의 에셋이 없는 지름길·보상은 공백 제거와 중복 방지만 적용해 확장 ID를 보존한다.
+            // 별도 정의 에셋이 없는 지름길·보상·보스는 공백 제거와 중복 방지만 적용해 확장 ID를 보존한다.
             if (savedIds == null)
             {
                 return;

@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 플레이어 진행 상태를 Unity 오브젝트 참조 없는 버전형 JSON 데이터로 표현한다.
-// 책임: 능력·체크포인트·월드 ID의 캡처, JSON 왕복과 안전한 복원을 제공한다.
+// 책임: 능력·체크포인트·월드·보스 ID의 캡처, JSON 왕복, 버전 이전과 안전한 복원을 제공한다.
 // 불변식: 저장 데이터는 영구 ID와 유한한 좌표만 포함하며 ScriptableObject·GameObject 참조를 포함하지 않는다.
 // 선택 이유: 순수 DTO와 Codec을 분리하면 파일 저장·클라우드 저장·테스트가 같은 직렬화 계약을 재사용한다.
 using System;
@@ -12,7 +12,7 @@ namespace GameSkill
     [Serializable]
     public sealed class GameProgressSaveData
     {
-        public const int CurrentVersion = 1;
+        public const int CurrentVersion = 2;
 
         public int version = CurrentVersion;
         public List<string> unlockedAbilityIds = new();
@@ -24,6 +24,7 @@ namespace GameSkill
         public List<string> visitedZoneIds = new();
         public List<string> unlockedShortcutIds = new();
         public List<string> collectedRewardIds = new();
+        public List<string> defeatedBossIds = new();
     }
 
     public static class GameProgressSaveCodec
@@ -32,6 +33,21 @@ namespace GameSkill
         private sealed class SaveVersionHeader
         {
             public int version;
+        }
+
+        [Serializable]
+        private sealed class GameProgressSaveDataVersionOne
+        {
+            public int version;
+            public List<string> unlockedAbilityIds = new();
+            public bool hasCheckpoint;
+            public string checkpointId = string.Empty;
+            public float respawnX;
+            public float respawnY;
+            public float respawnZ;
+            public List<string> visitedZoneIds = new();
+            public List<string> unlockedShortcutIds = new();
+            public List<string> collectedRewardIds = new();
         }
 
         public static GameProgressSaveData Capture(
@@ -70,6 +86,8 @@ namespace GameSkill
                     worldState.CopyUnlockedShortcutIds();
                 data.collectedRewardIds =
                     worldState.CopyCollectedRewardIds();
+                data.defeatedBossIds =
+                    worldState.CopyDefeatedBossIds();
             }
 
             return data;
@@ -102,34 +120,25 @@ namespace GameSkill
                 SaveVersionHeader header =
                     JsonUtility.FromJson<SaveVersionHeader>(
                         json);
-                if (header == null
-                    || header.version
-                        != GameProgressSaveData.CurrentVersion)
+                if (header == null)
                 {
                     return false;
                 }
 
-                GameProgressSaveData parsed =
-                    JsonUtility.FromJson<GameProgressSaveData>(
-                        json);
-                if (parsed == null
-                    || parsed.version
-                        != GameProgressSaveData.CurrentVersion)
+                switch (header.version)
                 {
-                    return false;
+                    case GameProgressSaveData
+                        .CurrentVersion:
+                        return TryParseCurrentVersion(
+                            json,
+                            out data);
+                    case 1:
+                        return TryMigrateVersionOne(
+                            json,
+                            out data);
+                    default:
+                        return false;
                 }
-
-                parsed.unlockedAbilityIds ??=
-                    new List<string>();
-                parsed.checkpointId ??= string.Empty;
-                parsed.visitedZoneIds ??=
-                    new List<string>();
-                parsed.unlockedShortcutIds ??=
-                    new List<string>();
-                parsed.collectedRewardIds ??=
-                    new List<string>();
-                data = parsed;
-                return true;
             }
             catch (ArgumentException)
             {
@@ -182,13 +191,99 @@ namespace GameSkill
                 return false;
             }
 
-            // 월드 상태가 제공된 통합 경로에서만 방문·지름길·보상 ID를 한 번에 교체한다.
+            // 월드 상태가 제공된 통합 경로에서만 방문·지름길·보상·보스 ID를 한 번에 교체한다.
             return worldState == null
                 || worldState.RestoreProgress(
                     knownZones,
                     data.visitedZoneIds,
                     data.unlockedShortcutIds,
-                    data.collectedRewardIds);
+                    data.collectedRewardIds,
+                    data.defeatedBossIds);
+        }
+
+        private static bool TryParseCurrentVersion(
+            string json,
+            out GameProgressSaveData data)
+        {
+            // 현재 스키마는 추가 변환 없이 역직렬화하되 모든 선택 목록을 빈 컬렉션으로 정규화한다.
+            data = new GameProgressSaveData();
+            GameProgressSaveData parsed =
+                JsonUtility.FromJson<GameProgressSaveData>(
+                    json);
+            if (parsed == null
+                || parsed.version
+                    != GameProgressSaveData
+                        .CurrentVersion)
+            {
+                return false;
+            }
+
+            Normalize(parsed);
+            data = parsed;
+            return true;
+        }
+
+        private static bool TryMigrateVersionOne(
+            string json,
+            out GameProgressSaveData data)
+        {
+            // v1에는 보스 처치 필드가 없으므로 기존 진행을 그대로 복사하고 빈 보스 목록을 추가한다.
+            data = new GameProgressSaveData();
+            GameProgressSaveDataVersionOne legacy =
+                JsonUtility
+                    .FromJson<GameProgressSaveDataVersionOne>(
+                        json);
+            if (legacy == null
+                || legacy.version != 1)
+            {
+                return false;
+            }
+
+            var migrated =
+                new GameProgressSaveData
+                {
+                    version =
+                        GameProgressSaveData
+                            .CurrentVersion,
+                    unlockedAbilityIds =
+                        legacy.unlockedAbilityIds,
+                    hasCheckpoint =
+                        legacy.hasCheckpoint,
+                    checkpointId =
+                        legacy.checkpointId,
+                    respawnX = legacy.respawnX,
+                    respawnY = legacy.respawnY,
+                    respawnZ = legacy.respawnZ,
+                    visitedZoneIds =
+                        legacy.visitedZoneIds,
+                    unlockedShortcutIds =
+                        legacy.unlockedShortcutIds,
+                    collectedRewardIds =
+                        legacy.collectedRewardIds,
+                    defeatedBossIds =
+                        new List<string>()
+                };
+            Normalize(migrated);
+            data = migrated;
+            return true;
+        }
+
+        private static void Normalize(
+            GameProgressSaveData data)
+        {
+            // 누락 가능한 참조 필드를 한곳에서 초기화해 현재 파싱과 구버전 이전의 결과 계약을 같게 만든다.
+            data.unlockedAbilityIds ??=
+                new List<string>();
+            data.checkpointId ??=
+                string.Empty;
+            data.visitedZoneIds ??=
+                new List<string>();
+            data.unlockedShortcutIds ??=
+                new List<string>();
+            data.collectedRewardIds ??=
+                new List<string>();
+            data.defeatedBossIds ??=
+                new List<string>();
         }
 
         private static bool IsFinite(

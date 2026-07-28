@@ -2960,6 +2960,8 @@ MonoBehaviour:
   doubleJumpAbility: {fileID: 11400000, guid: f043fffb9a672400a8a35629e6af8ffe, type: 2}
   airDashAbility: {fileID: 11400000, guid: 80c960008b4b34d46b1e133993b012d9, type: 2}
   wallTraversalAbility: {fileID: 11400000, guid: e695cc21de6984e73be4c8f1a2d7f4f3, type: 2}
+  bossId: ability_warden
+  worldState: {fileID: 1559595303}
   visualRenderer: {fileID: 285781701}
   warningRenderer: {fileID: 709584416}
   projectileMaterial: {fileID: 2100000, guid: e8d9578a241a442999d41df307f200ad, type: 2}
@@ -8289,6 +8291,7 @@ MonoBehaviour:
   initiallyVisitedZones: []
   initiallyUnlockedShortcutIds: []
   initiallyCollectedRewardIds: []
+  initiallyDefeatedBossIds: []
 --- !u!114 &1559595304
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -8310,7 +8313,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 7af8572be5674438ca9ec0b838497bb8, type: 2}
   - {fileID: 11400000, guid: 37d2b24a8733b4106966f6f46de937b2, type: 2}
   - {fileID: 11400000, guid: e6e746dc611e946c782d913e0f4f8a91, type: 2}
-  saveFileName: game_skill_save_v1.json
+  saveFileName: game_skill_save.json
 --- !u!1 &1627469596
 GameObject:
   m_ObjectHideFlags: 0
