@@ -140,9 +140,33 @@ namespace GameSkill.Tests
             Assert.That(
                 GameObject.Find("WallTraversal_RightUpper"),
                 Is.Not.Null);
+            GameObject backtrackRewardObject =
+                GameObject.Find("Backtrack_Reward");
+            Assert.That(backtrackRewardObject, Is.Not.Null);
             Assert.That(
-                GameObject.Find("Backtrack_Reward").transform.position,
-                Is.EqualTo(new Vector3(-11f, 6.5f, 0f)));
+                backtrackRewardObject.transform.position,
+                Is.EqualTo(
+                    new Vector3(-10.25f, 7.15f, 0f)));
+            BacktrackRewardPickup backtrackReward =
+                backtrackRewardObject
+                    .GetComponent<BacktrackRewardPickup>();
+            Assert.That(backtrackReward, Is.Not.Null);
+            Assert.That(
+                backtrackReward.RewardId,
+                Is.EqualTo(
+                    "reward_shaft_health_fragment"));
+            Assert.That(
+                backtrackReward.MaximumHealthBonus,
+                Is.EqualTo(1));
+            Assert.That(
+                backtrackReward.RequiredAbility.Id,
+                Is.EqualTo("wall_traversal"));
+            Assert.That(
+                backtrackRewardObject
+                    .GetComponent<Collider>().isTrigger,
+                Is.True);
+            Assert.That(backtrackReward.Collect(), Is.False);
+            Assert.That(playerHealth.MaxHealth, Is.EqualTo(5));
 
             // 세 Graybox 구역의 맞닿는 Trigger와 영구 ID 기반 방문 흐름을 실제 씬에서 검증한다.
             WorldZoneVolume startHall =
@@ -250,6 +274,26 @@ namespace GameSkill.Tests
             Assert.That(motor.IsWallTraversalUnlocked, Is.True);
             Assert.That(abilityState.UnlockedCount, Is.EqualTo(3));
 
+            // 벽 잡기로 되돌아온 샤프트 정상 보상이 최대 체력과 영구 획득 ID를 한 번만 갱신하는지 확인한다.
+            Assert.That(backtrackReward.IsRequirementMet, Is.True);
+            Assert.That(backtrackReward.Collect(), Is.True);
+            Assert.That(playerHealth.MaxHealth, Is.EqualTo(6));
+            Assert.That(
+                playerHealth.CurrentHealth,
+                Is.EqualTo(6));
+            Assert.That(
+                worldState.IsRewardCollected(
+                    "reward_shaft_health_fragment"),
+                Is.True);
+            Assert.That(
+                worldState.CollectedRewardCount,
+                Is.EqualTo(1));
+            Assert.That(
+                backtrackRewardObject
+                    .GetComponent<Collider>().enabled,
+                Is.False);
+            Assert.That(backtrackReward.Collect(), Is.False);
+
             // 벽 샤프트 정상의 실제 활성 장치로 귀환 다리를 열고 영구 ID 상태를 확인한다.
             Assert.That(
                 shortcutActivator.Activate(worldState),
@@ -318,6 +362,10 @@ namespace GameSkill.Tests
             Assert.That(
                 worldState.UnlockedShortcutCount,
                 Is.EqualTo(1));
+            Assert.That(
+                worldState.CollectedRewardCount,
+                Is.EqualTo(1));
+            Assert.That(playerHealth.MaxHealth, Is.EqualTo(6));
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

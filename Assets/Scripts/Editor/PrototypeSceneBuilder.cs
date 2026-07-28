@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 가장 작은 플레이 가능한 2.5D Showcase 씬을 생성하고 마이그레이션한다.
-// 책임: 플레이어·그레이박스·카메라·전투 더미·능력 진행 루프와 에디터 메뉴를 생성한다.
+// 책임: 플레이어·그레이박스·카메라·전투·능력·백트래킹 보상 루프와 에디터 메뉴를 생성한다.
 // 불변식: 빌더를 다시 실행해도 자신이 만든 이름의 프로토타입 루트만 제거한다.
 // 선택 이유: 씬 생성은 에디터 전용으로 두어 런타임 스크립트를 게임플레이에 집중시킨다.
 using System.Collections.Generic;
@@ -37,6 +37,8 @@ namespace GameSkill.Editor
             WorldZoneFolderPath + "/WorldZone_TraversalLab.asset";
         private const string ShaftReturnShortcutId =
             "shortcut_shaft_return";
+        private const string ShaftHealthRewardId =
+            "reward_shaft_health_fragment";
         private const string ZoneSceneFolderPath =
             "Assets/Scenes/Zones";
         private const string BacktrackShaftScenePath =
@@ -261,12 +263,6 @@ namespace GameSkill.Editor
                 "Wall_Gate",
                 new Vector3(-6f, 2f, 0f),
                 new Vector3(0.6f, 4f, 3f),
-                accentMaterial);
-            CreateBlock(
-                root.transform,
-                "Backtrack_Reward",
-                new Vector3(-9f, 4.5f, 0f),
-                new Vector3(1f, 1f, 1f),
                 accentMaterial);
             CreateCheckpoint(root.transform, accentMaterial);
             CreateRespawnHazard(root.transform, accentMaterial);
@@ -1441,7 +1437,11 @@ namespace GameSkill.Editor
             if (EnsureWallTraversalCourse(
                 grayboxRoot.transform,
                 groundMaterial,
-                abilityMaterial))
+                abilityMaterial,
+                wallTraversalAbility,
+                player.GetComponent<PlayerWorldState>(),
+                abilityState,
+                player.GetComponent<Health>()))
             {
                 changed = true;
             }
@@ -1485,7 +1485,11 @@ namespace GameSkill.Editor
         private static bool EnsureWallTraversalCourse(
             Transform parent,
             Material groundMaterial,
-            Material rewardMaterial)
+            Material rewardMaterial,
+            AbilityDefinition requiredAbility,
+            PlayerWorldState worldState,
+            PlayerAbilityState abilityState,
+            Health playerHealth)
         {
             // 오른쪽 아래로 진입한 뒤 두 벽 사이를 번갈아 점프하는 백트래킹 샤프트를 만든다.
             bool changed = false;
@@ -1513,23 +1517,76 @@ namespace GameSkill.Editor
             }
 
             GameObject reward = GameObject.Find("Backtrack_Reward");
-            if (reward == null)
+            if (reward == null
+                || reward.GetComponent<CapsuleCollider>() == null)
             {
-                // 완주 지점을 물리적으로 밟을 수 있는 보상 블록으로 생성한다.
-                reward = CreateBlock(
-                    parent,
-                    "Backtrack_Reward",
-                    new Vector3(-11f, 6.5f, 0f),
-                    Vector3.one,
-                    rewardMaterial);
+                // 이전 표식을 제거하고 지름길 구체와 모양이 다른 세로형 체력 조각으로 승격한다.
+                if (reward != null)
+                {
+                    Object.DestroyImmediate(reward);
+                }
+
+                reward =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Capsule);
+                reward.name = "Backtrack_Reward";
+                reward.transform.SetParent(parent);
                 changed = true;
             }
-            else if (SetTransformIfDifferent(
+
+            if (SetTransformIfDifferent(
                 reward.transform,
-                new Vector3(-11f, 6.5f, 0f),
-                Vector3.one))
+                new Vector3(-10.25f, 7.15f, 0f),
+                new Vector3(0.42f, 0.58f, 0.42f)))
             {
-                // 이전 위치의 보상 블록을 샤프트 정상으로 멱등적으로 이동한다.
+                // 지름길 활성 장치와 겹치지 않는 샤프트 정상 왼쪽에 보상을 유지한다.
+                changed = true;
+            }
+
+            MeshRenderer rewardRenderer =
+                reward.GetComponent<MeshRenderer>();
+            if (rewardRenderer != null
+                && rewardRenderer.sharedMaterial
+                    != rewardMaterial)
+            {
+                // 보상은 능력 구체와 같은 강조 재질을 사용해 획득 가능 오브젝트임을 알린다.
+                rewardRenderer.sharedMaterial =
+                    rewardMaterial;
+                EditorUtility.SetDirty(rewardRenderer);
+                changed = true;
+            }
+
+            Collider rewardTrigger =
+                reward.GetComponent<Collider>();
+            if (rewardTrigger != null
+                && !rewardTrigger.isTrigger)
+            {
+                // 체력 조각은 접촉만 감지하고 샤프트 정상 이동을 물리적으로 막지 않는다.
+                rewardTrigger.isTrigger = true;
+                EditorUtility.SetDirty(rewardTrigger);
+                changed = true;
+            }
+
+            BacktrackRewardPickup rewardPickup =
+                reward.GetComponent<BacktrackRewardPickup>();
+            if (rewardPickup == null)
+            {
+                rewardPickup =
+                    reward.AddComponent<BacktrackRewardPickup>();
+                changed = true;
+            }
+
+            if (rewardPickup.Configure(
+                ShaftHealthRewardId,
+                1,
+                requiredAbility,
+                worldState,
+                abilityState,
+                playerHealth,
+                rewardRenderer))
+            {
+                // ID·요구 능력·효과 대상 연결이 바뀐 경우에만 씬 직렬화를 갱신한다.
+                EditorUtility.SetDirty(rewardPickup);
                 changed = true;
             }
 

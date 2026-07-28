@@ -12,6 +12,7 @@
 | 월드 | Additive 구역 스트리밍 | 기본 구현 완료 | [World Streaming](Features/WorldStreaming.md) |
 | 카메라 | 구역별 중심점 제한 | 기본 구현 완료 | [Camera Bounds](Features/CameraBounds.md) |
 | UI | 현재 위치·방문 상태 지도 HUD | 기본 구현 완료 | [World Map](Features/WorldMap.md) |
+| 진행 | 능력 기반 백트래킹·최대 체력 보상 | 기본 구현 완료 | [Backtrack Rewards](Features/BacktrackRewards.md) |
 | AI | 적 상태 머신 | 예정 | — |
 | 저장 | 세이브·로드 | 예정 | — |
 

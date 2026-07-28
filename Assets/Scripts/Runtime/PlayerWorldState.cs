@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 플레이어의 구역 방문·현재 위치·영구 지름길 상태를 단일 런타임 원본으로 관리한다.
-// 책임: 구역 방문과 지름길 해금 ID의 조회·초기화·최초 변경 이벤트를 제공한다.
+// 목적: 플레이어의 구역 방문·현재 위치·영구 지름길·수집 보상을 단일 런타임 원본으로 관리한다.
+// 책임: 구역 방문, 지름길 해금과 보상 ID의 조회·초기화·최초 변경 이벤트를 제공한다.
 // 불변식: 같은 진행 ID는 한 번만 기록하며 중복 변경은 상태와 이벤트를 바꾸지 않는다.
 // 선택 이유: HashSet 기반 ID 상태는 지도·월드 게이트·저장 데이터에 동일한 계약을 제공한다.
 using System;
@@ -16,18 +16,24 @@ namespace GameSkill
         private List<WorldZoneDefinition> initiallyVisitedZones = new();
         [SerializeField]
         private List<string> initiallyUnlockedShortcutIds = new();
+        [SerializeField]
+        private List<string> initiallyCollectedRewardIds = new();
 
         private readonly HashSet<string> visitedZoneIds =
             new(StringComparer.Ordinal);
         private readonly HashSet<string> unlockedShortcutIds =
             new(StringComparer.Ordinal);
+        private readonly HashSet<string> collectedRewardIds =
+            new(StringComparer.Ordinal);
 
         public event Action<WorldZoneDefinition> ZoneVisited;
         public event Action<WorldZoneDefinition> ZoneEntered;
         public event Action<string> ShortcutUnlocked;
+        public event Action<string> RewardCollected;
 
         public int VisitedCount => visitedZoneIds.Count;
         public int UnlockedShortcutCount => unlockedShortcutIds.Count;
+        public int CollectedRewardCount => collectedRewardIds.Count;
         public WorldZoneDefinition CurrentZone { get; private set; }
 
         private void Awake()
@@ -127,11 +133,42 @@ namespace GameSkill
             return true;
         }
 
+        public bool IsRewardCollected(string rewardId)
+        {
+            // 저장 키로 사용할 수 없는 빈 보상 ID는 획득 상태로 판단하지 않는다.
+            if (string.IsNullOrWhiteSpace(rewardId))
+            {
+                return false;
+            }
+
+            return collectedRewardIds.Contains(rewardId.Trim());
+        }
+
+        public bool TryCollectReward(string rewardId)
+        {
+            // 영구 ID가 없는 보상은 재시작과 저장 복원에서 구분할 수 없으므로 거부한다.
+            if (string.IsNullOrWhiteSpace(rewardId))
+            {
+                return false;
+            }
+
+            string normalizedId = rewardId.Trim();
+            // HashSet.Add 결과로 최초 획득만 기록하고 효과와 연출의 중복 적용을 막는다.
+            if (!collectedRewardIds.Add(normalizedId))
+            {
+                return false;
+            }
+
+            RewardCollected?.Invoke(normalizedId);
+            return true;
+        }
+
         public void RebuildInitialState()
         {
             // 씬 재시작과 테스트 초기화가 이전 런타임 진행 기록을 남기지 않게 먼저 비운다.
             visitedZoneIds.Clear();
             unlockedShortcutIds.Clear();
+            collectedRewardIds.Clear();
             CurrentZone = null;
 
             // 직렬화 목록의 null과 중복을 검증하며 유효한 영구 ID만 집합에 넣는다.
@@ -149,6 +186,15 @@ namespace GameSkill
                 if (!string.IsNullOrWhiteSpace(shortcutId))
                 {
                     unlockedShortcutIds.Add(shortcutId.Trim());
+                }
+            }
+
+            // 수집 보상도 영구 ID만 복원해 월드 오브젝트 참조 없이 획득 상태를 재구성한다.
+            foreach (string rewardId in initiallyCollectedRewardIds)
+            {
+                if (!string.IsNullOrWhiteSpace(rewardId))
+                {
+                    collectedRewardIds.Add(rewardId.Trim());
                 }
             }
         }
@@ -181,6 +227,23 @@ namespace GameSkill
                 foreach (string shortcutId in shortcutIds)
                 {
                     initiallyUnlockedShortcutIds.Add(shortcutId);
+                }
+            }
+
+            RebuildInitialState();
+        }
+
+        public void ConfigureInitialRewardIds(
+            IEnumerable<string> rewardIds)
+        {
+            // 저장 로더와 테스트가 전달한 목록을 복사해 런타임 상태가 외부 컬렉션에 의존하지 않게 한다.
+            initiallyCollectedRewardIds.Clear();
+            if (rewardIds != null)
+            {
+                // 공백과 중복 검사는 공통 초기화 경로에서 처리해 모든 복원 방식에 같은 규칙을 적용한다.
+                foreach (string rewardId in rewardIds)
+                {
+                    initiallyCollectedRewardIds.Add(rewardId);
                 }
             }
 

@@ -43,7 +43,8 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 세 구역 Additive Scene 비동기 스트리밍
 - [x] 구역 진입 이벤트 기반 카메라 제한 영역
 - [x] 현재 위치와 방문 구역을 표시하는 지도 HUD
-- [ ] 연결된 월드와 백트래킹
+- [x] 벽 잡기로 다시 방문해 획득하는 최대 체력 조각
+- [x] 연결된 월드와 백트래킹
 - [ ] 적 AI 및 상태 머신
 - [ ] 세이브/로드
 - [ ] 보스와 수직 슬라이스 빌드
@@ -70,6 +71,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [Additive 구역 Scene 스트리밍](Docs/Features/WorldStreaming.md)
 - [구역별 카메라 제한 영역](Docs/Features/CameraBounds.md)
 - [현재 위치와 방문 상태 지도 HUD](Docs/Features/WorldMap.md)
+- [능력 기반 백트래킹과 최대 체력 보상](Docs/Features/BacktrackRewards.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기
