@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 namespace GameSkill.Editor
@@ -122,6 +123,7 @@ namespace GameSkill.Editor
                 accentMaterial);
             EnsureZoneStreamingPrototype(player);
             ConfigureCamera(player);
+            EnsureWorldMapPrototype(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -423,6 +425,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureWorldMapPrototype(player))
+            {
+                // 지도 Canvas·노드·연결선·Presenter 중 하나라도 보완되면 Main에 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -432,6 +440,321 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureWorldMapPrototype(
+            GameObject player)
+        {
+            // 플레이어 월드 상태가 있어야 지도 UI를 진행 데이터와 연결할 수 있다.
+            if (player == null)
+            {
+                return false;
+            }
+
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            if (worldState == null)
+            {
+                return false;
+            }
+
+            WorldZoneDefinition backtrackShaft =
+                GetOrCreateWorldZoneDefinition(
+                    BacktrackShaftZonePath,
+                    "backtrack_shaft",
+                    "백트래킹 샤프트",
+                    "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역.");
+            WorldZoneDefinition startHall =
+                GetOrCreateWorldZoneDefinition(
+                    StartHallZonePath,
+                    "start_hall",
+                    "시작 홀",
+                    "체크포인트와 첫 능력 단서를 제공하는 중앙 구역.");
+            WorldZoneDefinition traversalLab =
+                GetOrCreateWorldZoneDefinition(
+                    TraversalLabZonePath,
+                    "traversal_lab",
+                    "이동 실험실",
+                    "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+
+            bool changed = false;
+            GameObject hud = GameObject.Find("WorldMapHUD");
+            if (hud == null)
+            {
+                // Screen Space Overlay Canvas는 카메라 전환과 Additive Scene 언로드의 영향을 받지 않는다.
+                hud = new GameObject(
+                    "WorldMapHUD",
+                    typeof(RectTransform),
+                    typeof(Canvas),
+                    typeof(CanvasScaler),
+                    typeof(GraphicRaycaster));
+                changed = true;
+            }
+
+            Canvas canvas = hud.GetComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 20;
+            CanvasScaler scaler =
+                hud.GetComponent<CanvasScaler>();
+            scaler.uiScaleMode =
+                CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution =
+                new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            GameObject panel = EnsureUiImage(
+                "WorldMapPanel",
+                hud.transform,
+                ref changed);
+            RectTransform panelRect =
+                panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.one;
+            panelRect.anchorMax = Vector2.one;
+            panelRect.pivot = Vector2.one;
+            panelRect.anchoredPosition =
+                new Vector2(-24f, -24f);
+            panelRect.sizeDelta =
+                new Vector2(330f, 160f);
+            Image panelImage = panel.GetComponent<Image>();
+            panelImage.color =
+                new Color(0.035f, 0.045f, 0.065f, 0.82f);
+            panelImage.raycastTarget = false;
+
+            EnsureMapText(
+                "WorldMapTitle",
+                panel.transform,
+                "MAP",
+                new Vector2(0f, 58f),
+                new Vector2(280f, 24f),
+                17,
+                ref changed);
+
+            Vector2 shaftPosition =
+                new(-105f, 15f);
+            Vector2 startPosition =
+                new(-20f, -35f);
+            Vector2 labPosition =
+                new(105f, -35f);
+            Image shaftStartLine = EnsureMapConnection(
+                "MapConnection_ShaftStart",
+                panel.transform,
+                shaftPosition,
+                startPosition,
+                ref changed);
+            Image startLabLine = EnsureMapConnection(
+                "MapConnection_StartLab",
+                panel.transform,
+                startPosition,
+                labPosition,
+                ref changed);
+
+            WorldMapNodeView shaftNode = EnsureMapNode(
+                "MapNode_BacktrackShaft",
+                panel.transform,
+                backtrackShaft,
+                "SHAFT",
+                shaftPosition,
+                ref changed);
+            WorldMapNodeView startNode = EnsureMapNode(
+                "MapNode_StartHall",
+                panel.transform,
+                startHall,
+                "START",
+                startPosition,
+                ref changed);
+            WorldMapNodeView labNode = EnsureMapNode(
+                "MapNode_TraversalLab",
+                panel.transform,
+                traversalLab,
+                "LAB",
+                labPosition,
+                ref changed);
+
+            WorldMapPresenter presenter =
+                hud.GetComponent<WorldMapPresenter>();
+            if (presenter == null)
+            {
+                presenter =
+                    hud.AddComponent<WorldMapPresenter>();
+                changed = true;
+            }
+
+            var nodes = new List<WorldMapNodeView>
+            {
+                shaftNode,
+                startNode,
+                labNode
+            };
+            var connections =
+                new List<WorldMapConnectionView>
+                {
+                    new(
+                        backtrackShaft,
+                        startHall,
+                        shaftStartLine),
+                    new(
+                        startHall,
+                        traversalLab,
+                        startLabLine)
+                };
+            if (presenter.Configure(
+                worldState,
+                startHall,
+                nodes,
+                connections))
+            {
+                EditorUtility.SetDirty(presenter);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static GameObject EnsureUiImage(
+            string objectName,
+            Transform parent,
+            ref bool changed)
+        {
+            // 이름을 UI 배치 키로 사용해 빌더 재실행 시 같은 Image 오브젝트를 재사용한다.
+            GameObject imageObject =
+                GameObject.Find(objectName);
+            if (imageObject == null)
+            {
+                imageObject = new GameObject(
+                    objectName,
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Image));
+                imageObject.transform.SetParent(
+                    parent,
+                    false);
+                changed = true;
+            }
+
+            if (imageObject.GetComponent<Image>() == null)
+            {
+                // 부분 편집으로 Image가 제거된 경우에도 전체 HUD를 재생성하지 않고 복구한다.
+                imageObject.AddComponent<Image>();
+                changed = true;
+            }
+
+            return imageObject;
+        }
+
+        private static Text EnsureMapText(
+            string objectName,
+            Transform parent,
+            string content,
+            Vector2 position,
+            Vector2 size,
+            int fontSize,
+            ref bool changed)
+        {
+            // 짧은 ASCII 레이블은 프로젝트 외부 폰트 에셋 없이 런타임 기본 폰트로 표시한다.
+            GameObject textObject =
+                GameObject.Find(objectName);
+            if (textObject == null)
+            {
+                textObject = new GameObject(
+                    objectName,
+                    typeof(RectTransform),
+                    typeof(CanvasRenderer),
+                    typeof(Text));
+                textObject.transform.SetParent(
+                    parent,
+                    false);
+                changed = true;
+            }
+
+            Text text = textObject.GetComponent<Text>();
+            RectTransform rect =
+                textObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
+            text.font =
+                Resources.GetBuiltinResource<Font>(
+                    "LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.alignment = TextAnchor.MiddleCenter;
+            text.color = Color.white;
+            text.raycastTarget = false;
+            text.text = content;
+            return text;
+        }
+
+        private static Image EnsureMapConnection(
+            string objectName,
+            Transform parent,
+            Vector2 start,
+            Vector2 end,
+            ref bool changed)
+        {
+            // 두 지도 노드 중심 사이에 회전한 얇은 Image를 배치해 연결 그래프를 표현한다.
+            GameObject lineObject = EnsureUiImage(
+                objectName,
+                parent,
+                ref changed);
+            RectTransform rect =
+                lineObject.GetComponent<RectTransform>();
+            Vector2 difference = end - start;
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = (start + end) * 0.5f;
+            rect.sizeDelta =
+                new Vector2(difference.magnitude, 5f);
+            rect.localRotation = Quaternion.Euler(
+                0f,
+                0f,
+                Mathf.Atan2(
+                    difference.y,
+                    difference.x)
+                * Mathf.Rad2Deg);
+            Image line = lineObject.GetComponent<Image>();
+            line.raycastTarget = false;
+            return line;
+        }
+
+        private static WorldMapNodeView EnsureMapNode(
+            string objectName,
+            Transform parent,
+            WorldZoneDefinition zone,
+            string labelText,
+            Vector2 position,
+            ref bool changed)
+        {
+            // 노드 배경과 자식 레이블을 고정된 이름으로 만들어 테스트와 포트폴리오 캡처에서 찾기 쉽게 한다.
+            GameObject nodeObject = EnsureUiImage(
+                objectName,
+                parent,
+                ref changed);
+            RectTransform rect =
+                nodeObject.GetComponent<RectTransform>();
+            rect.anchorMin = new Vector2(0.5f, 0.5f);
+            rect.anchorMax = new Vector2(0.5f, 0.5f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = new Vector2(72f, 36f);
+            Image background =
+                nodeObject.GetComponent<Image>();
+            background.raycastTarget = false;
+
+            Text label = EnsureMapText(
+                objectName + "_Label",
+                nodeObject.transform,
+                labelText,
+                Vector2.zero,
+                new Vector2(68f, 32f),
+                14,
+                ref changed);
+            return new WorldMapNodeView(
+                zone,
+                labelText,
+                background,
+                label);
         }
 
         private static bool EnsureCameraBoundsPrototype(
@@ -1437,13 +1760,26 @@ namespace GameSkill.Editor
             }
 
             // 같은 색을 다시 대입하면 URP의 호환 색 속성이 바뀌어 불필요한 에셋 diff가 생기므로 건너뛴다.
-            if (material.color != color)
+            if (!ColorsApproximately(
+                material.color,
+                color))
             {
                 material.color = color;
                 EditorUtility.SetDirty(material);
             }
 
             return material;
+        }
+
+        private static bool ColorsApproximately(
+            Color first,
+            Color second)
+        {
+            // 색 공간 변환의 미세한 부동소수점 차이를 무시해 같은 URP 색상이 반복 저장되지 않게 한다.
+            return Mathf.Approximately(first.r, second.r)
+                && Mathf.Approximately(first.g, second.g)
+                && Mathf.Approximately(first.b, second.b)
+                && Mathf.Approximately(first.a, second.a);
         }
 
         private static void RemoveExistingPrototypeRoots()

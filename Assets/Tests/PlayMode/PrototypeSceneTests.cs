@@ -58,6 +58,25 @@ namespace GameSkill.Tests
             PlayerWorldState worldState =
                 player.GetComponent<PlayerWorldState>();
             Assert.That(worldState, Is.Not.Null);
+            GameObject worldMapHud =
+                GameObject.Find("WorldMapHUD");
+            Assert.That(worldMapHud, Is.Not.Null);
+            Assert.That(
+                worldMapHud.GetComponent<Canvas>(),
+                Is.Not.Null);
+            WorldMapPresenter mapPresenter =
+                worldMapHud.GetComponent<WorldMapPresenter>();
+            Assert.That(mapPresenter, Is.Not.Null);
+            Assert.That(mapPresenter.NodeCount, Is.EqualTo(3));
+            Assert.That(
+                mapPresenter.ConnectionCount,
+                Is.EqualTo(2));
+            Assert.That(
+                mapPresenter.GetNodeState("start_hall"),
+                Is.EqualTo(WorldMapVisualState.Current));
+            Assert.That(
+                mapPresenter.GetNodeState("traversal_lab"),
+                Is.EqualTo(WorldMapVisualState.Hidden));
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);
@@ -163,6 +182,15 @@ namespace GameSkill.Tests
                     new Vector3(100f, 100f, -9f)),
                 Is.EqualTo(
                     new Vector3(-10.75f, 6.2f, -9f)));
+            Assert.That(
+                mapPresenter.GetNodeState("backtrack_shaft"),
+                Is.EqualTo(WorldMapVisualState.Current));
+            Assert.That(
+                mapPresenter.GetNodeState("start_hall"),
+                Is.EqualTo(WorldMapVisualState.Visited));
+            Assert.That(
+                mapPresenter.GetNodeState("traversal_lab"),
+                Is.EqualTo(WorldMapVisualState.Visited));
             Assert.That(
                 GameObject.Find("Shortcut_ShaftLanding"),
                 Is.Not.Null);
