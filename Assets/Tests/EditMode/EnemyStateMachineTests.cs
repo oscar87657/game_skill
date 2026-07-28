@@ -157,6 +157,77 @@ namespace GameSkill.Tests
             }
         }
 
+        [Test]
+        public void EnemyProjectile_PassesThroughInvulnerableTarget()
+        {
+            // 무적 중 접촉은 탄환을 소비하지 않고, 같은 탄환의 이후 일반 피격은 정상 해결되는지 확인한다.
+            var owner =
+                new GameObject("ProjectileInvulnerabilityOwner");
+            var target =
+                new GameObject("ProjectileInvulnerabilityTarget");
+            GameObject projectileObject =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Sphere);
+            try
+            {
+                Health targetHealth =
+                    target.AddComponent<Health>();
+                targetHealth.Configure(5);
+                projectileObject.AddComponent<Rigidbody>();
+                EnemyProjectile projectile =
+                    projectileObject
+                        .AddComponent<EnemyProjectile>();
+                Renderer projectileRenderer =
+                    projectileObject.GetComponent<Renderer>();
+                SphereCollider projectileCollider =
+                    projectileObject.GetComponent<SphereCollider>();
+                projectile.Configure(
+                    owner.transform,
+                    targetHealth,
+                    Vector3.right,
+                    7f,
+                    2f,
+                    1,
+                    projectileRenderer);
+
+                Assert.That(
+                    projectile.TryResolveTargetHit(
+                        targetHealth,
+                        true),
+                    Is.False);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(5));
+                Assert.That(
+                    projectile.HasResolved,
+                    Is.False);
+                Assert.That(
+                    projectileCollider.enabled,
+                    Is.True);
+                Assert.That(
+                    projectileRenderer.enabled,
+                    Is.True);
+
+                Assert.That(
+                    projectile.TryResolveTargetHit(
+                        targetHealth,
+                        false),
+                    Is.True);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(4));
+                Assert.That(
+                    projectile.HasResolved,
+                    Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(projectileObject);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(owner);
+            }
+        }
+
         [TestCase(
             EnemyState.Idle,
             true,

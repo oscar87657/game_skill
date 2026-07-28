@@ -1,7 +1,7 @@
 // GOLDEN STANDARD
 // 목적: 원거리 적이 발사한 투사체를 이동시키고 플레이어·환경과의 접촉을 해결한다.
-// 책임: 고정 방향 이동, 수명 종료, 소유자 필터, 대시 무적 데미지와 환경 충돌 소멸을 처리한다.
-// 불변식: 한 투사체는 최대 한 번만 해결되며 소유자와 다른 적에게 데미지를 주지 않는다.
+// 책임: 고정 방향 이동, 수명 종료, 소유자 필터, 대시 무적 통과와 환경 충돌 소멸을 처리한다.
+// 불변식: 유효 피격·환경 충돌 전까지 활성 상태를 유지하며 소유자와 다른 적에게 데미지를 주지 않는다.
 // 선택 이유: 투사체를 적 상태 머신에서 분리하면 발사 패턴과 실제 충돌 규칙을 독립적으로 교체할 수 있다.
 using System;
 using UnityEngine;
@@ -118,25 +118,43 @@ namespace GameSkill
                 collisionObject.GetComponentInParent<Health>();
             if (hitHealth != null)
             {
-                if (hitHealth != targetHealth)
-                {
-                    // 다른 적과 훈련용 더미는 아군 방패가 되지 않도록 그대로 통과한다.
-                    return false;
-                }
-
                 bool isInvulnerable =
                     targetMotor != null
                     && targetMotor.IsInvulnerable;
-                bool damageApplied = DamageRules.TryApply(
-                    targetHealth,
-                    isInvulnerable,
-                    damage);
-                Finish(damageApplied);
-                return true;
+                return TryResolveTargetHit(
+                    hitHealth,
+                    isInvulnerable);
             }
 
             // Health가 없는 비 Trigger Collider는 바닥·벽으로 취급해 투사체를 제거한다.
             Finish(false);
+            return true;
+        }
+
+        public bool TryResolveTargetHit(
+            Health hitHealth,
+            bool isInvulnerable)
+        {
+            // 대상 분류와 무적 통과를 별도 경계로 두어 물리 콜백 없이도 충돌 소비 여부를 검증한다.
+            if (HasResolved
+                || hitHealth == null
+                || hitHealth != targetHealth)
+            {
+                // 다른 적과 훈련용 더미는 아군 방패가 되지 않도록 그대로 통과한다.
+                return false;
+            }
+
+            if (isInvulnerable)
+            {
+                // 회피 성공은 피격 자체가 성립하지 않은 것이므로 탄환의 이동·수명·Collider를 유지한다.
+                return false;
+            }
+
+            bool damageApplied = DamageRules.TryApply(
+                targetHealth,
+                false,
+                damage);
+            Finish(damageApplied);
             return true;
         }
 
