@@ -74,6 +74,7 @@ SideScrollerCamera.ConfigurePerspective
 - [x] Main 카메라가 Perspective인지 검증
 - [x] Vertical FOV `35°`와 카메라 거리 검증
 - [x] 구역 경계 Clamp가 카메라 Z를 변경하지 않음
+- [x] 높은 발판·샤프트 정상까지 카메라 Y 추적 허용
 - [x] 전체 Main 씬 PlayMode 회귀 테스트
 - [ ] 실제 플레이에서 가장자리 옆면과 왜곡 체감 확인
 - [ ] 16:9·16:10 화면비 구도 비교

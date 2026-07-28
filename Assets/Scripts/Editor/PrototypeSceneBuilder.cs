@@ -802,17 +802,17 @@ namespace GameSkill.Editor
                 new(
                     backtrackShaft,
                     new Vector2(-10.75f, 2.8f),
-                    new Vector2(-10.75f, 6.2f)),
+                    new Vector2(-10.75f, 9f)),
                 // 시작 홀은 체크포인트와 양쪽 출구가 동시에 읽히는 제한된 수평 이동을 허용한다.
                 new(
                     startHall,
                     new Vector2(-4f, 2.4f),
-                    new Vector2(2f, 3.4f)),
+                    new Vector2(2f, 9f)),
                 // 이동 실험실은 긴 계단 동선을 따라가되 구역 밖을 과도하게 보여 주지 않는다.
                 new(
                     traversalLab,
                     new Vector2(10f, 3f),
-                    new Vector2(20f, 5.2f))
+                    new Vector2(20f, 7.2f))
             };
 
             bool changed = false;

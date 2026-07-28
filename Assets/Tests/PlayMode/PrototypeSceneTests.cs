@@ -133,6 +133,11 @@ namespace GameSkill.Tests
                     new Vector3(100f, -100f, -9f)),
                 Is.EqualTo(
                     new Vector3(2f, 2.4f, -9f)));
+            Assert.That(
+                sideScrollerCamera.ConstrainPosition(
+                    new Vector3(0f, 6f, -9f)),
+                Is.EqualTo(
+                    new Vector3(0f, 6f, -9f)));
 
             Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
             GameObject gateObject = GameObject.Find("Wall_Gate");
@@ -218,7 +223,7 @@ namespace GameSkill.Tests
                 sideScrollerCamera.ConstrainPosition(
                     new Vector3(100f, 100f, -9f)),
                 Is.EqualTo(
-                    new Vector3(-10.75f, 6.2f, -9f)));
+                    new Vector3(-10.75f, 9f, -9f)));
             Assert.That(
                 mapPresenter.GetNodeState("backtrack_shaft"),
                 Is.EqualTo(WorldMapVisualState.Current));
