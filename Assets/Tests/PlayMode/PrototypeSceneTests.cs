@@ -5,7 +5,9 @@
 using System.Collections;
 using NUnit.Framework;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
 
@@ -122,6 +124,46 @@ namespace GameSkill.Tests
             Assert.That(
                 mapPresenter.GetNodeState("boss_room"),
                 Is.EqualTo(WorldMapVisualState.Hidden));
+            GameProgressHud progressHud =
+                worldMapHud.GetComponent<GameProgressHud>();
+            Assert.That(progressHud, Is.Not.Null);
+            Assert.That(
+                progressHud.AbilitySlotCount,
+                Is.EqualTo(3));
+            Assert.That(
+                progressHud.HealthLabelText,
+                Is.EqualTo("HP 5 / 5"));
+            Assert.That(
+                progressHud.IsAbilityUnlocked(
+                    "double_jump"),
+                Is.False);
+            Assert.That(
+                progressHud.IsAbilityUnlocked(
+                    "air_dash"),
+                Is.False);
+            Assert.That(
+                progressHud.IsAbilityUnlocked(
+                    "wall_traversal"),
+                Is.False);
+            Assert.That(
+                GameObject.Find(
+                    "ProgressHUDSaveButton"),
+                Is.Not.Null);
+            Assert.That(
+                GameObject.Find(
+                    "ProgressHUDLoadButton"),
+                Is.Not.Null);
+            GameObject eventSystemObject =
+                GameObject.Find("UIEventSystem");
+            Assert.That(eventSystemObject, Is.Not.Null);
+            Assert.That(
+                eventSystemObject
+                    .GetComponent<EventSystem>(),
+                Is.Not.Null);
+            Assert.That(
+                eventSystemObject
+                    .GetComponent<InputSystemUIInputModule>(),
+                Is.Not.Null);
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);

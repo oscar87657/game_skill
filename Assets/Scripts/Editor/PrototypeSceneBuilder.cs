@@ -8,8 +8,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using UnityEngine.EventSystems;
 
 namespace GameSkill.Editor
 {
@@ -160,6 +162,7 @@ namespace GameSkill.Editor
             EnsureZoneStreamingPrototype(player);
             ConfigureCamera(player);
             EnsureWorldMapPrototype(player);
+            EnsureProgressHudPrototype(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -580,6 +583,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureProgressHudPrototype(player))
+            {
+                // 체력·능력·저장 HUD와 Input System EventSystem 구성을 Main에 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -890,6 +899,367 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureProgressHudPrototype(
+            GameObject player)
+        {
+            // 상태 소유자와 기존 HUD Canvas가 모두 있을 때만 진행 HUD를 한 단위로 구성한다.
+            if (player == null)
+            {
+                return false;
+            }
+
+            Health health =
+                player.GetComponent<Health>();
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            GameProgressSaveController saveController =
+                player.GetComponent<GameProgressSaveController>();
+            GameObject hud =
+                GameObject.Find("WorldMapHUD");
+            if (health == null
+                || abilityState == null
+                || saveController == null
+                || hud == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            EnsureUiEventSystem(ref changed);
+            GameObject panel = EnsureUiImage(
+                "ProgressHUDPanel",
+                hud.transform,
+                ref changed);
+            RectTransform panelRect =
+                panel.GetComponent<RectTransform>();
+            panelRect.anchorMin = Vector2.zero;
+            panelRect.anchorMax = Vector2.zero;
+            panelRect.pivot = Vector2.zero;
+            panelRect.anchoredPosition =
+                new Vector2(24f, 24f);
+            panelRect.sizeDelta =
+                new Vector2(500f, 180f);
+            Image panelImage =
+                panel.GetComponent<Image>();
+            panelImage.color =
+                new Color(
+                    0.035f,
+                    0.045f,
+                    0.065f,
+                    0.88f);
+            panelImage.raycastTarget = false;
+
+            EnsureMapText(
+                "ProgressHUDTitle",
+                panel.transform,
+                "PLAYER STATUS",
+                new Vector2(0f, 72f),
+                new Vector2(450f, 24f),
+                17,
+                ref changed);
+            Text healthLabel = EnsureMapText(
+                "ProgressHUDHealthLabel",
+                panel.transform,
+                "HP 5 / 5",
+                new Vector2(-155f, 40f),
+                new Vector2(150f, 24f),
+                16,
+                ref changed);
+            GameObject healthBarBackground =
+                EnsureUiImage(
+                    "ProgressHUDHealthBarBackground",
+                    panel.transform,
+                    ref changed);
+            ConfigureCenteredRect(
+                healthBarBackground
+                    .GetComponent<RectTransform>(),
+                new Vector2(70f, 40f),
+                new Vector2(270f, 20f));
+            Image healthBackgroundImage =
+                healthBarBackground.GetComponent<Image>();
+            healthBackgroundImage.color =
+                new Color(
+                    0.12f,
+                    0.14f,
+                    0.18f,
+                    1f);
+            healthBackgroundImage.raycastTarget = false;
+
+            GameObject healthFillObject =
+                EnsureUiImage(
+                    "ProgressHUDHealthBarFill",
+                    healthBarBackground.transform,
+                    ref changed);
+            RectTransform healthFillRect =
+                healthFillObject
+                    .GetComponent<RectTransform>();
+            healthFillRect.anchorMin = Vector2.zero;
+            healthFillRect.anchorMax = Vector2.one;
+            healthFillRect.pivot =
+                new Vector2(0.5f, 0.5f);
+            healthFillRect.anchoredPosition =
+                Vector2.zero;
+            healthFillRect.sizeDelta =
+                new Vector2(-4f, -4f);
+            Image healthFill =
+                healthFillObject.GetComponent<Image>();
+            healthFill.color =
+                new Color(
+                    0.95f,
+                    0.2f,
+                    0.28f,
+                    1f);
+            healthFill.type =
+                Image.Type.Filled;
+            healthFill.fillMethod =
+                Image.FillMethod.Horizontal;
+            healthFill.fillOrigin = 0;
+            healthFill.fillAmount = 1f;
+            healthFill.raycastTarget = false;
+
+            AbilityDefinition doubleJump =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDash =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversal =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+            AbilityHudSlot doubleJumpSlot =
+                EnsureAbilityHudSlot(
+                    "ProgressHUDAbility_DoubleJump",
+                    panel.transform,
+                    doubleJump,
+                    "DOUBLE JUMP",
+                    new Vector2(-150f, -4f),
+                    ref changed);
+            AbilityHudSlot airDashSlot =
+                EnsureAbilityHudSlot(
+                    "ProgressHUDAbility_AirDash",
+                    panel.transform,
+                    airDash,
+                    "AIR DASH",
+                    new Vector2(0f, -4f),
+                    ref changed);
+            AbilityHudSlot wallSlot =
+                EnsureAbilityHudSlot(
+                    "ProgressHUDAbility_WallTraversal",
+                    panel.transform,
+                    wallTraversal,
+                    "WALL GRAB",
+                    new Vector2(150f, -4f),
+                    ref changed);
+
+            Button saveButton = EnsureHudButton(
+                "ProgressHUDSaveButton",
+                panel.transform,
+                "SAVE",
+                new Vector2(-180f, -57f),
+                ref changed);
+            Button loadButton = EnsureHudButton(
+                "ProgressHUDLoadButton",
+                panel.transform,
+                "LOAD",
+                new Vector2(-75f, -57f),
+                ref changed);
+            Text statusLabel = EnsureMapText(
+                "ProgressHUDSaveStatus",
+                panel.transform,
+                "READY",
+                new Vector2(95f, -57f),
+                new Vector2(210f, 32f),
+                14,
+                ref changed);
+            statusLabel.color =
+                new Color(
+                    0.72f,
+                    0.76f,
+                    0.84f,
+                    1f);
+
+            GameProgressHud progressHud =
+                hud.GetComponent<GameProgressHud>();
+            if (progressHud == null)
+            {
+                // 지도와 같은 영구 Canvas에 Presenter를 두어 Additive Scene 전환의 영향을 피한다.
+                progressHud =
+                    hud.AddComponent<GameProgressHud>();
+                changed = true;
+            }
+
+            if (progressHud.Configure(
+                health,
+                abilityState,
+                saveController,
+                healthFill,
+                healthLabel,
+                new[]
+                {
+                    doubleJumpSlot,
+                    airDashSlot,
+                    wallSlot
+                },
+                saveButton,
+                loadButton,
+                statusLabel))
+            {
+                EditorUtility.SetDirty(progressHud);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static AbilityHudSlot EnsureAbilityHudSlot(
+            string objectName,
+            Transform parent,
+            AbilityDefinition ability,
+            string unlockedLabel,
+            Vector2 position,
+            ref bool changed)
+        {
+            // 능력 슬롯의 배경과 레이블을 고정 이름으로 만들어 빌더 재실행 시 같은 View를 재사용한다.
+            GameObject slotObject =
+                EnsureUiImage(
+                    objectName,
+                    parent,
+                    ref changed);
+            ConfigureCenteredRect(
+                slotObject.GetComponent<RectTransform>(),
+                position,
+                new Vector2(130f, 38f));
+            Image background =
+                slotObject.GetComponent<Image>();
+            background.raycastTarget = false;
+            Text label = EnsureMapText(
+                objectName + "_Label",
+                slotObject.transform,
+                "?",
+                Vector2.zero,
+                new Vector2(124f, 32f),
+                13,
+                ref changed);
+            return new AbilityHudSlot(
+                ability,
+                unlockedLabel,
+                background,
+                label);
+        }
+
+        private static Button EnsureHudButton(
+            string objectName,
+            Transform parent,
+            string labelText,
+            Vector2 position,
+            ref bool changed)
+        {
+            // Image와 Button을 같은 오브젝트에 두어 포인터 영역과 시각 크기를 일치시킨다.
+            GameObject buttonObject =
+                EnsureUiImage(
+                    objectName,
+                    parent,
+                    ref changed);
+            ConfigureCenteredRect(
+                buttonObject
+                    .GetComponent<RectTransform>(),
+                position,
+                new Vector2(92f, 34f));
+            Image background =
+                buttonObject.GetComponent<Image>();
+            background.color =
+                new Color(
+                    0.16f,
+                    0.24f,
+                    0.34f,
+                    0.96f);
+            background.raycastTarget = true;
+            Button button =
+                buttonObject.GetComponent<Button>();
+            if (button == null)
+            {
+                button =
+                    buttonObject.AddComponent<Button>();
+                changed = true;
+            }
+
+            button.targetGraphic = background;
+            button.navigation =
+                new Navigation
+                {
+                    mode = Navigation.Mode.None
+                };
+            EnsureMapText(
+                objectName + "_Label",
+                buttonObject.transform,
+                labelText,
+                Vector2.zero,
+                new Vector2(86f, 30f),
+                14,
+                ref changed);
+            return button;
+        }
+
+        private static void EnsureUiEventSystem(
+            ref bool changed)
+        {
+            // Input System UI 모듈 하나만 배치해 마우스 클릭과 향후 게임패드 UI 탐색의 기반을 공유한다.
+            GameObject eventObject =
+                GameObject.Find("UIEventSystem");
+            if (eventObject == null)
+            {
+                eventObject =
+                    new GameObject("UIEventSystem");
+                changed = true;
+            }
+
+            if (eventObject
+                .GetComponent<EventSystem>()
+                == null)
+            {
+                eventObject
+                    .AddComponent<EventSystem>();
+                changed = true;
+            }
+
+            InputSystemUIInputModule inputModule =
+                eventObject
+                    .GetComponent<InputSystemUIInputModule>();
+            if (inputModule == null)
+            {
+                inputModule =
+                    eventObject
+                        .AddComponent<InputSystemUIInputModule>();
+                inputModule.AssignDefaultActions();
+                changed = true;
+            }
+        }
+
+        private static void ConfigureCenteredRect(
+            RectTransform rect,
+            Vector2 position,
+            Vector2 size)
+        {
+            // 모든 HUD 자식을 패널 중심 기준으로 배치해 해상도 스케일 변화에도 상대 구도를 유지한다.
+            rect.anchorMin =
+                new Vector2(0.5f, 0.5f);
+            rect.anchorMax =
+                new Vector2(0.5f, 0.5f);
+            rect.pivot =
+                new Vector2(0.5f, 0.5f);
+            rect.anchoredPosition = position;
+            rect.sizeDelta = size;
         }
 
         private static GameObject EnsureUiImage(
