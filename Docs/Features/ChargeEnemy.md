@@ -136,5 +136,5 @@ ChargeEnemyController ── CharacterController.Move
 - 현재 접촉 범위는 축 정렬 거리이므로 최종 모델의 Hurtbox 크기에 맞춰
   조정해야 한다.
 - 좁은 발판에서는 최대 거리보다 발판 끝 검사가 먼저 돌진을 중단한다.
-- M5의 다음 단계에서는 지금까지의 추적·투사체·돌진 패턴과 획득 능력을
-  조합하는 첫 보스를 구현한다.
+- 세 이동 능력과 일반 적에서 검증한 투사체 계약을 조합한 첫 보스는
+  [Ability Trial Boss](AbilityTrialBoss.md)에 분리해 구현했다.

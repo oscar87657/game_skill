@@ -58,6 +58,8 @@ namespace GameSkill.Editor
         private const float DashMovementDuration = 0.2f;
         private const float DashCooldownDuration = 0.48f;
         private const float DashInvulnerabilityDuration = 0.3f;
+        private const float WallJumpHorizontalSpeed = 3.6f;
+        private const float WallJumpControlLockDuration = 0.04f;
         private const float MeleeAttackWindupDuration = 0.55f;
         private const float MeleeAttackRecoveryDuration = 0.7f;
         private const float RangedAttackWindupDuration = 0.8f;
@@ -130,6 +132,11 @@ namespace GameSkill.Editor
             EnsureChargeEnemyPrototype(
                 player,
                 GameObject.Find(GrayboxRootName),
+                accentMaterial);
+            EnsureBossArenaPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                groundMaterial,
                 accentMaterial);
             EnsureAbilityPrototype(
                 player,
@@ -214,6 +221,9 @@ namespace GameSkill.Editor
                 DashMovementDuration,
                 DashCooldownDuration,
                 DashInvulnerabilityDuration);
+            motor.ConfigureWallJump(
+                WallJumpHorizontalSpeed,
+                WallJumpControlLockDuration);
             player.AddComponent<SideScrollerTargeting>();
             player.AddComponent<PlayerCombat>();
             player.AddComponent<PlayerRespawnController>();
@@ -469,6 +479,16 @@ namespace GameSkill.Editor
                 abilityMaterial))
             {
                 // 돌진 적·방향 표시·발판 안전 이동이 보완되면 Main 씬에 저장한다.
+                changed = true;
+            }
+
+            if (EnsureBossArenaPrototype(
+                player,
+                grayboxRoot,
+                groundMaterial,
+                abilityMaterial))
+            {
+                // 세 능력 관문·보스 아레나·패턴 표시가 보완되면 Main 씬에 저장한다.
                 changed = true;
             }
 
@@ -914,7 +934,7 @@ namespace GameSkill.Editor
                 new(
                     traversalLab,
                     new Vector2(10f, 3f),
-                    new Vector2(20f, 7.2f))
+                    new Vector2(32f, 7.2f))
             };
 
             bool changed = false;
@@ -1385,8 +1405,8 @@ namespace GameSkill.Editor
             changed |= EnsureWorldZoneVolume(
                 grayboxRoot.transform,
                 "Zone_TraversalLab",
-                new Vector3(15.5f, 4f, 0f),
-                new Vector3(18f, 10f, 3.5f),
+                new Vector3(22f, 4f, 0f),
+                new Vector3(32f, 10f, 3.5f),
                 traversalLab);
             return changed;
         }
@@ -1515,6 +1535,16 @@ namespace GameSkill.Editor
                     DashInvulnerabilityDuration))
             {
                 // 대시 이동보다 0.1초 긴 무적 시간을 저장해 교차 회피의 입력 오차를 완화한다.
+                EditorUtility.SetDirty(motor);
+                changed = true;
+            }
+
+            if (motor != null
+                && motor.ConfigureWallJump(
+                    WallJumpHorizontalSpeed,
+                    WallJumpControlLockDuration))
+            {
+                // 좁은 수직 동선에서 벽으로 빠르게 돌아올 수 있는 반발력과 입력 잠금을 저장한다.
                 EditorUtility.SetDirty(motor);
                 changed = true;
             }
@@ -2585,6 +2615,351 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureBossArenaPrototype(
+            GameObject player,
+            GameObject parent,
+            Material groundMaterial,
+            Material accentMaterial)
+        {
+            // 플레이어·능력 상태·배치 루트·재질이 준비된 경우에만 능력 시험 보스와 아레나를 구성한다.
+            if (player == null
+                || parent == null
+                || groundMaterial == null
+                || accentMaterial == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            Transform arenaParent = parent.transform;
+            EnsureBossArenaBlock(
+                arenaParent,
+                "BossArena_Floor",
+                new Vector3(32f, 3.2f, 0f),
+                new Vector3(12f, 0.6f, 3f),
+                groundMaterial,
+                true,
+                ref changed);
+            EnsureBossArenaBlock(
+                arenaParent,
+                "BossArena_WallPillar",
+                new Vector3(29f, 5.2f, 0f),
+                new Vector3(0.6f, 4f, 3f),
+                groundMaterial,
+                true,
+                ref changed);
+            EnsureBossArenaBlock(
+                arenaParent,
+                "BossArena_RightWall",
+                new Vector3(38f, 6.2f, 0f),
+                new Vector3(0.6f, 6f, 3f),
+                groundMaterial,
+                true,
+                ref changed);
+            EnsureBossArenaBlock(
+                arenaParent,
+                "BossArena_Backdrop",
+                new Vector3(32f, 6f, 2.4f),
+                new Vector3(12f, 7f, 0.2f),
+                groundMaterial,
+                false,
+                ref changed);
+
+            GameObject boss =
+                GameObject.Find("Boss_AbilityWarden");
+            if (boss == null)
+            {
+                // 발 위치 기준 빈 루트에 몸 Collider와 상태 표현 자식을 분리해 조립한다.
+                boss =
+                    new GameObject("Boss_AbilityWarden");
+                boss.transform.SetParent(arenaParent);
+                changed = true;
+            }
+
+            if (boss.layer
+                != CharacterBodyCollisionPolicy.EnemyBodyLayer)
+            {
+                // 플레이어를 밀어내지 않으면서 공격 대상으로는 남도록 공통 EnemyBody 레이어를 사용한다.
+                boss.layer =
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer;
+                EditorUtility.SetDirty(boss);
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                boss.transform,
+                new Vector3(34.5f, 3.55f, 0f),
+                Vector3.one))
+            {
+                changed = true;
+            }
+
+            CapsuleCollider bodyCollider =
+                boss.GetComponent<CapsuleCollider>();
+            if (bodyCollider == null)
+            {
+                bodyCollider =
+                    boss.AddComponent<CapsuleCollider>();
+                changed = true;
+            }
+
+            if (bodyCollider.center
+                    != new Vector3(0f, 1.2f, 0f)
+                || !Mathf.Approximately(
+                    bodyCollider.height,
+                    2.4f)
+                || !Mathf.Approximately(
+                    bodyCollider.radius,
+                    0.6f)
+                || bodyCollider.isTrigger)
+            {
+                // 큰 실루엣과 플레이어 공격 조회를 위한 일반 캡슐 Collider를 발 기준으로 배치한다.
+                bodyCollider.center =
+                    new Vector3(0f, 1.2f, 0f);
+                bodyCollider.height = 2.4f;
+                bodyCollider.radius = 0.6f;
+                bodyCollider.isTrigger = false;
+                EditorUtility.SetDirty(bodyCollider);
+                changed = true;
+            }
+
+            Transform visualTransform =
+                boss.transform.Find("Boss_Visual");
+            if (visualTransform == null)
+            {
+                // 실제 모델 전에는 큰 캡슐로 일반 적과 다른 보스 실루엣을 만든다.
+                GameObject visual =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Capsule);
+                visual.name = "Boss_Visual";
+                visual.transform.SetParent(
+                    boss.transform,
+                    false);
+                Object.DestroyImmediate(
+                    visual.GetComponent<CapsuleCollider>());
+                visualTransform = visual.transform;
+                changed = true;
+            }
+
+            Vector3 visualLocalPosition =
+                new(0f, 1.2f, 0f);
+            Vector3 visualLocalScale =
+                new(1.15f, 1.2f, 1.15f);
+            if ((visualTransform.localPosition
+                    - visualLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (visualTransform.localScale
+                    - visualLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 메시 바닥과 몸 Collider 바닥을 맞춰 아레나 바닥에 묻히지 않게 한다.
+                visualTransform.localPosition =
+                    visualLocalPosition;
+                visualTransform.localRotation =
+                    Quaternion.identity;
+                visualTransform.localScale =
+                    visualLocalScale;
+                EditorUtility.SetDirty(visualTransform);
+                changed = true;
+            }
+
+            MeshRenderer visualRenderer =
+                visualTransform.GetComponent<MeshRenderer>();
+            if (visualRenderer != null
+                && visualRenderer.sharedMaterial
+                    != accentMaterial)
+            {
+                visualRenderer.sharedMaterial =
+                    accentMaterial;
+                EditorUtility.SetDirty(visualRenderer);
+                changed = true;
+            }
+
+            Transform warningTransform =
+                boss.transform.Find(
+                    "Boss_PatternWarning");
+            if (warningTransform == null)
+            {
+                // 하나의 큐브를 패턴별 위치·크기·색으로 바꿔 다음 대응 능력을 예고한다.
+                GameObject warning =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Cube);
+                warning.name =
+                    "Boss_PatternWarning";
+                warning.transform.SetParent(
+                    boss.transform,
+                    false);
+                Object.DestroyImmediate(
+                    warning.GetComponent<BoxCollider>());
+                warningTransform = warning.transform;
+                changed = true;
+            }
+
+            Vector3 warningLocalPosition =
+                new(-1.3f, 0.45f, 0f);
+            Vector3 warningLocalScale =
+                new(1.8f, 0.22f, 0.8f);
+            if ((warningTransform.localPosition
+                    - warningLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (warningTransform.localScale
+                    - warningLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // Edit Mode에서는 첫 지상 파동 예고의 기준 배치를 저장한다.
+                warningTransform.localPosition =
+                    warningLocalPosition;
+                warningTransform.localRotation =
+                    Quaternion.identity;
+                warningTransform.localScale =
+                    warningLocalScale;
+                EditorUtility.SetDirty(warningTransform);
+                changed = true;
+            }
+
+            MeshRenderer warningRenderer =
+                warningTransform.GetComponent<MeshRenderer>();
+            if (warningRenderer != null)
+            {
+                if (warningRenderer.sharedMaterial
+                    != accentMaterial)
+                {
+                    warningRenderer.sharedMaterial =
+                        accentMaterial;
+                    changed = true;
+                }
+
+                // Play 전에는 숨기고 보스가 선딜 상태에 들어갈 때만 표시한다.
+                if (warningRenderer.enabled)
+                {
+                    warningRenderer.enabled = false;
+                    changed = true;
+                }
+
+                EditorUtility.SetDirty(warningRenderer);
+            }
+
+            Health health = boss.GetComponent<Health>();
+            if (health == null)
+            {
+                health = boss.AddComponent<Health>();
+                health.Configure(12);
+                changed = true;
+            }
+            else if (health.MaxHealth != 12)
+            {
+                // 세 패턴과 두 번째 페이즈를 관찰할 수 있도록 보스 체력을 고정한다.
+                health.Configure(12);
+                EditorUtility.SetDirty(health);
+                changed = true;
+            }
+
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            AbilityDefinition doubleJumpAbility =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDashAbility =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversalAbility =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+
+            AbilityTrialBossController bossController =
+                boss.GetComponent<AbilityTrialBossController>();
+            if (bossController == null)
+            {
+                bossController =
+                    boss.AddComponent<AbilityTrialBossController>();
+                changed = true;
+            }
+
+            if (bossController.Configure(
+                player.transform,
+                abilityState,
+                doubleJumpAbility,
+                airDashAbility,
+                wallTraversalAbility,
+                visualRenderer,
+                warningRenderer,
+                accentMaterial))
+            {
+                // 플레이어·능력·표현 참조가 바뀐 경우에만 보스 컴포넌트를 씬 저장 대상으로 표시한다.
+                EditorUtility.SetDirty(bossController);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static GameObject EnsureBossArenaBlock(
+            Transform parent,
+            string objectName,
+            Vector3 position,
+            Vector3 scale,
+            Material material,
+            bool needsCollider,
+            ref bool changed)
+        {
+            // 이름을 배치 키로 사용해 아레나 바닥·벽·배경을 재실행에도 같은 오브젝트로 유지한다.
+            GameObject block =
+                GameObject.Find(objectName);
+            if (block == null)
+            {
+                block = CreateBlock(
+                    parent,
+                    objectName,
+                    position,
+                    scale,
+                    material);
+                changed = true;
+            }
+            else if (SetTransformIfDifferent(
+                block.transform,
+                position,
+                scale))
+            {
+                changed = true;
+            }
+
+            MeshRenderer renderer =
+                block.GetComponent<MeshRenderer>();
+            if (renderer != null
+                && renderer.sharedMaterial != material)
+            {
+                renderer.sharedMaterial = material;
+                EditorUtility.SetDirty(renderer);
+                changed = true;
+            }
+
+            Collider collider =
+                block.GetComponent<Collider>();
+            if (!needsCollider && collider != null)
+            {
+                // 배경은 Main 게임플레이 충돌을 막지 않는 시각 오브젝트로만 유지한다.
+                Object.DestroyImmediate(collider);
+                changed = true;
+            }
+            else if (needsCollider && collider == null)
+            {
+                // 사용자가 실수로 아레나 환경 Collider를 지워도 빌더가 물리 경계를 복원한다.
+                block.AddComponent<BoxCollider>();
+                changed = true;
+            }
+
+            return block;
         }
 
         private static GameObject CreateCheckpoint(

@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 일반 적들의 탐지·추적·공격·돌진 상태 전환과 공통 데미지 규칙을 검증한다.
-// 책임: 거리 경계·높이 차·탐지 히스테리시스·공격 선딜·돌진 방향·무적 거부의 회귀를 확인한다.
+// 목적: 일반 적과 첫 보스의 탐지·추적·공격·돌진·패턴 전환과 공통 데미지 규칙을 검증한다.
+// 책임: 거리 경계·높이 차·탐지 히스테리시스·공격 선딜·돌진 방향·능력 관문·무적 거부의 회귀를 확인한다.
 // 불변식: 각 컴포넌트 테스트는 자신이 생성한 Unity 오브젝트를 종료 전에 모두 정리한다.
 // 선택 이유: 순수 판단 테스트와 작은 통합 테스트를 함께 두어 규칙 오류와 씬 배치 오류를 구분한다.
 using NUnit.Framework;
@@ -171,6 +171,87 @@ namespace GameSkill.Tests
                     fallbackDirection);
 
             Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(true, true, 5f, 0f, true)]
+        [TestCase(true, false, 2f, 0f, false)]
+        [TestCase(false, true, 2f, 0f, false)]
+        [TestCase(true, true, 6f, 0f, false)]
+        [TestCase(true, true, 3f, 5f, false)]
+        public void BossEngagement_RequiresAbilitiesAndRange(
+            bool targetAvailable,
+            bool allAbilitiesUnlocked,
+            float horizontalDistance,
+            float verticalDistance,
+            bool expected)
+        {
+            // 보스 기본 활성 거리 5.5와 높이 4.5에서 능력 관문을 건너뛸 수 없는지 확인한다.
+            bool result =
+                BossPatternDecisionMath.CanEngage(
+                    targetAvailable,
+                    allAbilitiesUnlocked,
+                    horizontalDistance,
+                    verticalDistance,
+                    5.5f,
+                    4.5f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(
+            BossPattern.GroundWave,
+            BossPattern.AirBurst)]
+        [TestCase(
+            BossPattern.AirBurst,
+            BossPattern.GroundPulse)]
+        [TestCase(
+            BossPattern.GroundPulse,
+            BossPattern.GroundWave)]
+        public void BossPattern_CyclesPredictably(
+            BossPattern current,
+            BossPattern expected)
+        {
+            // 세 능력 시험이 플레이어가 학습 가능한 고정 순서로 순환하는지 검증한다.
+            Assert.That(
+                BossPatternDecisionMath.NextPattern(
+                    current),
+                Is.EqualTo(expected));
+        }
+
+        [TestCase(5.64f, 3.55f, 2.1f, false)]
+        [TestCase(5.65f, 3.55f, 2.1f, true)]
+        [TestCase(7f, 3.55f, 2.1f, true)]
+        public void GroundPulse_UsesArenaRelativeHeight(
+            float targetHeight,
+            float floorHeight,
+            float requiredHeight,
+            bool expected)
+        {
+            // 월드 원점이 아니라 아레나 바닥을 기준으로 지면 충격의 안전 높이를 판정한다.
+            Assert.That(
+                BossPatternDecisionMath.IsGroundPulseSafe(
+                    targetHeight,
+                    floorHeight,
+                    requiredHeight),
+                Is.EqualTo(expected));
+        }
+
+        [TestCase(12, 12, false)]
+        [TestCase(7, 12, false)]
+        [TestCase(6, 12, true)]
+        [TestCase(1, 12, true)]
+        [TestCase(0, 12, false)]
+        public void BossPhase_ChangesAtHalfHealth(
+            int currentHealth,
+            int maximumHealth,
+            bool expected)
+        {
+            // 살아 있는 보스의 체력이 절반 이하일 때만 두 번째 페이즈가 되는지 확인한다.
+            Assert.That(
+                BossPatternDecisionMath.IsSecondPhase(
+                    currentHealth,
+                    maximumHealth),
+                Is.EqualTo(expected));
         }
 
         [Test]
@@ -622,6 +703,120 @@ namespace GameSkill.Tests
                 Object.DestroyImmediate(enemy);
                 Object.DestroyImmediate(target);
                 Object.DestroyImmediate(ground);
+            }
+        }
+
+        [Test]
+        public void AbilityTrialBoss_WaitsForAbilitiesThenExecutesPattern()
+        {
+            // 실제 보스 컴포넌트가 세 능력 전에는 대기하고 해금 뒤 첫 투사체 패턴을 실행하는지 검증한다.
+            var target =
+                new GameObject("BossTestTarget");
+            GameObject boss =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Capsule);
+            var doubleJump =
+                ScriptableObject.CreateInstance<AbilityDefinition>();
+            var airDash =
+                ScriptableObject.CreateInstance<AbilityDefinition>();
+            var wallTraversal =
+                ScriptableObject.CreateInstance<AbilityDefinition>();
+            try
+            {
+                doubleJump.Configure(
+                    "boss_test_double_jump",
+                    "2단 점프",
+                    string.Empty);
+                airDash.Configure(
+                    "boss_test_air_dash",
+                    "공중 대시",
+                    string.Empty);
+                wallTraversal.Configure(
+                    "boss_test_wall",
+                    "벽 잡기",
+                    string.Empty);
+                PlayerAbilityState abilityState =
+                    target.AddComponent<PlayerAbilityState>();
+                Health targetHealth =
+                    target.AddComponent<Health>();
+                targetHealth.Configure(5);
+                target.transform.position =
+                    new Vector3(-2f, 0.05f, 0f);
+                Health bossHealth =
+                    boss.AddComponent<Health>();
+                bossHealth.Configure(12);
+                AbilityTrialBossController controller =
+                    boss.AddComponent<AbilityTrialBossController>();
+                controller.Configure(
+                    target.transform,
+                    abilityState,
+                    doubleJump,
+                    airDash,
+                    wallTraversal,
+                    boss.GetComponent<Renderer>(),
+                    null,
+                    null);
+
+                controller.Tick(0.01f);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.Idle));
+                Assert.That(
+                    controller.IsAbilityGateSatisfied,
+                    Is.False);
+
+                Assert.That(
+                    abilityState.TryUnlock(doubleJump),
+                    Is.True);
+                Assert.That(
+                    abilityState.TryUnlock(airDash),
+                    Is.True);
+                Assert.That(
+                    abilityState.TryUnlock(
+                        wallTraversal),
+                    Is.True);
+                controller.Tick(0.01f);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.AttackWindup));
+                Assert.That(
+                    controller.IsAbilityGateSatisfied,
+                    Is.True);
+
+                controller.Tick(0.91f);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.AttackRecovery));
+                Assert.That(
+                    controller.PatternExecutionCount,
+                    Is.EqualTo(1));
+                Assert.That(
+                    controller.ActiveProjectileCount,
+                    Is.EqualTo(1));
+                controller.ResetToSpawn();
+                Assert.That(
+                    controller.ActiveProjectileCount,
+                    Is.Zero);
+            }
+            finally
+            {
+                EnemyProjectile[] projectiles =
+                    Object.FindObjectsByType<EnemyProjectile>(
+                        FindObjectsSortMode.None);
+                // EditMode의 Destroy 예약 없는 투사체를 테스트가 직접 모두 정리한다.
+                for (int index = 0;
+                     index < projectiles.Length;
+                     index++)
+                {
+                    Object.DestroyImmediate(
+                        projectiles[index].gameObject);
+                }
+
+                Object.DestroyImmediate(boss);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(doubleJump);
+                Object.DestroyImmediate(airDash);
+                Object.DestroyImmediate(wallTraversal);
             }
         }
     }

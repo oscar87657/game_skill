@@ -38,8 +38,8 @@ namespace GameSkill
         [Header("Wall Traversal")]
         [SerializeField, Min(0f)] private float wallClingDuration = 0.22f;
         [SerializeField, Min(0f)] private float wallSlideSpeed = 2.4f;
-        [SerializeField, Min(0f)] private float wallJumpHorizontalSpeed = 4.8f;
-        [SerializeField, Min(0f)] private float wallJumpControlLockTime = 0.08f;
+        [SerializeField, Min(0f)] private float wallJumpHorizontalSpeed = 3.6f;
+        [SerializeField, Min(0f)] private float wallJumpControlLockTime = 0.04f;
         [SerializeField, Range(0.5f, 1f)]
         private float minimumWallNormal = 0.75f;
 
@@ -101,6 +101,10 @@ namespace GameSkill
         public float DashDuration => dashDuration;
         public float DashInvulnerabilityDuration =>
             dashInvulnerabilityDuration;
+        public float WallJumpHorizontalSpeed =>
+            wallJumpHorizontalSpeed;
+        public float WallJumpControlLockTime =>
+            wallJumpControlLockTime;
 
         private void Awake()
         {
@@ -168,6 +172,32 @@ namespace GameSkill
             dashCooldown = safeCooldown;
             dashInvulnerabilityDuration =
                 safeInvulnerabilityDuration;
+            return true;
+        }
+
+        public bool ConfigureWallJump(
+            float horizontalJumpSpeed,
+            float controlLockDuration)
+        {
+            // 반발 거리와 입력 복귀 시간을 함께 조정해 씬과 코드 기본값이 서로 어긋나지 않게 한다.
+            float safeHorizontalSpeed =
+                Mathf.Max(0f, horizontalJumpSpeed);
+            float safeControlLockDuration =
+                Mathf.Max(0f, controlLockDuration);
+            if (Mathf.Approximately(
+                    wallJumpHorizontalSpeed,
+                    safeHorizontalSpeed)
+                && Mathf.Approximately(
+                    wallJumpControlLockTime,
+                    safeControlLockDuration))
+            {
+                return false;
+            }
+
+            wallJumpHorizontalSpeed =
+                safeHorizontalSpeed;
+            wallJumpControlLockTime =
+                safeControlLockDuration;
             return true;
         }
 

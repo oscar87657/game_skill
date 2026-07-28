@@ -62,6 +62,12 @@ namespace GameSkill.Tests
             Assert.That(
                 motor.DashInvulnerabilityDuration,
                 Is.GreaterThan(motor.DashDuration));
+            Assert.That(
+                motor.WallJumpHorizontalSpeed,
+                Is.EqualTo(3.6f).Within(0.001f));
+            Assert.That(
+                motor.WallJumpControlLockTime,
+                Is.EqualTo(0.04f).Within(0.001f));
             PlayerAbilityState abilityState =
                 player.GetComponent<PlayerAbilityState>();
             Assert.That(abilityState, Is.Not.Null);
@@ -434,6 +440,57 @@ namespace GameSkill.Tests
                 Is.False);
             Vector3 chargeEnemySpawnPosition =
                 chargeEnemyObject.transform.position;
+            GameObject bossObject =
+                GameObject.Find("Boss_AbilityWarden");
+            Assert.That(bossObject, Is.Not.Null);
+            Assert.That(
+                bossObject.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer));
+            AbilityTrialBossController boss =
+                bossObject
+                    .GetComponent<AbilityTrialBossController>();
+            Assert.That(boss, Is.Not.Null);
+            Health bossHealth =
+                bossObject.GetComponent<Health>();
+            Assert.That(bossHealth, Is.Not.Null);
+            Assert.That(
+                bossHealth.MaxHealth,
+                Is.EqualTo(12));
+            CapsuleCollider bossBody =
+                bossObject.GetComponent<CapsuleCollider>();
+            Assert.That(bossBody, Is.Not.Null);
+            Assert.That(
+                boss.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                boss.IsAbilityGateSatisfied,
+                Is.False);
+            Transform bossVisual =
+                bossObject.transform.Find(
+                    "Boss_Visual");
+            Assert.That(bossVisual, Is.Not.Null);
+            Renderer bossRenderer =
+                bossVisual.GetComponent<Renderer>();
+            Assert.That(bossRenderer, Is.Not.Null);
+            Renderer bossWarningRenderer =
+                bossObject.transform
+                    .Find("Boss_PatternWarning")
+                    .GetComponent<Renderer>();
+            Assert.That(
+                bossWarningRenderer.enabled,
+                Is.False);
+            Vector3 bossSpawnPosition =
+                bossObject.transform.position;
+            Assert.That(
+                GameObject.Find("BossArena_Floor"),
+                Is.Not.Null);
+            Assert.That(
+                GameObject.Find("BossArena_WallPillar"),
+                Is.Not.Null);
+            Assert.That(
+                GameObject.Find("BossArena_RightWall"),
+                Is.Not.Null);
 
             // 실제 Main 참조로 선딜·투사체 생성·초기화까지 원거리 공격 한 사이클을 검증한다.
             Vector3 initialPlayerPosition =
@@ -530,6 +587,42 @@ namespace GameSkill.Tests
             Assert.That(motor.IsWallTraversalUnlocked, Is.True);
             Assert.That(abilityState.UnlockedCount, Is.EqualTo(3));
 
+            // 세 능력 해금 뒤에만 실제 보스가 첫 패턴을 예고하고 지상 파동을 생성하는지 확인한다.
+            motor.Teleport(
+                bossSpawnPosition
+                + new Vector3(-2f, 0f, 0f));
+            boss.Tick(0.01f);
+            Assert.That(
+                boss.IsAbilityGateSatisfied,
+                Is.True);
+            Assert.That(
+                boss.CurrentState,
+                Is.EqualTo(EnemyState.AttackWindup));
+            Assert.That(
+                bossWarningRenderer.enabled,
+                Is.True);
+            Assert.That(
+                boss.CurrentPattern,
+                Is.EqualTo(BossPattern.GroundWave));
+            boss.Tick(0.91f);
+            Assert.That(
+                boss.CurrentState,
+                Is.EqualTo(EnemyState.AttackRecovery));
+            Assert.That(
+                boss.PatternExecutionCount,
+                Is.EqualTo(1));
+            Assert.That(
+                boss.ActiveProjectileCount,
+                Is.EqualTo(1));
+            boss.ResetToSpawn();
+            Assert.That(
+                boss.ActiveProjectileCount,
+                Is.Zero);
+            Assert.That(
+                bossWarningRenderer.enabled,
+                Is.False);
+            motor.Teleport(initialPlayerPosition);
+
             // 벽 잡기로 되돌아온 샤프트 정상 보상이 최대 체력과 영구 획득 ID를 한 번만 갱신하는지 확인한다.
             Assert.That(backtrackReward.IsRequirementMet, Is.True);
             Assert.That(backtrackReward.Collect(), Is.True);
@@ -607,6 +700,15 @@ namespace GameSkill.Tests
                 Is.EqualTo(EnemyState.Dead));
             chargeEnemyObject.transform.position +=
                 new Vector3(-2f, 1f, 0f);
+            Assert.That(
+                bossHealth.TakeDamage(12),
+                Is.True);
+            Assert.That(bossHealth.IsDead, Is.True);
+            Assert.That(
+                boss.CurrentState,
+                Is.EqualTo(EnemyState.Dead));
+            bossObject.transform.position +=
+                new Vector3(2f, 1f, 0f);
             GameObject hazardObject = GameObject.Find("RespawnHazard");
             Assert.That(hazardObject, Is.Not.Null);
             DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
@@ -706,6 +808,25 @@ namespace GameSkill.Tests
             Assert.That(
                 chargeBody.enabled,
                 Is.True);
+            Assert.That(bossHealth.IsDead, Is.False);
+            Assert.That(
+                bossHealth.CurrentHealth,
+                Is.EqualTo(12));
+            Assert.That(
+                boss.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                bossObject.transform.position,
+                Is.EqualTo(bossSpawnPosition));
+            Assert.That(
+                bossRenderer.enabled,
+                Is.True);
+            Assert.That(
+                bossBody.enabled,
+                Is.True);
+            Assert.That(
+                boss.ActiveProjectileCount,
+                Is.Zero);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

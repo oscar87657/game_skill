@@ -17,6 +17,7 @@
 | AI | 근거리 적·탐지·추적·공격 상태 머신 | 기본 구현 완료 | [Enemy State Machine](Features/EnemyStateMachine.md) |
 | AI | 고정형 원거리 적·직선 투사체 | 기본 구현 완료 | [Ranged Enemy](Features/RangedEnemy.md) |
 | AI | 방향 잠금 돌진 적·발판 끝 중단 | 기본 구현 완료 | [Charge Enemy](Features/ChargeEnemy.md) |
+| 보스 | 세 이동 능력을 시험하는 순환 패턴 보스 | 기본 구현 완료 | [Ability Trial Boss](Features/AbilityTrialBoss.md) |
 | 저장 | 세이브·로드 | 예정 | — |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.
