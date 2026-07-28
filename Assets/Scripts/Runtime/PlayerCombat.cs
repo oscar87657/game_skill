@@ -3,6 +3,7 @@
 // 책임: 공격 입력·시간을 관리하고 히트박스를 조회해 Health에 데미지를 전달한다.
 // 불변식: 한 공격은 대상에게 최대 한 번만 데미지를 주며 이동을 직접 변경하지 않는다.
 // 선택 이유: Physics.OverlapBox로 판정 타이밍을 결정적으로 만들고 표현과 분리한다.
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -15,6 +16,9 @@ namespace GameSkill
     [RequireComponent(typeof(SideScrollerTargeting))]
     public sealed class PlayerCombat : MonoBehaviour
     {
+        public event Action<int> AttackStarted;
+        public event Action<Vector3> HitConfirmed;
+
         [Header("Attack")]
         [SerializeField, Min(1)] private int damage = 1;
         [SerializeField, Min(0.01f)] private float attackDuration = 0.38f;
@@ -128,6 +132,9 @@ namespace GameSkill
             hitApplied = false;
             damagedTargets.Clear();
             targeting.AcquireTarget(GetAttackOrigin(), motor.FacingDirection);
+            // 애니메이션·VFX 계층이 공격 판정 타이머를 복제하지 않도록 확정된 콤보 단계를 알린다.
+            AttackStarted?.Invoke(
+                ComboStep);
             if (!motor.IsGrounded)
             {
                 motor.RequestAirAttackHover(
@@ -191,10 +198,17 @@ namespace GameSkill
                     continue;
                 }
 
-                target.TakeDamage(CombatMath.DamageForComboStep(
-                    damage,
-                    ComboStep,
-                    finisherDamageBonus));
+                if (target.TakeDamage(
+                    CombatMath.DamageForComboStep(
+                        damage,
+                        ComboStep,
+                        finisherDamageBonus)))
+                {
+                    // 실제 Health가 데미지를 승인한 위치에서만 타격 피드백을 한 번 발생시킨다.
+                    HitConfirmed?.Invoke(
+                        hit.bounds.ClosestPoint(
+                            center));
+                }
             }
         }
 

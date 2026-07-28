@@ -84,6 +84,39 @@ namespace GameSkill.Tests
             Assert.That(targeting, Is.Not.Null);
             Health playerHealth = player.GetComponent<Health>();
             Assert.That(playerHealth, Is.Not.Null);
+            PlayerFeedbackController feedback =
+                player.GetComponent<PlayerFeedbackController>();
+            Assert.That(feedback, Is.Not.Null);
+            Assert.That(
+                feedback.IsConfigured,
+                Is.True);
+            AudioSource feedbackAudio =
+                player.GetComponent<AudioSource>();
+            Assert.That(feedbackAudio, Is.Not.Null);
+            Assert.That(
+                feedbackAudio.playOnAwake,
+                Is.False);
+            Assert.That(
+                feedbackAudio.spatialBlend,
+                Is.Zero.Within(0.001f));
+            Transform dashTrail =
+                player.transform.Find(
+                    "Player_DashTrail");
+            Assert.That(dashTrail, Is.Not.Null);
+            Assert.That(
+                dashTrail.GetComponent<TrailRenderer>(),
+                Is.Not.Null);
+            Transform feedbackParticle =
+                player.transform.Find(
+                    "Player_FeedbackVfx");
+            Assert.That(
+                feedbackParticle,
+                Is.Not.Null);
+            Assert.That(
+                feedbackParticle
+                    .GetComponent<ParticleSystem>(),
+                Is.Not.Null);
+
             PlayerCheckpointState checkpointState =
                 player.GetComponent<PlayerCheckpointState>();
             Assert.That(checkpointState, Is.Not.Null);

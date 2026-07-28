@@ -54,6 +54,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 체력·능력·저장 상태 HUD
 - [x] 일시정지·저장 메뉴와 마스터 음량 옵션
 - [x] 보스 처치 저장과 세이브 데이터 `v1 → v2` 마이그레이션
+- [x] 이벤트 기반 대시·공격·명중·피격·능력 획득 VFX와 임시 SFX
 - [ ] 보스와 수직 슬라이스 빌드
 
 자세한 내용은 [게임 디자인](Docs/GAME_DESIGN.md)과
@@ -87,6 +88,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [플레이어 진행 저장](Docs/Features/ProgressSave.md)
 - [체력·능력·저장 상태 HUD](Docs/Features/ProgressHud.md)
 - [일시정지와 옵션 메뉴](Docs/Features/PauseAndOptions.md)
+- [이벤트 기반 플레이어 VFX·SFX](Docs/Features/PlayerFeedback.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기

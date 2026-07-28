@@ -21,5 +21,6 @@
 | 저장 | 능력·체크포인트·월드·보스 상태와 v1→v2 이전 | 기본 구현 완료 | [Progress Save](Features/ProgressSave.md) |
 | UI | 체력·능력·저장 상태 HUD | 기본 구현 완료 | [Progress HUD](Features/ProgressHud.md) |
 | UI | 일시정지·저장 메뉴·마스터 음량 | 기본 구현 완료 | [Pause & Options](Features/PauseAndOptions.md) |
+| 표현 | 이벤트 기반 대시·공격·명중·피격·능력 VFX/SFX | 기본 구현 완료 | [Player Feedback](Features/PlayerFeedback.md) |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.

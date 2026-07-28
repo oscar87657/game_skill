@@ -12,6 +12,7 @@ using UnityEngine.InputSystem.UI;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
+using UnityEngine.Rendering;
 
 namespace GameSkill.Editor
 {
@@ -22,6 +23,8 @@ namespace GameSkill.Editor
         private const string InputActionsPath = "Assets/InputSystem_Actions.inputactions";
         private const string GroundMaterialPath = "Assets/Materials/PrototypeGround.mat";
         private const string AccentMaterialPath = "Assets/Materials/PrototypeAccent.mat";
+        private const string FeedbackMaterialPath =
+            "Assets/Materials/PrototypeFeedback.mat";
         private const string AbilityFolderPath = "Assets/Settings/Abilities";
         private const string DoubleJumpAbilityPath =
             AbilityFolderPath + "/Ability_DoubleJump.asset";
@@ -151,6 +154,7 @@ namespace GameSkill.Editor
                 GameObject.Find(GrayboxRootName),
                 accentMaterial,
                 groundMaterial);
+            EnsurePlayerFeedbackPrototype(player);
             EnsureWorldZonePrototype(
                 player,
                 GameObject.Find(GrayboxRootName));
@@ -544,6 +548,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsurePlayerFeedbackPrototype(player))
+            {
+                // 대시·공격·피격·능력 획득 VFX와 임시 SFX 연결이 보완되면 Main 씬에 저장한다.
+                changed = true;
+            }
+
             if (EnsureGameProgressSavePrototype(player))
             {
                 // M6 저장 제어기와 능력 카탈로그가 보완되면 플레이어 구성을 Main에 저장한다.
@@ -712,6 +722,232 @@ namespace GameSkill.Editor
                     highPlatform,
                     new Vector3(20f, 3.2f, 0f),
                     new Vector3(12f, 0.6f, 3f));
+        }
+
+        private static bool EnsurePlayerFeedbackPrototype(
+            GameObject player)
+        {
+            // 이동·전투·체력·능력 상태가 모두 준비된 플레이어에만 표현 계층을 연결한다.
+            if (player == null)
+            {
+                return false;
+            }
+
+            SideScrollerMotor motor =
+                player.GetComponent<SideScrollerMotor>();
+            PlayerCombat combat =
+                player.GetComponent<PlayerCombat>();
+            Health health =
+                player.GetComponent<Health>();
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            if (motor == null
+                || combat == null
+                || health == null
+                || abilityState == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            Material feedbackMaterial =
+                GetOrCreateFeedbackMaterial();
+            Transform trailTransform =
+                player.transform.Find(
+                    "Player_DashTrail");
+            if (trailTransform == null)
+            {
+                // 캐릭터 중심을 따라가는 별도 자식으로 대시 Trail을 만든다.
+                var trailObject =
+                    new GameObject(
+                        "Player_DashTrail");
+                trailObject.transform.SetParent(
+                    player.transform,
+                    false);
+                trailTransform =
+                    trailObject.transform;
+                changed = true;
+            }
+
+            trailTransform.localPosition =
+                new Vector3(0f, 0.9f, -0.2f);
+            TrailRenderer trail =
+                trailTransform
+                    .GetComponent<TrailRenderer>();
+            if (trail == null)
+            {
+                trail =
+                    trailTransform.gameObject
+                        .AddComponent<TrailRenderer>();
+                changed = true;
+            }
+
+            trail.sharedMaterial =
+                feedbackMaterial;
+            trail.time = 0.14f;
+            trail.minVertexDistance = 0.04f;
+            trail.startWidth = 0.34f;
+            trail.endWidth = 0.02f;
+            trail.startColor =
+                new Color(
+                    0.2f,
+                    0.92f,
+                    1f,
+                    0.8f);
+            trail.endColor =
+                new Color(
+                    0.15f,
+                    0.45f,
+                    1f,
+                    0f);
+            trail.alignment =
+                LineAlignment.View;
+            trail.textureMode =
+                LineTextureMode.Stretch;
+            trail.emitting = false;
+
+            string[] legacyParticleNames =
+            {
+                "Player_DashVfx",
+                "Player_AttackVfx",
+                "Player_HitVfx",
+                "Player_HurtVfx",
+                "Player_AbilityVfx"
+            };
+            // 이전 다중 파티클 구성을 공유 Emitter로 이전해 씬 크기와 컴포넌트 수를 줄인다.
+            for (int index = 0;
+                 index < legacyParticleNames.Length;
+                 index++)
+            {
+                Transform legacyParticle =
+                    player.transform.Find(
+                        legacyParticleNames[index]);
+                if (legacyParticle == null)
+                {
+                    continue;
+                }
+
+                Object.DestroyImmediate(
+                    legacyParticle.gameObject);
+                changed = true;
+            }
+
+            ParticleSystem feedbackParticles =
+                EnsureFeedbackParticles(
+                    "Player_FeedbackVfx",
+                    player.transform,
+                    feedbackMaterial,
+                    ref changed);
+
+            AudioSource audioSource =
+                player.GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                // 여러 이벤트의 짧은 OneShot을 공유하는 2D AudioSource를 플레이어에 하나만 둔다.
+                audioSource =
+                    player.AddComponent<AudioSource>();
+                changed = true;
+            }
+
+            audioSource.playOnAwake = false;
+            audioSource.loop = false;
+            audioSource.spatialBlend = 0f;
+            audioSource.volume = 0.65f;
+            audioSource.dopplerLevel = 0f;
+
+            PlayerFeedbackController feedback =
+                player.GetComponent<PlayerFeedbackController>();
+            if (feedback == null)
+            {
+                feedback =
+                    player.AddComponent<PlayerFeedbackController>();
+                changed = true;
+            }
+
+            if (feedback.Configure(
+                motor,
+                combat,
+                health,
+                abilityState,
+                trail,
+                feedbackParticles,
+                audioSource))
+            {
+                EditorUtility.SetDirty(feedback);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static ParticleSystem EnsureFeedbackParticles(
+            string objectName,
+            Transform parent,
+            Material material,
+            ref bool changed)
+        {
+            // 이름으로 파티클 자식을 재사용해 빌더를 반복해도 같은 Cue가 중복 생성되지 않게 한다.
+            Transform particleTransform =
+                parent.Find(objectName);
+            if (particleTransform == null)
+            {
+                var particleObject =
+                    new GameObject(
+                        objectName);
+                particleObject.transform.SetParent(
+                    parent,
+                    false);
+                particleTransform =
+                    particleObject.transform;
+                changed = true;
+            }
+
+            particleTransform.localPosition =
+                new Vector3(0f, 0.9f, -0.25f);
+            ParticleSystem particles =
+                particleTransform
+                    .GetComponent<ParticleSystem>();
+            if (particles == null)
+            {
+                particles =
+                    particleTransform.gameObject
+                        .AddComponent<ParticleSystem>();
+                changed = true;
+            }
+
+            ParticleSystem.MainModule main =
+                particles.main;
+            main.loop = false;
+            main.playOnAwake = false;
+            main.duration = 0.5f;
+            main.startLifetime = 0.42f;
+            main.startSpeed = 0f;
+            main.startSize = 0.15f;
+            main.startColor = Color.white;
+            main.maxParticles = 128;
+            main.simulationSpace =
+                ParticleSystemSimulationSpace.World;
+            main.gravityModifier = 0.12f;
+            ParticleSystem.EmissionModule emission =
+                particles.emission;
+            emission.enabled = false;
+            ParticleSystem.ShapeModule shape =
+                particles.shape;
+            shape.enabled = false;
+            ParticleSystemRenderer renderer =
+                particles
+                    .GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.renderMode =
+                ParticleSystemRenderMode.Billboard;
+            renderer.alignment =
+                ParticleSystemRenderSpace.View;
+            renderer.sortingOrder = 40;
+            particles.Stop(
+                true,
+                ParticleSystemStopBehavior
+                    .StopEmittingAndClear);
+            return particles;
         }
 
         private static bool EnsureWorldMapPrototype(
@@ -3911,6 +4147,74 @@ namespace GameSkill.Editor
                 EditorUtility.SetDirty(material);
             }
 
+            return material;
+        }
+
+        private static Material GetOrCreateFeedbackMaterial()
+        {
+            // 파티클 전용 URP 셰이더를 우선 사용하고 설치 환경 차이에 대비해 안전한 셰이더로 순서대로 대체한다.
+            Material material =
+                AssetDatabase.LoadAssetAtPath<Material>(
+                    FeedbackMaterialPath);
+            if (material == null)
+            {
+                Shader shader =
+                    Shader.Find(
+                        "Universal Render Pipeline/Particles/Unlit");
+                shader ??=
+                    Shader.Find(
+                        "Universal Render Pipeline/Unlit");
+                shader ??=
+                    Shader.Find(
+                        "Sprites/Default");
+                material =
+                    new Material(shader);
+                AssetDatabase.CreateAsset(
+                    material,
+                    FeedbackMaterialPath);
+            }
+
+            // Trail과 파티클의 알파가 배경과 섞이도록 URP 투명 표면 설정을 공통 머티리얼에 적용한다.
+            if (material.HasProperty("_Surface"))
+            {
+                material.SetFloat(
+                    "_Surface",
+                    1f);
+            }
+
+            if (material.HasProperty("_Blend"))
+            {
+                material.SetFloat(
+                    "_Blend",
+                    0f);
+            }
+
+            if (material.HasProperty("_SrcBlend"))
+            {
+                material.SetFloat(
+                    "_SrcBlend",
+                    (float)BlendMode.SrcAlpha);
+            }
+
+            if (material.HasProperty("_DstBlend"))
+            {
+                material.SetFloat(
+                    "_DstBlend",
+                    (float)BlendMode.OneMinusSrcAlpha);
+            }
+
+            if (material.HasProperty("_ZWrite"))
+            {
+                material.SetFloat(
+                    "_ZWrite",
+                    0f);
+            }
+
+            material.EnableKeyword(
+                "_SURFACE_TYPE_TRANSPARENT");
+            material.renderQueue =
+                (int)RenderQueue.Transparent;
+            EditorUtility.SetDirty(material);
             return material;
         }
 

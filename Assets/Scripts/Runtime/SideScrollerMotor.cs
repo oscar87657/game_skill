@@ -3,6 +3,7 @@
 // 책임: 이동 입력을 읽고 점프·대시 상태를 해결한 뒤 CharacterController를 이동시킨다.
 // 불변식: Z 깊이는 고정되며 이동 능력이 전투나 애니메이션을 직접 소유하지 않는다.
 // 선택 이유: 명시적인 타이머로 코요테 타임·버퍼·쿨다운·무적을 확인하고 테스트할 수 있다.
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.Serialization;
@@ -13,6 +14,8 @@ namespace GameSkill
     [RequireComponent(typeof(PlayerInput))]
     public sealed class SideScrollerMotor : MonoBehaviour
     {
+        public event Action<float> DashStarted;
+
         [Header("Movement")]
         [SerializeField, Min(0f)] private float runSpeed = 5.5f;
         [SerializeField, Min(0f)] private float sprintSpeed = 8f;
@@ -336,6 +339,10 @@ namespace GameSkill
             {
                 airDashAvailable = false;
             }
+
+            // 이동 상태를 소유하지 않는 VFX·SFX 계층에 확정된 대시 방향만 전달한다.
+            DashStarted?.Invoke(
+                dashDirection);
         }
 
         public void RequestAirAttackHover(float duration, float maximumDuration)
