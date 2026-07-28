@@ -78,6 +78,25 @@ Profiler에 연결해 확정해야 한다. 이 결과를 Release 성능이라고
 발사 순간 스파이크가 재현될 때 탄환 Prefab 풀을 도입한다. 측정 없이 풀링부터
 추가하면 수명·이벤트 해제 복잡도만 늘 수 있기 때문이다.
 
+## 2026-07-29 Development Player 기준선
+
+macOS Development Build를 1280×720 창 모드로 실행해 `Main`과
+`start_hall` 스트리밍 뒤 자동 기준선을 측정했다.
+
+| 항목 | 값 |
+|---|---|
+| 관측 프레임 | 3,444프레임 중 최근 600프레임 |
+| 프레임 시간 | 평균 `0.98 ms`, p95 `3.63 ms`, 최대 `4.22 ms` |
+| 메인 스레드 GC | 평균 `0 B`, p95 `0 B` |
+| 드로우 콜 | `unsupported` |
+| 할당 메모리 최고점 | `86.8 MB` |
+| 종합 | `PASS` |
+
+Editor에서 보이던 GC p95 `5,124 B`가 같은 시작 구역의 Player에서는
+`0 B`였으므로 해당 값은 게임 로직의 지속 할당보다 Editor 실행 환경의
+영향이라는 근거가 생겼다. 드로우 콜은 여전히 지원되지 않아 별도 Profiler
+연결 측정 대상으로 유지한다.
+
 ## 자동 테스트
 
 - 통계가 입력 배열을 변경하지 않고 평균·nearest-rank p95·최댓값을 계산한다.
@@ -92,8 +111,8 @@ Profiler에 연결해 확정해야 한다. 이 결과를 Release 성능이라고
 1. 전체 플레이 회귀 테스트에서 보스방까지 진행한다.
 2. 투사체가 가장 많은 패턴이 시작되면 `F8`을 누른다.
 3. Console의 `[Performance Baseline]` 한 줄을 이 문서 표와 비교한다.
-4. PC Development Build를 만든 뒤 Unity Profiler를 연결한다.
-5. GC와 드로우 콜 Recorder가 모두 유효한 Player 기준선을 별도 표로 추가한다.
+4. macOS Development Build의 시작 구역 기준선과 비교한다.
+5. Unity Profiler를 연결해 드로우 콜과 보스 패턴 호출 스택을 확인한다.
 6. 예산을 넘는 항목의 Timeline 호출 스택을 근거로 한 기능만 최적화한다.
 
 ## 한계

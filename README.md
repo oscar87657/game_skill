@@ -57,7 +57,8 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 이벤트 기반 대시·공격·명중·피격·능력 획득 VFX와 임시 SFX
 - [x] 진행 기반 목표 HUD·조작 튜토리얼과 재사용 월드 비콘
 - [x] 프레임·GC·드로우 콜 성능 기준선과 재측정 Probe
-- [ ] 보스와 수직 슬라이스 빌드
+- [x] 전체 플레이 회귀 테스트와 macOS Development Build 실행 확인
+- [ ] README 시연 자료와 `v0.1.0` Release
 
 자세한 내용은 [게임 디자인](Docs/GAME_DESIGN.md)과
 [프로젝트 계획서](Docs/PROJECT_PLAN.md)를 참고하세요.
@@ -93,6 +94,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [이벤트 기반 플레이어 VFX·SFX](Docs/Features/PlayerFeedback.md)
 - [진행 기반 길 찾기와 튜토리얼](Docs/Features/GuidanceAndTutorial.md)
 - [수직 슬라이스 성능 기준선](Docs/Features/PerformanceProfiling.md)
+- [macOS 데스크톱 빌드](Docs/Features/DesktopBuild.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기
