@@ -257,6 +257,44 @@ namespace GameSkill.Tests
             Assert.That(
                 pauseOverlay.activeSelf,
                 Is.False);
+            PlayerGuidanceController guidance =
+                worldMapHud
+                    .GetComponent<PlayerGuidanceController>();
+            Assert.That(guidance, Is.Not.Null);
+            Assert.That(
+                guidance.IsConfigured,
+                Is.True);
+            Assert.That(
+                guidance.CurrentStage,
+                Is.EqualTo(
+                    GuidanceStage.LearnMove));
+            Assert.That(
+                guidance.ObjectiveText,
+                Is.EqualTo("MOVE RIGHT"));
+            Assert.That(
+                guidance.HintText,
+                Is.EqualTo("[A / D] MOVE"));
+            Assert.That(
+                guidance.WaypointCount,
+                Is.EqualTo(8));
+            GameObject guidancePanel =
+                GameObject.Find(
+                    "GuidanceHUDPanel");
+            Assert.That(
+                guidancePanel,
+                Is.Not.Null);
+            WorldGuidanceMarker guidanceMarker =
+                Object.FindFirstObjectByType<WorldGuidanceMarker>(
+                    FindObjectsInactive.Include);
+            Assert.That(
+                guidanceMarker,
+                Is.Not.Null);
+            Assert.That(
+                guidanceMarker.RendererCount,
+                Is.EqualTo(2));
+            Assert.That(
+                guidanceMarker.IsVisible,
+                Is.False);
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);

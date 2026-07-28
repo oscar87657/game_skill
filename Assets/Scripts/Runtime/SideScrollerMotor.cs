@@ -14,7 +14,9 @@ namespace GameSkill
     [RequireComponent(typeof(PlayerInput))]
     public sealed class SideScrollerMotor : MonoBehaviour
     {
+        // 순간 입력을 폴링하지 않는 표현·튜토리얼 계층에는 성공한 이동 이벤트만 공개한다.
         public event Action<float> DashStarted;
+        public event Action Jumped;
 
         [Header("Movement")]
         [SerializeField, Min(0f)] private float runSpeed = 5.5f;
@@ -473,6 +475,8 @@ namespace GameSkill
                 airDashAvailable = true;
                 jumpBufferTimer = 0f;
                 coyoteTimer = 0f;
+                // 지상·공중·벽 점프 중 하나가 실제 승인된 뒤에만 튜토리얼 진행을 알린다.
+                Jumped?.Invoke();
             }
 
             verticalSpeed += gravity * deltaTime;

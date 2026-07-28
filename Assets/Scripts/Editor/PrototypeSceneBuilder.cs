@@ -167,6 +167,11 @@ namespace GameSkill.Editor
             ConfigureCamera(player);
             EnsureWorldMapPrototype(player);
             EnsureProgressHudPrototype(player);
+            EnsureGuidancePrototype(
+                player,
+                GameObject.Find(
+                    GrayboxRootName),
+                accentMaterial);
             EnsurePauseMenuPrototype(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -600,6 +605,15 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureGuidancePrototype(
+                player,
+                grayboxRoot,
+                abilityMaterial))
+            {
+                // 현재 목표 HUD와 단일 월드 비콘의 진행 연결이 보완되면 Main에 저장한다.
+                changed = true;
+            }
+
             if (EnsurePauseMenuPrototype(player))
             {
                 // Pause 입력, 전역 시간 정지와 음량 옵션 메뉴 구성을 Main에 저장한다.
@@ -615,6 +629,364 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureGuidancePrototype(
+            GameObject player,
+            GameObject grayboxRoot,
+            Material markerMaterial)
+        {
+            // 플레이어 진행 상태, 영구 HUD와 월드 배치 루트가 모두 준비된 경우에만 안내 시스템을 조립한다.
+            GameObject hud =
+                GameObject.Find("WorldMapHUD");
+            if (player == null
+                || grayboxRoot == null
+                || markerMaterial == null
+                || hud == null)
+            {
+                return false;
+            }
+
+            SideScrollerMotor motor =
+                player.GetComponent<SideScrollerMotor>();
+            PlayerCombat combat =
+                player.GetComponent<PlayerCombat>();
+            PlayerAbilityState abilityState =
+                player.GetComponent<PlayerAbilityState>();
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            if (motor == null
+                || combat == null
+                || abilityState == null
+                || worldState == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            GameObject panel =
+                EnsureUiImage(
+                    "GuidanceHUDPanel",
+                    hud.transform,
+                    ref changed);
+            RectTransform panelRect =
+                panel.GetComponent<RectTransform>();
+            panelRect.anchorMin =
+                new Vector2(0.5f, 1f);
+            panelRect.anchorMax =
+                new Vector2(0.5f, 1f);
+            panelRect.pivot =
+                new Vector2(0.5f, 1f);
+            panelRect.anchoredPosition =
+                new Vector2(0f, -24f);
+            panelRect.sizeDelta =
+                new Vector2(720f, 96f);
+            Image panelImage =
+                panel.GetComponent<Image>();
+            panelImage.color =
+                new Color(
+                    0.035f,
+                    0.045f,
+                    0.065f,
+                    0.88f);
+            panelImage.raycastTarget = false;
+
+            Text objectiveLabel =
+                EnsureMapText(
+                    "GuidanceHUDObjective",
+                    panel.transform,
+                    "MOVE RIGHT",
+                    new Vector2(0f, 19f),
+                    new Vector2(680f, 38f),
+                    22,
+                    ref changed);
+            objectiveLabel.color =
+                new Color(
+                    1f,
+                    0.78f,
+                    0.2f,
+                    1f);
+            Text hintLabel =
+                EnsureMapText(
+                    "GuidanceHUDHint",
+                    panel.transform,
+                    "[A / D] MOVE",
+                    new Vector2(0f, -20f),
+                    new Vector2(680f, 28f),
+                    14,
+                    ref changed);
+            hintLabel.color =
+                new Color(
+                    0.76f,
+                    0.8f,
+                    0.88f,
+                    1f);
+
+            WorldGuidanceMarker marker =
+                EnsureWorldGuidanceMarker(
+                    grayboxRoot.transform,
+                    markerMaterial,
+                    ref changed);
+            AbilityDefinition doubleJump =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDash =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversal =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+
+            PlayerGuidanceController guidance =
+                hud.GetComponent<PlayerGuidanceController>();
+            if (guidance == null)
+            {
+                // 구역 Scene과 함께 언로드되지 않는 영구 Canvas에 안내 Controller를 한 개만 둔다.
+                guidance =
+                    hud.AddComponent<PlayerGuidanceController>();
+                changed = true;
+            }
+
+            if (guidance.Configure(
+                player.transform,
+                motor,
+                combat,
+                abilityState,
+                worldState,
+                doubleJump,
+                airDash,
+                wallTraversal,
+                objectiveLabel,
+                hintLabel,
+                marker,
+                new[]
+                {
+                    new GuidanceWaypoint(
+                        "double_jump",
+                        new Vector3(
+                            7f,
+                            2.25f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "air_dash",
+                        new Vector3(
+                            20f,
+                            5.45f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "wall_traversal",
+                        new Vector3(
+                            22.6f,
+                            5.45f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "shaft_entrance",
+                        new Vector3(
+                            -9.6f,
+                            1.55f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "shaft_reward",
+                        new Vector3(
+                            -10.25f,
+                            8.35f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "shaft_shortcut",
+                        new Vector3(
+                            -9.4f,
+                            8.25f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "boss_entrance",
+                        new Vector3(
+                            28.5f,
+                            5.1f,
+                            -0.55f)),
+                    new GuidanceWaypoint(
+                        "boss_target",
+                        new Vector3(
+                            34.5f,
+                            6.35f,
+                            -0.55f))
+                }))
+            {
+                EditorUtility.SetDirty(
+                    guidance);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static WorldGuidanceMarker
+            EnsureWorldGuidanceMarker(
+                Transform parent,
+                Material material,
+                ref bool changed)
+        {
+            // 고정 이름의 비콘 하나를 만들고 모든 진행 단계가 위치만 바꿔 재사용하게 한다.
+            GameObject markerObject =
+                FindSceneObject(
+                    "WorldGuidanceMarker");
+            if (markerObject == null)
+            {
+                markerObject =
+                    new GameObject(
+                        "WorldGuidanceMarker");
+                markerObject.transform.SetParent(
+                    parent);
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                markerObject.transform,
+                new Vector3(
+                    7f,
+                    2.25f,
+                    -0.55f),
+                Vector3.one))
+            {
+                changed = true;
+            }
+
+            Transform visualRoot =
+                markerObject.transform.Find(
+                    "WorldGuidanceMarker_Visual");
+            if (visualRoot == null)
+            {
+                var visualObject =
+                    new GameObject(
+                        "WorldGuidanceMarker_Visual");
+                visualObject.transform.SetParent(
+                    markerObject.transform,
+                    false);
+                visualRoot =
+                    visualObject.transform;
+                changed = true;
+            }
+
+            if (SetLocalTransformIfDifferent(
+                visualRoot,
+                Vector3.zero,
+                Quaternion.identity,
+                Vector3.one))
+            {
+                changed = true;
+            }
+
+            Renderer diamond =
+                EnsureGuidancePrimitive(
+                    visualRoot,
+                    "WorldGuidanceMarker_Diamond",
+                    new Vector3(0f, 0.55f, 0f),
+                    Quaternion.Euler(
+                        0f,
+                        45f,
+                        45f),
+                    Vector3.one * 0.42f,
+                    material,
+                    ref changed);
+            Renderer beam =
+                EnsureGuidancePrimitive(
+                    visualRoot,
+                    "WorldGuidanceMarker_Beam",
+                    new Vector3(0f, -0.2f, 0.08f),
+                    Quaternion.identity,
+                    new Vector3(
+                        0.1f,
+                        1.1f,
+                        0.1f),
+                    material,
+                    ref changed);
+            WorldGuidanceMarker marker =
+                markerObject
+                    .GetComponent<WorldGuidanceMarker>();
+            if (marker == null)
+            {
+                marker =
+                    markerObject
+                        .AddComponent<WorldGuidanceMarker>();
+                changed = true;
+            }
+
+            if (marker.Configure(
+                visualRoot,
+                new[]
+                {
+                    diamond,
+                    beam
+                }))
+            {
+                EditorUtility.SetDirty(
+                    marker);
+                changed = true;
+            }
+
+            return marker;
+        }
+
+        private static Renderer EnsureGuidancePrimitive(
+            Transform parent,
+            string objectName,
+            Vector3 localPosition,
+            Quaternion localRotation,
+            Vector3 localScale,
+            Material material,
+            ref bool changed)
+        {
+            // 충돌 없는 큐브 자식을 재사용해 비콘 시각을 코드 생성 가능한 최소 자산으로 유지한다.
+            Transform primitiveTransform =
+                parent.Find(objectName);
+            if (primitiveTransform == null)
+            {
+                GameObject primitive =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Cube);
+                primitive.name = objectName;
+                primitive.transform.SetParent(
+                    parent,
+                    false);
+                Object.DestroyImmediate(
+                    primitive.GetComponent<BoxCollider>());
+                primitiveTransform =
+                    primitive.transform;
+                changed = true;
+            }
+
+            if (SetLocalTransformIfDifferent(
+                primitiveTransform,
+                localPosition,
+                localRotation,
+                localScale))
+            {
+                changed = true;
+            }
+
+            Renderer renderer =
+                primitiveTransform
+                    .GetComponent<Renderer>();
+            if (renderer != null
+                && renderer.sharedMaterial
+                    != material)
+            {
+                renderer.sharedMaterial =
+                    material;
+                EditorUtility.SetDirty(
+                    renderer);
+                changed = true;
+            }
+
+            return renderer;
         }
 
         private static bool EnsureGameProgressSavePrototype(
@@ -2868,6 +3240,39 @@ namespace GameSkill.Editor
 
             target.position = position;
             target.localScale = scale;
+            EditorUtility.SetDirty(target);
+            return true;
+        }
+
+        private static bool SetLocalTransformIfDifferent(
+            Transform target,
+            Vector3 localPosition,
+            Quaternion localRotation,
+            Vector3 localScale)
+        {
+            // 자식 시각 요소의 로컬 위치·회전·크기를 함께 비교해 같은 빌더 실행은 씬을 변경하지 않게 한다.
+            if ((target.localPosition
+                    - localPosition)
+                    .sqrMagnitude
+                    < 0.000001f
+                && Quaternion.Angle(
+                    target.localRotation,
+                    localRotation)
+                    < 0.001f
+                && (target.localScale
+                    - localScale)
+                    .sqrMagnitude
+                    < 0.000001f)
+            {
+                return false;
+            }
+
+            target.localPosition =
+                localPosition;
+            target.localRotation =
+                localRotation;
+            target.localScale =
+                localScale;
             EditorUtility.SetDirty(target);
             return true;
         }
