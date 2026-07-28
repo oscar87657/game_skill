@@ -442,6 +442,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameSkill.Runtime::GameSkill.WorldZoneVolume
   zone: {fileID: 11400000, guid: 37d2b24a8733b4106966f6f46de937b2, type: 2}
+  horizontalEntryInset: 0.45
 --- !u!65 &93487243
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -948,6 +949,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameSkill.Runtime::GameSkill.WorldZoneVolume
   zone: {fileID: 11400000, guid: d3ecd595130444ab5839b0e473dd17ca, type: 2}
+  horizontalEntryInset: 0.45
 --- !u!65 &270377707
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1924,6 +1926,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameSkill.Runtime::GameSkill.WorldZoneVolume
   zone: {fileID: 11400000, guid: 7af8572be5674438ca9ec0b838497bb8, type: 2}
+  horizontalEntryInset: 0.45
 --- !u!65 &866934337
 BoxCollider:
   m_ObjectHideFlags: 0

@@ -91,6 +91,63 @@ namespace GameSkill.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator BoundaryOverlap_KeepsPlayerAndCameraInTraversal()
+        {
+            // 실제 CharacterController가 맞닿은 두 Trigger에 동시에 걸리는 사용자 재현 위치를 검증한다.
+            SceneManager.LoadScene("Main", LoadSceneMode.Single);
+            yield return null;
+
+            GameObject player = GameObject.Find("Player");
+            SideScrollerMotor motor =
+                player.GetComponent<SideScrollerMotor>();
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            SideScrollerCamera sideScrollerCamera =
+                Camera.main.GetComponent<SideScrollerCamera>();
+            WorldZoneVolume startVolume =
+                GameObject.Find("Zone_StartHall")
+                    .GetComponent<WorldZoneVolume>();
+            WorldZoneVolume traversalVolume =
+                GameObject.Find("Zone_TraversalLab")
+                    .GetComponent<WorldZoneVolume>();
+
+            Assert.That(
+                traversalVolume.Enter(worldState),
+                Is.True);
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("traversal_lab"));
+
+            motor.Teleport(
+                new Vector3(6.4f, 0.05f, 0f));
+            Physics.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+            yield return null;
+
+            Assert.That(
+                worldState.CurrentZone.Id,
+                Is.EqualTo("traversal_lab"));
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("traversal_lab"));
+
+            // 시작 홀 안쪽 임계점까지 이동한 뒤에만 구역·카메라가 함께 전환되어야 한다.
+            motor.Teleport(
+                new Vector3(6f, 0.05f, 0f));
+            Physics.SyncTransforms();
+            yield return new WaitForFixedUpdate();
+            yield return null;
+
+            Assert.That(
+                worldState.CurrentZone.Id,
+                Is.EqualTo("start_hall"));
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("start_hall"));
+            Assert.That(startVolume.HorizontalEntryInset, Is.EqualTo(0.45f));
+        }
+
         private static GameObject FindRoot(
             Scene scene,
             string rootName)
