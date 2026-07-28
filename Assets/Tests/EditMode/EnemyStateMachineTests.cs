@@ -10,6 +10,37 @@ namespace GameSkill.Tests
 {
     public sealed class EnemyStateMachineTests
     {
+        [Test]
+        public void CharacterBodyCollisionPolicy_IgnoresOnlyCharacterBodies()
+        {
+            // 전용 레이어 이름과 몸 통과 규칙을 적용한 뒤 환경과의 충돌은 남아 있는지 확인한다.
+            CharacterBodyCollisionPolicy.Apply();
+
+            Assert.That(
+                LayerMask.LayerToName(
+                    CharacterBodyCollisionPolicy.PlayerBodyLayer),
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.PlayerBodyLayerName));
+            Assert.That(
+                LayerMask.LayerToName(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer),
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayerName));
+            Assert.That(
+                CharacterBodyCollisionPolicy.IsApplied(),
+                Is.True);
+            Assert.That(
+                Physics.GetIgnoreLayerCollision(
+                    CharacterBodyCollisionPolicy.PlayerBodyLayer,
+                    0),
+                Is.False);
+            Assert.That(
+                Physics.GetIgnoreLayerCollision(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer,
+                    0),
+                Is.False);
+        }
+
         [TestCase(
             EnemyState.Idle,
             true,

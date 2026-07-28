@@ -22,6 +22,18 @@ namespace GameSkill.Tests
 
             GameObject player = GameObject.Find("Player");
             Assert.That(player, Is.Not.Null);
+            Assert.That(
+                player.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.PlayerBodyLayer));
+            Assert.That(
+                CharacterBodyCollisionPolicy.IsApplied(),
+                Is.True);
+            Assert.That(
+                Physics.GetIgnoreLayerCollision(
+                    CharacterBodyCollisionPolicy.PlayerBodyLayer,
+                    0),
+                Is.False);
             CharacterController characterController =
                 player.GetComponent<CharacterController>();
             Assert.That(characterController, Is.Not.Null);
@@ -252,11 +264,24 @@ namespace GameSkill.Tests
             Assert.That(shortcutActivator, Is.Not.Null);
             GameObject dummy = GameObject.Find("TrainingDummy");
             Assert.That(dummy, Is.Not.Null);
+            Assert.That(
+                dummy.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer));
             Health dummyHealth = dummy.GetComponent<Health>();
             Assert.That(dummyHealth, Is.Not.Null);
             GameObject meleeEnemyObject =
                 GameObject.Find("MeleeEnemy_Grunt");
             Assert.That(meleeEnemyObject, Is.Not.Null);
+            Assert.That(
+                meleeEnemyObject.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer));
+            Assert.That(
+                Physics.GetIgnoreLayerCollision(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer,
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer),
+                Is.True);
             MeleeEnemyController meleeEnemy =
                 meleeEnemyObject
                     .GetComponent<MeleeEnemyController>();

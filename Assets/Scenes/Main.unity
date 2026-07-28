@@ -2354,7 +2354,7 @@ GameObject:
   - component: {fileID: 843829640}
   - component: {fileID: 843829639}
   - component: {fileID: 843829638}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: MeleeEnemy_Grunt
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2677,7 +2677,7 @@ GameObject:
   - component: {fileID: 994521255}
   - component: {fileID: 994521254}
   - component: {fileID: 994521253}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: TrainingDummy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3836,7 +3836,7 @@ GameObject:
   - component: {fileID: 1559595301}
   - component: {fileID: 1559595302}
   - component: {fileID: 1559595303}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Player
   m_TagString: Untagged
   m_Icon: {fileID: 0}

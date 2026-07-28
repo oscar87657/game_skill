@@ -19,6 +19,7 @@ M5의 첫 적으로, 플레이어가 가까워지면 추적하고 공격 거리�
 - 발 기준 이동 루트와 중심 기준 캡슐 메시 분리
 - 플레이어 재시작 시 최초 위치·체력·상태 복원
 - 상태 색상과 공격 결과 구체를 이용한 임시 피드백
+- 플레이어·적, 적·적 사이의 몸 충돌 통과
 
 ## 상태 흐름
 
@@ -112,6 +113,36 @@ DamageVolume ─────────→ DamageRules ──→ Health
 충돌체와 렌더러를 함께 복원한다. 체크포인트의 단순 체력 회복 이벤트에는
 반응하지 않으므로 회복만으로 전투가 초기화되지는 않는다.
 
+## 캐릭터 몸 충돌 정책
+
+캐릭터가 서로 밀거나 적 여러 마리가 겹쳐 길을 막는 문제는 전용 물리 레이어로
+분리했다.
+
+| 레이어 | 번호 | 대상 |
+|---|---:|---|
+| `PlayerBody` | `6` | 플레이어 루트 `CharacterController` |
+| `EnemyBody` | `7` | 적 루트와 훈련용 더미의 몸 Collider |
+| `Default` | `0` | 바닥, 벽, 경사, Trigger와 일반 월드 |
+
+`CharacterBodyCollisionPolicy`는 첫 Scene이 로드되기 전에 다음 두 조합만
+무시한다.
+
+```text
+PlayerBody ↔ EnemyBody : 통과
+EnemyBody  ↔ EnemyBody : 통과
+PlayerBody ↔ Default   : 충돌 유지
+EnemyBody  ↔ Default   : 충돌 유지
+```
+
+`Physics.IgnoreCollision`을 적마다 반복 호출하는 대신 레이어 규칙을 사용하므로
+런타임에 적이 늘어나도 새 Collider 쌍 목록을 만들 필요가 없다. 플레이어 공격은
+`Physics.OverlapBox`, 자동 조준은 `Physics.OverlapSphereNonAlloc` 조회를
+사용하므로 몸 충돌을 꺼도 `EnemyBody`의 `Health`를 계속 찾을 수 있다.
+
+추후 Trigger 방식 Hitbox/Hurtbox를 추가할 때는 몸 루트에 두지 않고 별도의
+전투 판정 레이어를 가진 자식으로 구성한다. 그러면 몸은 통과하면서 공격
+Trigger만 서로 반응하게 만들 수 있다.
+
 ## 자동 테스트
 
 - [x] 탐지 거리 안에서 `Idle → Chase`
@@ -125,6 +156,9 @@ DamageVolume ─────────→ DamageRules ──→ Health
 - [x] Main 씬의 근거리 적 구성 확인
 - [x] 사망한 적의 위치·체력·상태 복원
 - [x] 플레이어 재시작 이벤트와 적 초기화 통합
+- [x] 플레이어·적과 적·적 몸 충돌 무시
+- [x] PlayerBody·EnemyBody와 Default 환경 충돌 유지
+- [x] 몸 충돌을 끈 뒤에도 자동 조준·공격 대상 탐색 유지
 
 ## 수동 시연 방법
 

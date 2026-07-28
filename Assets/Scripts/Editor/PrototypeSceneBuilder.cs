@@ -144,6 +144,8 @@ namespace GameSkill.Editor
         {
             // 여기서는 게임플레이 컴포넌트만 조립하고 시각 자식은 애니메이션 빌더가 소유한다.
             var player = new GameObject("Player");
+            player.layer =
+                CharacterBodyCollisionPolicy.PlayerBodyLayer;
             player.transform.position = new Vector3(0f, 0.05f, 0f);
 
             CharacterController controller = player.AddComponent<CharacterController>();
@@ -300,6 +302,17 @@ namespace GameSkill.Editor
             // 기존 씬을 멱등적으로 마이그레이션하고 변경 여부를 반환한다.
             bool changed = false;
             GameObject player = GameObject.Find("Player");
+            if (player != null
+                && player.layer
+                    != CharacterBodyCollisionPolicy.PlayerBodyLayer)
+            {
+                // CharacterController가 환경에는 막히고 적의 몸만 통과하도록 전용 레이어를 적용한다.
+                player.layer =
+                    CharacterBodyCollisionPolicy.PlayerBodyLayer;
+                EditorUtility.SetDirty(player);
+                changed = true;
+            }
+
             if (player != null && player.GetComponent<Health>() == null)
             {
                 // 생존 흐름의 단일 체력 원본을 플레이어 루트에 추가한다.
@@ -362,6 +375,19 @@ namespace GameSkill.Editor
                     CreateTrainingDummy(root.transform, accentMaterial);
                     changed = true;
                 }
+            }
+
+            GameObject trainingDummy =
+                GameObject.Find("TrainingDummy");
+            if (trainingDummy != null
+                && trainingDummy.layer
+                    != CharacterBodyCollisionPolicy.EnemyBodyLayer)
+            {
+                // 움직이지 않는 연습용 더미도 적 몸으로 분류해 플레이어와 실제 적을 밀어내지 않게 한다.
+                trainingDummy.layer =
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer;
+                EditorUtility.SetDirty(trainingDummy);
+                changed = true;
             }
 
             if (GameObject.Find("Checkpoint_Start") == null)
@@ -1769,6 +1795,8 @@ namespace GameSkill.Editor
             // 공격 시연을 위한 보이고 충돌하는 Health 대상을 만든다.
             GameObject dummy = GameObject.CreatePrimitive(PrimitiveType.Capsule);
             dummy.name = "TrainingDummy";
+            dummy.layer =
+                CharacterBodyCollisionPolicy.EnemyBodyLayer;
             dummy.transform.SetParent(parent);
             dummy.transform.position = new Vector3(10f, 2f, 0f);
             dummy.transform.localScale = new Vector3(0.7f, 1f, 0.7f);
@@ -1799,6 +1827,16 @@ namespace GameSkill.Editor
                 enemy = new GameObject("MeleeEnemy_Grunt");
                 enemy.name = "MeleeEnemy_Grunt";
                 enemy.transform.SetParent(parent.transform);
+                changed = true;
+            }
+
+            if (enemy.layer
+                != CharacterBodyCollisionPolicy.EnemyBodyLayer)
+            {
+                // 적 이동 루트의 CharacterController만 EnemyBody로 분류해 시각·공격 자식은 자유롭게 분리한다.
+                enemy.layer =
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer;
+                EditorUtility.SetDirty(enemy);
                 changed = true;
             }
 
