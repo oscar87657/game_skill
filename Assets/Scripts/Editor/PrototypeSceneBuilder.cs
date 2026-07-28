@@ -213,6 +213,7 @@ namespace GameSkill.Editor
             camera.transform.SetPositionAndRotation(
                 new Vector3(1.35f, 2.4f, -9f),
                 Quaternion.identity);
+            EnsureCameraBoundsPrototype(player);
             EditorUtility.SetDirty(sideScrollerCamera);
             EditorUtility.SetDirty(camera);
         }
@@ -416,6 +417,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureCameraBoundsPrototype(player))
+            {
+                // 세 구역 카메라 중심점 경계가 추가·변경되면 Main Camera 구성을 저장한다.
+                changed = true;
+            }
+
             if (changed)
             {
                 Scene scene = SceneManager.GetActiveScene();
@@ -425,6 +432,75 @@ namespace GameSkill.Editor
             }
 
             return changed;
+        }
+
+        private static bool EnsureCameraBoundsPrototype(
+            GameObject player)
+        {
+            // 플레이어·월드 상태·Main Camera가 모두 있을 때만 경계 이벤트 연결을 구성한다.
+            if (player == null || Camera.main == null)
+            {
+                return false;
+            }
+
+            PlayerWorldState worldState =
+                player.GetComponent<PlayerWorldState>();
+            SideScrollerCamera sideScrollerCamera =
+                Camera.main.GetComponent<SideScrollerCamera>();
+            if (worldState == null || sideScrollerCamera == null)
+            {
+                return false;
+            }
+
+            WorldZoneDefinition backtrackShaft =
+                GetOrCreateWorldZoneDefinition(
+                    BacktrackShaftZonePath,
+                    "backtrack_shaft",
+                    "백트래킹 샤프트",
+                    "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역.");
+            WorldZoneDefinition startHall =
+                GetOrCreateWorldZoneDefinition(
+                    StartHallZonePath,
+                    "start_hall",
+                    "시작 홀",
+                    "체크포인트와 첫 능력 단서를 제공하는 중앙 구역.");
+            WorldZoneDefinition traversalLab =
+                GetOrCreateWorldZoneDefinition(
+                    TraversalLabZonePath,
+                    "traversal_lab",
+                    "이동 실험실",
+                    "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+
+            var bounds = new List<CameraZoneBounds>
+            {
+                // 좁은 수직 샤프트는 X 중심을 고정하고 등반 높이에만 반응하게 한다.
+                new(
+                    backtrackShaft,
+                    new Vector2(-10.75f, 2.8f),
+                    new Vector2(-10.75f, 6.2f)),
+                // 시작 홀은 체크포인트와 양쪽 출구가 동시에 읽히는 제한된 수평 이동을 허용한다.
+                new(
+                    startHall,
+                    new Vector2(-4f, 2.4f),
+                    new Vector2(2f, 3.4f)),
+                // 이동 실험실은 긴 계단 동선을 따라가되 구역 밖을 과도하게 보여 주지 않는다.
+                new(
+                    traversalLab,
+                    new Vector2(10f, 3f),
+                    new Vector2(20f, 5.2f))
+            };
+
+            sideScrollerCamera.Configure(player.transform);
+            if (!sideScrollerCamera.ConfigureWorldBounds(
+                worldState,
+                startHall,
+                bounds))
+            {
+                return false;
+            }
+
+            EditorUtility.SetDirty(sideScrollerCamera);
+            return true;
         }
 
         private static bool EnsureZoneStreamingPrototype(
@@ -1360,8 +1436,13 @@ namespace GameSkill.Editor
                 AssetDatabase.CreateAsset(material, path);
             }
 
-            material.color = color;
-            EditorUtility.SetDirty(material);
+            // 같은 색을 다시 대입하면 URP의 호환 색 속성이 바뀌어 불필요한 에셋 diff가 생기므로 건너뛴다.
+            if (material.color != color)
+            {
+                material.color = color;
+                EditorUtility.SetDirty(material);
+            }
+
             return material;
         }
 

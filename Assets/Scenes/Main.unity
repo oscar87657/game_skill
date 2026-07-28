@@ -1124,6 +1124,18 @@ MonoBehaviour:
   horizontalLookAhead: 1.35
   horizontalSmoothTime: 0.16
   verticalSmoothTime: 0.24
+  playerWorldState: {fileID: 1559595303}
+  initialZone: {fileID: 11400000, guid: 7af8572be5674438ca9ec0b838497bb8, type: 2}
+  zoneBounds:
+  - zone: {fileID: 11400000, guid: d3ecd595130444ab5839b0e473dd17ca, type: 2}
+    minimumCenter: {x: -10.75, y: 2.8}
+    maximumCenter: {x: -10.75, y: 6.2}
+  - zone: {fileID: 11400000, guid: 7af8572be5674438ca9ec0b838497bb8, type: 2}
+    minimumCenter: {x: -4, y: 2.4}
+    maximumCenter: {x: 2, y: 3.4}
+  - zone: {fileID: 11400000, guid: 37d2b24a8733b4106966f6f46de937b2, type: 2}
+    minimumCenter: {x: 10, y: 3}
+    maximumCenter: {x: 20, y: 5.2}
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0

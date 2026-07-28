@@ -84,6 +84,5 @@ WorldZoneStreamController.RequestZone
 
 ## 다음 단계
 
-- 구역별 카메라 제한 영역을 현재 구역 이벤트에 연결한다.
 - 실제 장식·적·상호작용 오브젝트를 Additive Scene으로 단계적으로 이전한다.
 - 로딩 실패와 빌드 설정 누락을 플레이어에게 보이지 않는 복구 경로로 처리한다.

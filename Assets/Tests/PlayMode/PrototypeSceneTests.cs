@@ -89,8 +89,18 @@ namespace GameSkill.Tests
 
             Camera camera = Camera.main;
             Assert.That(camera, Is.Not.Null);
-            Assert.That(camera.GetComponent<SideScrollerCamera>(), Is.Not.Null);
+            SideScrollerCamera sideScrollerCamera =
+                camera.GetComponent<SideScrollerCamera>();
+            Assert.That(sideScrollerCamera, Is.Not.Null);
             Assert.That(camera.orthographic, Is.True);
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("start_hall"));
+            Assert.That(
+                sideScrollerCamera.ConstrainPosition(
+                    new Vector3(100f, -100f, -9f)),
+                Is.EqualTo(
+                    new Vector3(2f, 2.4f, -9f)));
 
             Assert.That(GameObject.Find("SideScrollerGraybox"), Is.Not.Null);
             GameObject gateObject = GameObject.Find("Wall_Gate");
@@ -145,6 +155,14 @@ namespace GameSkill.Tests
             Assert.That(traversalLab.Enter(worldState), Is.True);
             Assert.That(backtrackShaft.Enter(worldState), Is.True);
             Assert.That(worldState.VisitedCount, Is.EqualTo(3));
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("backtrack_shaft"));
+            Assert.That(
+                sideScrollerCamera.ConstrainPosition(
+                    new Vector3(100f, 100f, -9f)),
+                Is.EqualTo(
+                    new Vector3(-10.75f, 6.2f, -9f)));
             Assert.That(
                 GameObject.Find("Shortcut_ShaftLanding"),
                 Is.Not.Null);

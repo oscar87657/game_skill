@@ -10,6 +10,7 @@
 | 월드 | 세 구역·방문 상태 | 기본 구현 완료 | [World Zones](Features/WorldZones.md) |
 | 월드 | 구역 연결·영구 지름길 | 기본 구현 완료 | [World Shortcuts](Features/WorldShortcuts.md) |
 | 월드 | Additive 구역 스트리밍 | 기본 구현 완료 | [World Streaming](Features/WorldStreaming.md) |
+| 카메라 | 구역별 중심점 제한 | 기본 구현 완료 | [Camera Bounds](Features/CameraBounds.md) |
 | AI | 적 상태 머신 | 예정 | — |
 | 저장 | 세이브·로드 | 예정 | — |
 
