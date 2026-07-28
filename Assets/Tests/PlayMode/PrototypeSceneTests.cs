@@ -254,6 +254,29 @@ namespace GameSkill.Tests
             Assert.That(dummy, Is.Not.Null);
             Health dummyHealth = dummy.GetComponent<Health>();
             Assert.That(dummyHealth, Is.Not.Null);
+            GameObject meleeEnemyObject =
+                GameObject.Find("MeleeEnemy_Grunt");
+            Assert.That(meleeEnemyObject, Is.Not.Null);
+            MeleeEnemyController meleeEnemy =
+                meleeEnemyObject
+                    .GetComponent<MeleeEnemyController>();
+            Assert.That(meleeEnemy, Is.Not.Null);
+            Assert.That(
+                meleeEnemyObject
+                    .GetComponent<CharacterController>(),
+                Is.Not.Null);
+            Health meleeEnemyHealth =
+                meleeEnemyObject.GetComponent<Health>();
+            Assert.That(meleeEnemyHealth, Is.Not.Null);
+            Assert.That(
+                meleeEnemyHealth.MaxHealth,
+                Is.EqualTo(3));
+            Assert.That(
+                meleeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                meleeEnemyObject.transform.position.z,
+                Is.Zero.Within(0.0001f));
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
 
             // 실제 픽업을 순서대로 소비해 보유 상태·이동 잠금·백트래킹 게이트를 함께 검증한다.

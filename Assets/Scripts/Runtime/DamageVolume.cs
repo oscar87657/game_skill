@@ -41,20 +41,16 @@ namespace GameSkill
 
             Health targetHealth =
                 targetObject.GetComponentInParent<Health>();
-            if (targetHealth == null || targetHealth.IsDead)
-            {
-                return false;
-            }
 
             SideScrollerMotor targetMotor =
                 targetObject.GetComponentInParent<SideScrollerMotor>();
-            if (targetMotor != null && targetMotor.IsInvulnerable)
-            {
-                // 대시 무적은 환경 위험에도 같은 규칙으로 적용해 전투 규칙의 일관성을 지킨다.
-                return false;
-            }
-
-            return targetHealth.TakeDamage(damage);
+            bool isInvulnerable =
+                targetMotor != null && targetMotor.IsInvulnerable;
+            // 환경과 적 공격이 같은 공통 규칙을 사용해 대시 무적의 의미를 일관되게 유지한다.
+            return DamageRules.TryApply(
+                targetHealth,
+                isInvulnerable,
+                damage);
         }
 
         private void OnTriggerEnter(Collider other)

@@ -11,10 +11,10 @@
 | 월드 | 구역 연결·영구 지름길 | 기본 구현 완료 | [World Shortcuts](Features/WorldShortcuts.md) |
 | 월드 | Additive 구역 스트리밍 | 기본 구현 완료 | [World Streaming](Features/WorldStreaming.md) |
 | 카메라 | 구역별 중심점 제한 | 기본 구현 완료 | [Camera Bounds](Features/CameraBounds.md) |
-| 카메라 | 정면 Perspective 2.5D 구도 | 체감 조정 중 | [Perspective Camera](Features/PerspectiveCamera.md) |
+| 카메라 | 정면 Perspective 2.5D 구도 | 기본 구현 완료 | [Perspective Camera](Features/PerspectiveCamera.md) |
 | UI | 현재 위치·방문 상태 지도 HUD | 기본 구현 완료 | [World Map](Features/WorldMap.md) |
 | 진행 | 능력 기반 백트래킹·최대 체력 보상 | 기본 구현 완료 | [Backtrack Rewards](Features/BacktrackRewards.md) |
-| AI | 적 상태 머신 | 예정 | — |
+| AI | 근거리 적·탐지·추적·공격 상태 머신 | 기본 구현 완료 | [Enemy State Machine](Features/EnemyStateMachine.md) |
 | 저장 | 세이브·로드 | 예정 | — |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.

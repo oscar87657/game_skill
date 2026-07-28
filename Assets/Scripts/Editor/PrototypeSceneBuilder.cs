@@ -112,6 +112,10 @@ namespace GameSkill.Editor
 
             GameObject player = CreatePlayer();
             CreateGraybox(groundMaterial, accentMaterial);
+            EnsureMeleeEnemyPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                accentMaterial);
             EnsureAbilityPrototype(
                 player,
                 GameObject.Find(GrayboxRootName),
@@ -389,6 +393,15 @@ namespace GameSkill.Editor
                 AssetDatabase.LoadAssetAtPath<Material>(AccentMaterialPath);
             Material groundMaterial =
                 AssetDatabase.LoadAssetAtPath<Material>(GroundMaterialPath);
+            if (EnsureMeleeEnemyPrototype(
+                player,
+                grayboxRoot,
+                abilityMaterial))
+            {
+                // 근거리 적의 상태 머신·체력·이동기 연결이 보완되면 Main 씬에 저장한다.
+                changed = true;
+            }
+
             if (EnsureAbilityPrototype(
                 player,
                 grayboxRoot,
@@ -1765,6 +1778,113 @@ namespace GameSkill.Editor
             health.Configure(3);
             dummy.AddComponent<TrainingDummy>();
             return dummy;
+        }
+
+        private static bool EnsureMeleeEnemyPrototype(
+            GameObject player,
+            GameObject parent,
+            Material material)
+        {
+            // 전투 대상·배치 부모·표시 재질이 모두 준비된 경우에만 실제 적을 구성한다.
+            if (player == null || parent == null || material == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            GameObject enemy = GameObject.Find("MeleeEnemy_Grunt");
+            if (enemy == null)
+            {
+                // 캡슐 프리미티브는 임시 모델 역할만 하고 충돌 이동은 CharacterController가 담당한다.
+                enemy =
+                    GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                enemy.name = "MeleeEnemy_Grunt";
+                enemy.transform.SetParent(parent.transform);
+                Object.DestroyImmediate(
+                    enemy.GetComponent<CapsuleCollider>());
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                enemy.transform,
+                new Vector3(13.8f, 3.05f, 0f),
+                new Vector3(0.75f, 1f, 0.75f)))
+            {
+                changed = true;
+            }
+
+            MeshRenderer renderer =
+                enemy.GetComponent<MeshRenderer>();
+            if (renderer != null
+                && renderer.sharedMaterial != material)
+            {
+                // 첫 적은 포트폴리오 그레이박스의 강조색을 사용해 연습용 더미와 구분한다.
+                renderer.sharedMaterial = material;
+                EditorUtility.SetDirty(renderer);
+                changed = true;
+            }
+
+            CapsuleCollider primitiveCollider =
+                enemy.GetComponent<CapsuleCollider>();
+            if (primitiveCollider != null)
+            {
+                // 중복 캡슐 충돌체는 CharacterController 이동과 접촉 판정을 흔들 수 있어 제거한다.
+                Object.DestroyImmediate(primitiveCollider);
+                changed = true;
+            }
+
+            CharacterController controller =
+                enemy.GetComponent<CharacterController>();
+            if (controller == null)
+            {
+                controller =
+                    enemy.AddComponent<CharacterController>();
+                changed = true;
+            }
+
+            if (controller.center != new Vector3(0f, 0.9f, 0f)
+                || !Mathf.Approximately(controller.height, 1.8f)
+                || !Mathf.Approximately(controller.radius, 0.35f)
+                || !Mathf.Approximately(controller.slopeLimit, 45f)
+                || !Mathf.Approximately(controller.stepOffset, 0.3f))
+            {
+                // 플레이어와 같은 계단·경사 기준을 사용해 추적 이동의 비교 조건을 통일한다.
+                controller.center = new Vector3(0f, 0.9f, 0f);
+                controller.height = 1.8f;
+                controller.radius = 0.35f;
+                controller.slopeLimit = 45f;
+                controller.stepOffset = 0.3f;
+                EditorUtility.SetDirty(controller);
+                changed = true;
+            }
+
+            Health health = enemy.GetComponent<Health>();
+            if (health == null)
+            {
+                health = enemy.AddComponent<Health>();
+                health.Configure(3);
+                changed = true;
+            }
+
+            MeleeEnemyController enemyController =
+                enemy.GetComponent<MeleeEnemyController>();
+            if (enemyController == null)
+            {
+                enemyController =
+                    enemy.AddComponent<MeleeEnemyController>();
+                changed = true;
+            }
+
+            if (enemyController.Configure(
+                player.transform,
+                renderer))
+            {
+                // 씬 참조 변경만 Dirty로 표시해 멱등 빌더가 매 실행마다 씬을 수정하지 않게 한다.
+                EditorUtility.SetDirty(enemyController);
+                changed = true;
+            }
+
+            return changed;
         }
 
         private static GameObject CreateCheckpoint(
