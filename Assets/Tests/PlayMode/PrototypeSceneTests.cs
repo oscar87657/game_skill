@@ -369,6 +369,47 @@ namespace GameSkill.Tests
                 Is.False);
             Vector3 rangedEnemySpawnPosition =
                 rangedEnemyObject.transform.position;
+            GameObject chargeEnemyObject =
+                GameObject.Find("ChargeEnemy_Rusher");
+            Assert.That(chargeEnemyObject, Is.Not.Null);
+            Assert.That(
+                chargeEnemyObject.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer));
+            ChargeEnemyController chargeEnemy =
+                chargeEnemyObject
+                    .GetComponent<ChargeEnemyController>();
+            Assert.That(chargeEnemy, Is.Not.Null);
+            Health chargeEnemyHealth =
+                chargeEnemyObject.GetComponent<Health>();
+            Assert.That(chargeEnemyHealth, Is.Not.Null);
+            Assert.That(
+                chargeEnemyHealth.MaxHealth,
+                Is.EqualTo(4));
+            CharacterController chargeBody =
+                chargeEnemyObject
+                    .GetComponent<CharacterController>();
+            Assert.That(chargeBody, Is.Not.Null);
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Transform chargeVisual =
+                chargeEnemyObject.transform.Find(
+                    "ChargeEnemy_Visual");
+            Assert.That(chargeVisual, Is.Not.Null);
+            Renderer chargeRenderer =
+                chargeVisual.GetComponent<Renderer>();
+            Assert.That(chargeRenderer, Is.Not.Null);
+            Renderer chargeIndicatorRenderer =
+                chargeEnemyObject.transform
+                    .Find(
+                        "ChargeEnemy_DirectionIndicator")
+                    .GetComponent<Renderer>();
+            Assert.That(
+                chargeIndicatorRenderer.enabled,
+                Is.False);
+            Vector3 chargeEnemySpawnPosition =
+                chargeEnemyObject.transform.position;
 
             // 실제 Main 참조로 선딜·투사체 생성·초기화까지 원거리 공격 한 사이클을 검증한다.
             Vector3 initialPlayerPosition =
@@ -397,6 +438,35 @@ namespace GameSkill.Tests
             Assert.That(
                 rangedEnemy.ActiveProjectileCount,
                 Is.Zero);
+
+            // 실제 Main 배치에서 방향 예고가 한 번의 고정 방향 돌진으로 전환되는지 확인한다.
+            motor.Teleport(
+                chargeEnemySpawnPosition
+                + new Vector3(-2f, 0f, 0f));
+            chargeEnemy.Tick(0.01f);
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.AttackWindup));
+            Assert.That(
+                chargeIndicatorRenderer.enabled,
+                Is.True);
+            chargeEnemy.Tick(0.56f);
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Charge));
+            Assert.That(
+                chargeEnemy.ChargeDirection,
+                Is.EqualTo(-1));
+            Assert.That(
+                chargeEnemy.StartedChargeCount,
+                Is.EqualTo(1));
+            chargeEnemy.ResetToSpawn();
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                chargeIndicatorRenderer.enabled,
+                Is.False);
             motor.Teleport(initialPlayerPosition);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
 
@@ -502,6 +572,17 @@ namespace GameSkill.Tests
                 Is.EqualTo(EnemyState.Dead));
             rangedEnemyObject.transform.position +=
                 new Vector3(2f, 1f, 0f);
+            Assert.That(
+                chargeEnemyHealth.TakeDamage(4),
+                Is.True);
+            Assert.That(
+                chargeEnemyHealth.IsDead,
+                Is.True);
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Dead));
+            chargeEnemyObject.transform.position +=
+                new Vector3(-2f, 1f, 0f);
             GameObject hazardObject = GameObject.Find("RespawnHazard");
             Assert.That(hazardObject, Is.Not.Null);
             DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
@@ -579,6 +660,24 @@ namespace GameSkill.Tests
             Assert.That(
                 rangedEnemy.ActiveProjectileCount,
                 Is.Zero);
+            Assert.That(
+                chargeEnemyHealth.IsDead,
+                Is.False);
+            Assert.That(
+                chargeEnemyHealth.CurrentHealth,
+                Is.EqualTo(4));
+            Assert.That(
+                chargeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                chargeEnemyObject.transform.position,
+                Is.EqualTo(chargeEnemySpawnPosition));
+            Assert.That(
+                chargeRenderer.enabled,
+                Is.True);
+            Assert.That(
+                chargeBody.enabled,
+                Is.True);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

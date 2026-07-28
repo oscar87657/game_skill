@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 가장 작은 플레이 가능한 2.5D Showcase 씬을 생성하고 마이그레이션한다.
-// 책임: 플레이어·그레이박스·카메라·전투·능력·백트래킹 보상 루프와 에디터 메뉴를 생성한다.
+// 책임: 플레이어·그레이박스·카메라·전투 적·능력·백트래킹 보상 루프와 에디터 메뉴를 생성한다.
 // 불변식: 빌더를 다시 실행해도 자신이 만든 이름의 프로토타입 루트만 제거한다.
 // 선택 이유: 씬 생성은 에디터 전용으로 두어 런타임 스크립트를 게임플레이에 집중시킨다.
 using System.Collections.Generic;
@@ -117,6 +117,10 @@ namespace GameSkill.Editor
                 GameObject.Find(GrayboxRootName),
                 accentMaterial);
             EnsureRangedEnemyPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                accentMaterial);
+            EnsureChargeEnemyPrototype(
                 player,
                 GameObject.Find(GrayboxRootName),
                 accentMaterial);
@@ -438,6 +442,15 @@ namespace GameSkill.Editor
                 abilityMaterial))
             {
                 // 고정형 원거리 적·충전 표시·투사체 설정이 보완되면 Main 씬에 저장한다.
+                changed = true;
+            }
+
+            if (EnsureChargeEnemyPrototype(
+                player,
+                grayboxRoot,
+                abilityMaterial))
+            {
+                // 돌진 적·방향 표시·발판 안전 이동이 보완되면 Main 씬에 저장한다.
                 changed = true;
             }
 
@@ -2263,6 +2276,242 @@ namespace GameSkill.Editor
                 muzzleRenderer,
                 muzzleTransform,
                 material))
+            {
+                // 직렬화 참조가 달라진 경우에만 멱등 마이그레이션 결과를 저장한다.
+                EditorUtility.SetDirty(controller);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureChargeEnemyPrototype(
+            GameObject player,
+            GameObject parent,
+            Material material)
+        {
+            // 플레이어·배치 루트·공유 재질이 준비된 경우에만 돌진 전투 대상을 구성한다.
+            if (player == null || parent == null || material == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            GameObject enemy =
+                GameObject.Find("ChargeEnemy_Rusher");
+            if (enemy == null)
+            {
+                // 발 위치 기준 루트에 이동 충돌체와 시각 자식을 분리해 조립한다.
+                enemy =
+                    new GameObject("ChargeEnemy_Rusher");
+                enemy.transform.SetParent(parent.transform);
+                changed = true;
+            }
+
+            if (enemy.layer
+                != CharacterBodyCollisionPolicy.EnemyBodyLayer)
+            {
+                // 플레이어와 다른 적의 몸을 밀지 않되 공격 조회 대상에는 남도록 EnemyBody를 사용한다.
+                enemy.layer =
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer;
+                EditorUtility.SetDirty(enemy);
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                enemy.transform,
+                new Vector3(22.2f, 3.55f, 0f),
+                Vector3.one))
+            {
+                changed = true;
+            }
+
+            CapsuleCollider primitiveCollider =
+                enemy.GetComponent<CapsuleCollider>();
+            if (primitiveCollider != null)
+            {
+                // 원시 오브젝트에서 남은 Collider가 CharacterController와 겹치면 발판 끝 검사가 흔들리므로 제거한다.
+                Object.DestroyImmediate(primitiveCollider);
+                changed = true;
+            }
+
+            CharacterController bodyController =
+                enemy.GetComponent<CharacterController>();
+            if (bodyController == null)
+            {
+                bodyController =
+                    enemy.AddComponent<CharacterController>();
+                changed = true;
+            }
+
+            if (bodyController.center
+                    != new Vector3(0f, 0.65f, 0f)
+                || !Mathf.Approximately(
+                    bodyController.height,
+                    1.3f)
+                || !Mathf.Approximately(
+                    bodyController.radius,
+                    0.42f)
+                || !Mathf.Approximately(
+                    bodyController.slopeLimit,
+                    45f)
+                || !Mathf.Approximately(
+                    bodyController.stepOffset,
+                    0.25f))
+            {
+                // 낮고 넓은 몸체를 사용해 사람형 근거리 적과 돌진 실루엣을 구분한다.
+                bodyController.center =
+                    new Vector3(0f, 0.65f, 0f);
+                bodyController.height = 1.3f;
+                bodyController.radius = 0.42f;
+                bodyController.slopeLimit = 45f;
+                bodyController.stepOffset = 0.25f;
+                EditorUtility.SetDirty(bodyController);
+                changed = true;
+            }
+
+            Transform visualTransform =
+                enemy.transform.Find("ChargeEnemy_Visual");
+            if (visualTransform == null)
+            {
+                // 실제 모델 전에는 넓은 큐브로 빠른 지상형 적의 역할을 표현한다.
+                GameObject visual =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Cube);
+                visual.name = "ChargeEnemy_Visual";
+                visual.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    visual.GetComponent<BoxCollider>());
+                visualTransform = visual.transform;
+                changed = true;
+            }
+
+            Vector3 visualLocalPosition =
+                new(0f, 0.65f, 0f);
+            Vector3 visualLocalScale =
+                new(1.05f, 1.15f, 0.85f);
+            if ((visualTransform.localPosition
+                    - visualLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (visualTransform.localScale
+                    - visualLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 메시 바닥을 발 기준 루트에 맞추고 진행 방향이 읽히는 가로 비율을 사용한다.
+                visualTransform.localPosition =
+                    visualLocalPosition;
+                visualTransform.localRotation =
+                    Quaternion.identity;
+                visualTransform.localScale =
+                    visualLocalScale;
+                EditorUtility.SetDirty(visualTransform);
+                changed = true;
+            }
+
+            MeshRenderer visualRenderer =
+                visualTransform.GetComponent<MeshRenderer>();
+            if (visualRenderer != null
+                && visualRenderer.sharedMaterial != material)
+            {
+                // 공유 재질은 유지하고 런타임 상태 색만 MaterialPropertyBlock으로 덮어쓴다.
+                visualRenderer.sharedMaterial = material;
+                EditorUtility.SetDirty(visualRenderer);
+                changed = true;
+            }
+
+            Transform indicatorTransform =
+                enemy.transform.Find(
+                    "ChargeEnemy_DirectionIndicator");
+            if (indicatorTransform == null)
+            {
+                // 몸 앞의 얇은 막대를 선딜 방향과 돌진 활성 표시로 재사용한다.
+                GameObject indicator =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Cube);
+                indicator.name =
+                    "ChargeEnemy_DirectionIndicator";
+                indicator.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    indicator.GetComponent<BoxCollider>());
+                indicatorTransform = indicator.transform;
+                changed = true;
+            }
+
+            Vector3 indicatorLocalPosition =
+                new(-0.95f, 0.65f, 0f);
+            Vector3 indicatorLocalScale =
+                new(0.65f, 0.16f, 0.9f);
+            if ((indicatorTransform.localPosition
+                    - indicatorLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (indicatorTransform.localScale
+                    - indicatorLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 기본 왼쪽 표시 위치는 런타임에 잠긴 돌진 방향에 따라 좌우 반전된다.
+                indicatorTransform.localPosition =
+                    indicatorLocalPosition;
+                indicatorTransform.localRotation =
+                    Quaternion.identity;
+                indicatorTransform.localScale =
+                    indicatorLocalScale;
+                EditorUtility.SetDirty(indicatorTransform);
+                changed = true;
+            }
+
+            MeshRenderer indicatorRenderer =
+                indicatorTransform.GetComponent<MeshRenderer>();
+            if (indicatorRenderer != null)
+            {
+                if (indicatorRenderer.sharedMaterial != material)
+                {
+                    indicatorRenderer.sharedMaterial =
+                        material;
+                    changed = true;
+                }
+
+                // Play 전에는 숨기고 돌진 상태 머신이 예고와 실행 중에만 표시한다.
+                if (indicatorRenderer.enabled)
+                {
+                    indicatorRenderer.enabled = false;
+                    changed = true;
+                }
+
+                EditorUtility.SetDirty(indicatorRenderer);
+            }
+
+            Health health = enemy.GetComponent<Health>();
+            if (health == null)
+            {
+                health = enemy.AddComponent<Health>();
+                health.Configure(4);
+                changed = true;
+            }
+            else if (health.MaxHealth != 4)
+            {
+                // 세 번째 적은 공격 중단을 여러 번 시도할 수 있도록 일반 적보다 체력을 한 칸 늘린다.
+                health.Configure(4);
+                EditorUtility.SetDirty(health);
+                changed = true;
+            }
+
+            ChargeEnemyController controller =
+                enemy.GetComponent<ChargeEnemyController>();
+            if (controller == null)
+            {
+                controller =
+                    enemy.AddComponent<ChargeEnemyController>();
+                changed = true;
+            }
+
+            if (controller.Configure(
+                player.transform,
+                visualRenderer,
+                indicatorRenderer))
             {
                 // 직렬화 참조가 달라진 경우에만 멱등 마이그레이션 결과를 저장한다.
                 EditorUtility.SetDirty(controller);

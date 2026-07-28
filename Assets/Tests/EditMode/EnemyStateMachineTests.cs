@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 첫 근거리 적의 탐지·추적·공격 상태 전환과 공통 데미지 규칙을 검증한다.
-// 책임: 거리 경계·높이 차·탐지 히스테리시스·공격 선딜·무적 거부의 회귀를 확인한다.
+// 목적: 일반 적들의 탐지·추적·공격·돌진 상태 전환과 공통 데미지 규칙을 검증한다.
+// 책임: 거리 경계·높이 차·탐지 히스테리시스·공격 선딜·돌진 방향·무적 거부의 회귀를 확인한다.
 // 불변식: 각 컴포넌트 테스트는 자신이 생성한 Unity 오브젝트를 종료 전에 모두 정리한다.
 // 선택 이유: 순수 판단 테스트와 작은 통합 테스트를 함께 두어 규칙 오류와 씬 배치 오류를 구분한다.
 using NUnit.Framework;
@@ -94,6 +94,81 @@ namespace GameSkill.Tests
                     8f,
                     9.5f,
                     3.8f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(
+            EnemyState.Idle,
+            true,
+            6f,
+            0f,
+            EnemyState.AttackWindup)]
+        [TestCase(
+            EnemyState.Idle,
+            true,
+            7f,
+            0f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.AttackRecovery,
+            true,
+            7f,
+            0f,
+            EnemyState.AttackWindup)]
+        [TestCase(
+            EnemyState.AttackRecovery,
+            true,
+            8f,
+            0f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.Idle,
+            true,
+            4f,
+            2f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.Dead,
+            true,
+            2f,
+            0f,
+            EnemyState.Dead)]
+        public void ChargeDecision_UsesDetectionHysteresis(
+            EnemyState currentState,
+            bool targetAvailable,
+            float horizontalDistance,
+            float verticalDistance,
+            EnemyState expected)
+        {
+            // 기본 탐지 6.5·해제 7.5·높이 1.7을 사용해 돌진 준비의 인지 경계를 검증한다.
+            EnemyState result =
+                ChargeEnemyDecisionMath.ResolveAttackState(
+                    currentState,
+                    targetAvailable,
+                    horizontalDistance,
+                    verticalDistance,
+                    6.5f,
+                    7.5f,
+                    1.7f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [TestCase(3f, -1, 1)]
+        [TestCase(-3f, 1, -1)]
+        [TestCase(0f, -1, -1)]
+        [TestCase(0f, 1, 1)]
+        public void ChargeDirection_LocksTargetSide(
+            float horizontalDistance,
+            int fallbackDirection,
+            int expected)
+        {
+            // 돌진 시작 순간의 상대 X 방향과 같은 좌표에서 사용할 마지막 방향을 각각 확인한다.
+            int result =
+                ChargeEnemyDecisionMath.ResolveChargeDirection(
+                    horizontalDistance,
+                    fallbackDirection);
 
             Assert.That(result, Is.EqualTo(expected));
         }
@@ -460,6 +535,90 @@ namespace GameSkill.Tests
             {
                 Object.DestroyImmediate(enemy);
                 Object.DestroyImmediate(target);
+            }
+        }
+
+        [Test]
+        public void ChargeEnemy_WindupLocksDirectionAndDamagesOnce()
+        {
+            // 실제 CharacterController가 예고 후 방향을 잠그고 이동해 접촉 데미지를 한 번만 적용하는지 검증한다.
+            var target =
+                new GameObject("ChargeEnemyTestTarget");
+            GameObject enemy =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Cube);
+            GameObject ground =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Cube);
+            try
+            {
+                Health targetHealth =
+                    target.AddComponent<Health>();
+                targetHealth.Configure(5);
+                target.transform.position =
+                    new Vector3(1.2f, 0.05f, 0f);
+                ground.transform.position =
+                    new Vector3(0f, -0.5f, 0f);
+                ground.transform.localScale =
+                    new Vector3(8f, 1f, 3f);
+                enemy.transform.position =
+                    new Vector3(0f, 0.05f, 0f);
+
+                Object.DestroyImmediate(
+                    enemy.GetComponent<BoxCollider>());
+                CharacterController characterController =
+                    enemy.AddComponent<CharacterController>();
+                characterController.center =
+                    new Vector3(0f, 0.65f, 0f);
+                characterController.height = 1.3f;
+                characterController.radius = 0.42f;
+                Health enemyHealth =
+                    enemy.AddComponent<Health>();
+                enemyHealth.Configure(4);
+                ChargeEnemyController controller =
+                    enemy.AddComponent<ChargeEnemyController>();
+                controller.Configure(
+                    target.transform,
+                    enemy.GetComponent<Renderer>(),
+                    null);
+                Physics.SyncTransforms();
+
+                controller.Tick(0.01f);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.AttackWindup));
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(5));
+
+                controller.Tick(0.56f);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.Charge));
+                Assert.That(
+                    controller.ChargeDirection,
+                    Is.EqualTo(1));
+                Assert.That(
+                    controller.StartedChargeCount,
+                    Is.EqualTo(1));
+
+                controller.Tick(0.05f);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(4));
+                Assert.That(
+                    controller.SuccessfulChargeHitCount,
+                    Is.EqualTo(1));
+                controller.Tick(0.05f);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(4));
+            }
+            finally
+            {
+                Object.DestroyImmediate(enemy);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(ground);
             }
         }
     }
