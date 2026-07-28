@@ -23,5 +23,6 @@
 | UI | 일시정지·저장 메뉴·마스터 음량 | 기본 구현 완료 | [Pause & Options](Features/PauseAndOptions.md) |
 | 표현 | 이벤트 기반 대시·공격·명중·피격·능력 VFX/SFX | 기본 구현 완료 | [Player Feedback](Features/PlayerFeedback.md) |
 | UX | 진행 기반 목표 HUD·조작 튜토리얼·단일 월드 비콘 | 기본 구현 완료 | [Guidance & Tutorial](Features/GuidanceAndTutorial.md) |
+| 품질 | 프레임·GC·드로우 콜 성능 기준선 | Editor 기준선 완료 | [Performance Profiling](Features/PerformanceProfiling.md) |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.

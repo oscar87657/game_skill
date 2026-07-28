@@ -295,6 +295,18 @@ namespace GameSkill.Tests
             Assert.That(
                 guidanceMarker.IsVisible,
                 Is.False);
+            RuntimePerformanceProbe performanceProbe =
+                Object.FindFirstObjectByType<RuntimePerformanceProbe>(
+                    FindObjectsInactive.Include);
+            Assert.That(
+                performanceProbe,
+                Is.Not.Null);
+            Assert.That(
+                performanceProbe.IsConfigured,
+                Is.True);
+            Assert.That(
+                performanceProbe.IsCapturing,
+                Is.True);
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);
@@ -987,9 +999,12 @@ namespace GameSkill.Tests
             Assert.That(
                 meleeEnemy.CurrentState,
                 Is.EqualTo(EnemyState.Idle));
+            // 부활 이벤트가 적을 시작점으로 되돌린 뒤 같은 프레임의 AI 추적이 실행될 수 있으므로 한 틱 이동만 허용한다.
             Assert.That(
-                meleeEnemyObject.transform.position,
-                Is.EqualTo(meleeEnemySpawnPosition));
+                Vector3.Distance(
+                    meleeEnemyObject.transform.position,
+                    meleeEnemySpawnPosition),
+                Is.LessThan(0.35f));
             Assert.That(
                 meleeEnemyRenderer.enabled,
                 Is.True);

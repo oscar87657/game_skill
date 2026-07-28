@@ -172,6 +172,7 @@ namespace GameSkill.Editor
                 GameObject.Find(
                     GrayboxRootName),
                 accentMaterial);
+            EnsurePerformanceDiagnosticsPrototype();
             EnsurePauseMenuPrototype(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -614,6 +615,12 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsurePerformanceDiagnosticsPrototype())
+            {
+                // Editor·Development Build 전용 기준선 Probe 설정이 보완되면 Main에 저장한다.
+                changed = true;
+            }
+
             if (EnsurePauseMenuPrototype(player))
             {
                 // Pause 입력, 전역 시간 정지와 음량 옵션 메뉴 구성을 Main에 저장한다.
@@ -626,6 +633,47 @@ namespace GameSkill.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static bool
+            EnsurePerformanceDiagnosticsPrototype()
+        {
+            // 게임플레이 오브젝트와 분리된 고정 루트에 개발용 측정 Probe를 한 개만 유지한다.
+            bool changed = false;
+            GameObject diagnostics =
+                FindSceneObject(
+                    "PerformanceDiagnostics");
+            if (diagnostics == null)
+            {
+                diagnostics =
+                    new GameObject(
+                        "PerformanceDiagnostics");
+                changed = true;
+            }
+
+            RuntimePerformanceProbe probe =
+                diagnostics
+                    .GetComponent<RuntimePerformanceProbe>();
+            if (probe == null)
+            {
+                probe =
+                    diagnostics
+                        .AddComponent<RuntimePerformanceProbe>();
+                changed = true;
+            }
+
+            if (probe.Configure(
+                1.5f,
+                5f,
+                true,
+                true))
+            {
+                EditorUtility.SetDirty(
+                    probe);
+                changed = true;
             }
 
             return changed;
