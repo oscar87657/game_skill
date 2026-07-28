@@ -44,6 +44,9 @@ namespace GameSkill.Tests
             PlayerInput playerInput = player.GetComponent<PlayerInput>();
             Assert.That(playerInput, Is.Not.Null);
             Assert.That(playerInput.actions.FindAction("Dash"), Is.Not.Null);
+            Assert.That(
+                playerInput.actions.FindAction("Pause"),
+                Is.Not.Null);
             SideScrollerMotor motor = player.GetComponent<SideScrollerMotor>();
             Assert.That(motor, Is.Not.Null);
             Assert.That(motor.IsDashing, Is.False);
@@ -164,6 +167,56 @@ namespace GameSkill.Tests
                 eventSystemObject
                     .GetComponent<InputSystemUIInputModule>(),
                 Is.Not.Null);
+            PauseMenuController pauseMenu =
+                worldMapHud
+                    .GetComponent<PauseMenuController>();
+            Assert.That(pauseMenu, Is.Not.Null);
+            Assert.That(
+                pauseMenu.IsConfigured,
+                Is.True);
+            Assert.That(
+                pauseMenu.HasPauseAction,
+                Is.True);
+            Assert.That(
+                pauseMenu.IsPaused,
+                Is.False);
+            GameObject pauseOverlay =
+                pauseMenu.MenuRoot;
+            Assert.That(
+                pauseOverlay,
+                Is.Not.Null);
+            Assert.That(
+                pauseOverlay.name,
+                Is.EqualTo("PauseMenuOverlay"));
+            Assert.That(
+                pauseOverlay.activeSelf,
+                Is.False);
+            Assert.That(
+                pauseMenu.VolumeLabelText,
+                Does.StartWith("VOLUME "));
+            float runningTimeScale =
+                Time.timeScale;
+            pauseMenu.SetPaused(true);
+            Assert.That(
+                pauseMenu.IsPaused,
+                Is.True);
+            Assert.That(
+                Time.timeScale,
+                Is.Zero);
+            Assert.That(
+                pauseOverlay.activeSelf,
+                Is.True);
+            pauseMenu.Resume();
+            Assert.That(
+                pauseMenu.IsPaused,
+                Is.False);
+            Assert.That(
+                Time.timeScale,
+                Is.EqualTo(runningTimeScale)
+                    .Within(0.001f));
+            Assert.That(
+                pauseOverlay.activeSelf,
+                Is.False);
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
             Assert.That(respawnController, Is.Not.Null);

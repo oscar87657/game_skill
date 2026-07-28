@@ -2,7 +2,8 @@
   "name": "GameSkill.EditModeTests",
   "rootNamespace": "GameSkill.Tests",
   "references": [
-    "GameSkill.Runtime"
+    "GameSkill.Runtime",
+    "Unity.InputSystem"
   ],
   "includePlatforms": [
     "Editor"

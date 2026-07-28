@@ -20,5 +20,6 @@
 | 보스 | 세 이동 능력을 시험하는 순환 패턴 보스 | 기본 구현 완료 | [Ability Trial Boss](Features/AbilityTrialBoss.md) |
 | 저장 | 능력·체크포인트·월드 상태 JSON | 기본 구현 완료 | [Progress Save](Features/ProgressSave.md) |
 | UI | 체력·능력·저장 상태 HUD | 기본 구현 완료 | [Progress HUD](Features/ProgressHud.md) |
+| UI | 일시정지·저장 메뉴·마스터 음량 | 기본 구현 완료 | [Pause & Options](Features/PauseAndOptions.md) |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.

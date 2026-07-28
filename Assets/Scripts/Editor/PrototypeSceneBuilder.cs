@@ -163,6 +163,7 @@ namespace GameSkill.Editor
             ConfigureCamera(player);
             EnsureWorldMapPrototype(player);
             EnsureProgressHudPrototype(player);
+            EnsurePauseMenuPrototype(player);
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -586,6 +587,12 @@ namespace GameSkill.Editor
             if (EnsureProgressHudPrototype(player))
             {
                 // 체력·능력·저장 HUD와 Input System EventSystem 구성을 Main에 저장한다.
+                changed = true;
+            }
+
+            if (EnsurePauseMenuPrototype(player))
+            {
+                // Pause 입력, 전역 시간 정지와 음량 옵션 메뉴 구성을 Main에 저장한다.
                 changed = true;
             }
 
@@ -1158,6 +1165,252 @@ namespace GameSkill.Editor
                 label);
         }
 
+        private static bool EnsurePauseMenuPrototype(
+            GameObject player)
+        {
+            // 기존 영구 Canvas와 진행 HUD를 재사용할 수 있을 때만 Pause 메뉴를 구성한다.
+            if (player == null)
+            {
+                return false;
+            }
+
+            PlayerInput playerInput =
+                player.GetComponent<PlayerInput>();
+            GameObject hud =
+                GameObject.Find("WorldMapHUD");
+            GameProgressHud progressHud =
+                hud != null
+                    ? hud.GetComponent<GameProgressHud>()
+                    : null;
+            if (playerInput == null
+                || hud == null
+                || progressHud == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            EnsureUiEventSystem(ref changed);
+            GameObject overlay =
+                EnsureUiImage(
+                    "PauseMenuOverlay",
+                    hud.transform,
+                    ref changed);
+            RectTransform overlayRect =
+                overlay.GetComponent<RectTransform>();
+            overlayRect.anchorMin = Vector2.zero;
+            overlayRect.anchorMax = Vector2.one;
+            overlayRect.pivot =
+                new Vector2(0.5f, 0.5f);
+            overlayRect.anchoredPosition =
+                Vector2.zero;
+            overlayRect.sizeDelta =
+                Vector2.zero;
+            Image overlayImage =
+                overlay.GetComponent<Image>();
+            overlayImage.color =
+                new Color(
+                    0.01f,
+                    0.015f,
+                    0.025f,
+                    0.82f);
+            overlayImage.raycastTarget = true;
+            if (overlay.transform.GetSiblingIndex()
+                != hud.transform.childCount - 1)
+            {
+                // 전체 화면 메뉴를 다른 HUD보다 마지막에 그려 입력과 시각을 모두 가리게 한다.
+                overlay.transform.SetAsLastSibling();
+                changed = true;
+            }
+
+            GameObject panel =
+                EnsureUiImage(
+                    "PauseMenuPanel",
+                    overlay.transform,
+                    ref changed);
+            ConfigureCenteredRect(
+                panel.GetComponent<RectTransform>(),
+                Vector2.zero,
+                new Vector2(540f, 520f));
+            Image panelImage =
+                panel.GetComponent<Image>();
+            panelImage.color =
+                new Color(
+                    0.035f,
+                    0.045f,
+                    0.065f,
+                    0.98f);
+            panelImage.raycastTarget = true;
+
+            EnsureMapText(
+                "PauseMenuTitle",
+                panel.transform,
+                "PAUSED",
+                new Vector2(0f, 205f),
+                new Vector2(460f, 42f),
+                28,
+                ref changed);
+            Text hint = EnsureMapText(
+                "PauseMenuHint",
+                panel.transform,
+                "ESC / START TO RESUME",
+                new Vector2(0f, 165f),
+                new Vector2(460f, 28f),
+                14,
+                ref changed);
+            hint.color =
+                new Color(
+                    0.66f,
+                    0.71f,
+                    0.8f,
+                    1f);
+
+            Button resumeButton =
+                EnsurePauseButton(
+                    "PauseMenuResumeButton",
+                    panel.transform,
+                    "RESUME",
+                    new Vector2(0f, 105f),
+                    new Vector2(240f, 44f),
+                    ref changed);
+            Button saveButton =
+                EnsurePauseButton(
+                    "PauseMenuSaveButton",
+                    panel.transform,
+                    "SAVE",
+                    new Vector2(-70f, 48f),
+                    new Vector2(120f, 38f),
+                    ref changed);
+            Button loadButton =
+                EnsurePauseButton(
+                    "PauseMenuLoadButton",
+                    panel.transform,
+                    "LOAD",
+                    new Vector2(70f, 48f),
+                    new Vector2(120f, 38f),
+                    ref changed);
+            Text volumeLabel =
+                EnsureMapText(
+                    "PauseMenuVolumeLabel",
+                    panel.transform,
+                    "VOLUME 100%",
+                    new Vector2(0f, -12f),
+                    new Vector2(300f, 30f),
+                    17,
+                    ref changed);
+            Button volumeDownButton =
+                EnsurePauseButton(
+                    "PauseMenuVolumeDownButton",
+                    panel.transform,
+                    "-",
+                    new Vector2(-55f, -62f),
+                    new Vector2(80f, 40f),
+                    ref changed);
+            Button volumeUpButton =
+                EnsurePauseButton(
+                    "PauseMenuVolumeUpButton",
+                    panel.transform,
+                    "+",
+                    new Vector2(55f, -62f),
+                    new Vector2(80f, 40f),
+                    ref changed);
+            Text statusLabel =
+                EnsureMapText(
+                    "PauseMenuStatus",
+                    panel.transform,
+                    "READY",
+                    new Vector2(0f, -118f),
+                    new Vector2(360f, 30f),
+                    15,
+                    ref changed);
+            statusLabel.color =
+                new Color(
+                    0.72f,
+                    0.76f,
+                    0.84f,
+                    1f);
+            Text note = EnsureMapText(
+                "PauseMenuSaveNote",
+                panel.transform,
+                "SAVE STORES ABILITIES, CHECKPOINT AND WORLD",
+                new Vector2(0f, -170f),
+                new Vector2(480f, 32f),
+                12,
+                ref changed);
+            note.color =
+                new Color(
+                    0.5f,
+                    0.55f,
+                    0.64f,
+                    1f);
+
+            PauseMenuController controller =
+                hud.GetComponent<PauseMenuController>();
+            if (controller == null)
+            {
+                // 영구 Canvas에 제어기를 두어 Additive 구역 전환 중에도 Pause 상태를 유지한다.
+                controller =
+                    hud.AddComponent<PauseMenuController>();
+                changed = true;
+            }
+
+            bool wasVisible =
+                overlay.activeSelf;
+            if (controller.Configure(
+                overlay,
+                playerInput,
+                progressHud,
+                resumeButton,
+                saveButton,
+                loadButton,
+                volumeDownButton,
+                volumeUpButton,
+                volumeLabel,
+                statusLabel))
+            {
+                EditorUtility.SetDirty(controller);
+                changed = true;
+            }
+
+            if (wasVisible
+                && !overlay.activeSelf)
+            {
+                // 빌더에서 만든 메뉴는 실행 전 씬 화면을 가리지 않도록 닫힌 상태로 저장한다.
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static Button EnsurePauseButton(
+            string objectName,
+            Transform parent,
+            string labelText,
+            Vector2 position,
+            Vector2 size,
+            ref bool changed)
+        {
+            // 기존 HUD Button 생성 규칙을 재사용하고 Pause 메뉴에 맞는 크기와 자동 탐색만 덮어쓴다.
+            Button button =
+                EnsureHudButton(
+                    objectName,
+                    parent,
+                    labelText,
+                    position,
+                    ref changed);
+            ConfigureCenteredRect(
+                button.GetComponent<RectTransform>(),
+                position,
+                size);
+            button.navigation =
+                new Navigation
+                {
+                    mode =
+                        Navigation.Mode.Automatic
+                };
+            return button;
+        }
+
         private static Button EnsureHudButton(
             string objectName,
             Transform parent,
@@ -1269,7 +1522,7 @@ namespace GameSkill.Editor
         {
             // 이름을 UI 배치 키로 사용해 빌더 재실행 시 같은 Image 오브젝트를 재사용한다.
             GameObject imageObject =
-                GameObject.Find(objectName);
+                FindSceneObject(objectName);
             if (imageObject == null)
             {
                 imageObject = new GameObject(
@@ -1304,7 +1557,7 @@ namespace GameSkill.Editor
         {
             // 짧은 ASCII 레이블은 프로젝트 외부 폰트 에셋 없이 런타임 기본 폰트로 표시한다.
             GameObject textObject =
-                GameObject.Find(objectName);
+                FindSceneObject(objectName);
             if (textObject == null)
             {
                 textObject = new GameObject(
@@ -1335,6 +1588,28 @@ namespace GameSkill.Editor
             text.raycastTarget = false;
             text.text = content;
             return text;
+        }
+
+        private static GameObject FindSceneObject(
+            string objectName)
+        {
+            // 비활성 Pause 메뉴까지 빌더가 재사용하도록 활성 Scene의 모든 GameObject를 조회한다.
+            GameObject[] candidates =
+                Resources.FindObjectsOfTypeAll<GameObject>();
+            // 프로젝트 에셋과 Additive Scene 오브젝트를 제외하고 현재 편집 Scene의 이름만 비교한다.
+            foreach (GameObject candidate
+                in candidates)
+            {
+                if (candidate != null
+                    && candidate.scene
+                        == SceneManager.GetActiveScene()
+                    && candidate.name == objectName)
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
         }
 
         private static Image EnsureMapConnection(

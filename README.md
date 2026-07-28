@@ -52,6 +52,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 세 이동 능력을 활용하게 만드는 순환 패턴 보스
 - [x] 능력·체크포인트·월드 상태 세이브/로드
 - [x] 체력·능력·저장 상태 HUD
+- [x] 일시정지·저장 메뉴와 마스터 음량 옵션
 - [ ] 보스와 수직 슬라이스 빌드
 
 자세한 내용은 [게임 디자인](Docs/GAME_DESIGN.md)과
@@ -84,6 +85,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [능력 시험 보스와 독립 보스방](Docs/Features/AbilityTrialBoss.md)
 - [플레이어 진행 저장](Docs/Features/ProgressSave.md)
 - [체력·능력·저장 상태 HUD](Docs/Features/ProgressHud.md)
+- [일시정지와 옵션 메뉴](Docs/Features/PauseAndOptions.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기
@@ -101,6 +103,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - 대시: `Left Shift` 또는 게임패드 East 버튼
 - 대시 후 계속 달리기: `Left Shift`를 계속 누르고 이동
 - 공격: `Enter` 또는 게임패드 West 버튼
+- 일시정지: `Esc` 또는 게임패드 Start 버튼
 
 현재 플레이어는 Quaternius의 사람 비율 Humanoid 모델을 사용합니다. 이동
 속도에 따라 Idle, Walk, Jog, Sprint가 블렌딩되며 점프와 공격 상태도 Humanoid
