@@ -10,6 +10,31 @@ namespace GameSkill.Tests
 {
     public sealed class CameraBoundsTests
     {
+        [Test]
+        public void PerspectiveDistance_PreservesOrthographicFraming()
+        {
+            // 기존 정사영 반높이를 원근 거리로 바꾼 뒤 다시 계산해 같은 세로 구도가 유지되는지 검증한다.
+            float distance =
+                CameraPerspectiveMath
+                    .DistanceForVerticalFraming(
+                        5.2f,
+                        35f);
+            float restoredHalfExtent =
+                CameraPerspectiveMath
+                    .VerticalHalfExtent(
+                        distance,
+                        35f);
+
+            Assert.That(
+                distance,
+                Is.EqualTo(16.4923f)
+                    .Within(0.001f));
+            Assert.That(
+                restoredHalfExtent,
+                Is.EqualTo(5.2f)
+                    .Within(0.0001f));
+        }
+
         [TestCase(0f, 3f, 0f, 3f)]
         [TestCase(-9f, 3f, -4f, 3f)]
         [TestCase(9f, 9f, 2f, 4f)]

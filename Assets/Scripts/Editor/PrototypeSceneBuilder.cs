@@ -53,6 +53,8 @@ namespace GameSkill.Editor
             "Assets/Materials/ZoneBackdrop_Start.mat";
         private const string TraversalBackdropMaterialPath =
             "Assets/Materials/ZoneBackdrop_Traversal.mat";
+        private const float CameraVerticalHalfExtent = 5.2f;
+        private const float CameraPerspectiveFieldOfView = 35f;
 
         [InitializeOnLoadMethod]
         private static void ScheduleSideScrollerMigration()
@@ -211,11 +213,15 @@ namespace GameSkill.Editor
                 camera.GetComponent<SideScrollerCamera>()
                 ?? camera.gameObject.AddComponent<SideScrollerCamera>();
             sideScrollerCamera.Configure(player.transform);
+            sideScrollerCamera.ConfigurePerspective(
+                CameraVerticalHalfExtent,
+                CameraPerspectiveFieldOfView);
 
-            camera.orthographic = true;
-            camera.orthographicSize = 5.2f;
             camera.transform.SetPositionAndRotation(
-                new Vector3(1.35f, 2.4f, -9f),
+                new Vector3(
+                    1.35f,
+                    2.4f,
+                    -sideScrollerCamera.CameraDistance),
                 Quaternion.identity);
             EnsureCameraBoundsPrototype(player);
             EditorUtility.SetDirty(sideScrollerCamera);
@@ -809,17 +815,50 @@ namespace GameSkill.Editor
                     new Vector2(20f, 5.2f))
             };
 
+            bool changed = false;
             sideScrollerCamera.Configure(player.transform);
-            if (!sideScrollerCamera.ConfigureWorldBounds(
+            if (sideScrollerCamera.ConfigurePerspective(
+                CameraVerticalHalfExtent,
+                CameraPerspectiveFieldOfView))
+            {
+                // 정사영 구도를 유지하는 거리와 약한 원근 FOV가 바뀐 경우 두 컴포넌트를 저장한다.
+                EditorUtility.SetDirty(Camera.main);
+                changed = true;
+            }
+
+            Vector3 currentCameraPosition =
+                Camera.main.transform.position;
+            float requestedCameraDepth =
+                -sideScrollerCamera.CameraDistance;
+            if (!Mathf.Approximately(
+                currentCameraPosition.z,
+                requestedCameraDepth))
+            {
+                // Edit Mode Scene 뷰에서도 런타임과 같은 깊이에 카메라가 보이도록 직렬화 위치를 맞춘다.
+                Camera.main.transform.position =
+                    new Vector3(
+                        currentCameraPosition.x,
+                        currentCameraPosition.y,
+                        requestedCameraDepth);
+                EditorUtility.SetDirty(
+                    Camera.main.transform);
+                changed = true;
+            }
+
+            if (sideScrollerCamera.ConfigureWorldBounds(
                 worldState,
                 startHall,
                 bounds))
             {
-                return false;
+                changed = true;
             }
 
-            EditorUtility.SetDirty(sideScrollerCamera);
-            return true;
+            if (changed)
+            {
+                EditorUtility.SetDirty(sideScrollerCamera);
+            }
+
+            return changed;
         }
 
         private static bool EnsureZoneStreamingPrototype(

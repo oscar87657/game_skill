@@ -1,8 +1,8 @@
 // GOLDEN STANDARD
-// 목적: 게임 물리를 변경하지 않고 구역 경계 안에서 2.5D 플레이어를 따라간다.
-// 책임: 목표·방향 미리보기·현재 구역 경계를 계산하고 카메라 위치만 부드럽게 보정한다.
-// 불변식: 카메라 회전·깊이축은 고정되고 추적 목표 중심점은 활성 구역 허용 범위 안에 있다.
-// 선택 이유: SmoothDamp 추적과 데이터 기반 경계를 결합해 방 전환의 가독성과 튜닝 가능성을 함께 얻는다.
+// 목적: 게임 물리를 변경하지 않고 약한 원근감으로 구역 경계 안의 2.5D 플레이어를 따라간다.
+// 책임: 원근 투영·목표·방향 미리보기·현재 구역 경계를 계산하고 카메라 위치만 부드럽게 보정한다.
+// 불변식: 카메라 회전은 정면, 깊이축은 고정되고 추적 중심점은 활성 구역 허용 범위 안에 있다.
+// 선택 이유: 정면 Perspective와 SmoothDamp·데이터 경계를 결합해 2D 가독성과 3D 깊이감을 함께 얻는다.
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -11,7 +11,12 @@ namespace GameSkill
     public sealed class SideScrollerCamera : MonoBehaviour
     {
         [SerializeField] private Transform target;
-        [SerializeField] private Vector3 offset = new(0f, 2.4f, -9f);
+        [SerializeField] private Vector3 offset =
+            new(0f, 2.4f, -16.4923f);
+        [SerializeField, Min(0.01f)]
+        private float referenceVerticalHalfExtent = 5.2f;
+        [SerializeField, Range(1f, 179f)]
+        private float perspectiveFieldOfView = 35f;
         [SerializeField, Min(0f)] private float horizontalLookAhead = 1.35f;
         [SerializeField, Min(0.01f)] private float horizontalSmoothTime = 0.16f;
         [SerializeField, Min(0.01f)] private float verticalSmoothTime = 0.24f;
@@ -29,6 +34,11 @@ namespace GameSkill
         public string ActiveZoneId =>
             activeBounds?.Zone?.Id ?? string.Empty;
         public bool HasActiveBounds => activeBounds != null;
+        public float CameraDistance => Mathf.Abs(offset.z);
+        public float PerspectiveFieldOfView =>
+            perspectiveFieldOfView;
+        public float ReferenceVerticalHalfExtent =>
+            referenceVerticalHalfExtent;
 
         public void Configure(Transform followTarget)
         {
@@ -37,10 +47,70 @@ namespace GameSkill
             motor = target != null ? target.GetComponent<SideScrollerMotor>() : null;
         }
 
+        public bool ConfigurePerspective(
+            float verticalHalfExtent,
+            float verticalFieldOfView)
+        {
+            float normalizedHalfExtent =
+                Mathf.Max(
+                    0.01f,
+                    Mathf.Abs(verticalHalfExtent));
+            float normalizedFieldOfView =
+                Mathf.Clamp(
+                    Mathf.Abs(verticalFieldOfView),
+                    1f,
+                    179f);
+            float distance =
+                CameraPerspectiveMath
+                    .DistanceForVerticalFraming(
+                        normalizedHalfExtent,
+                        normalizedFieldOfView);
+            Vector3 requestedOffset =
+                new(offset.x, offset.y, -distance);
+            Camera attachedCamera = GetComponent<Camera>();
+            bool changed =
+                !Mathf.Approximately(
+                    referenceVerticalHalfExtent,
+                    normalizedHalfExtent)
+                || !Mathf.Approximately(
+                    perspectiveFieldOfView,
+                    normalizedFieldOfView)
+                || offset != requestedOffset
+                || (attachedCamera != null
+                    && (attachedCamera.orthographic
+                        || !Mathf.Approximately(
+                            attachedCamera.fieldOfView,
+                            normalizedFieldOfView)
+                        || !Mathf.Approximately(
+                            attachedCamera.orthographicSize,
+                            normalizedHalfExtent)));
+
+            // 기준 구도와 투영값을 함께 저장해 Inspector 변경 뒤에도 거리·FOV 불일치를 만들지 않는다.
+            referenceVerticalHalfExtent =
+                normalizedHalfExtent;
+            perspectiveFieldOfView =
+                normalizedFieldOfView;
+            offset = requestedOffset;
+            if (attachedCamera != null)
+            {
+                // 정면 회전은 유지하고 투영만 Perspective로 바꿔 화면 가장자리에서 3D 옆면을 드러낸다.
+                attachedCamera.orthographic = false;
+                attachedCamera.fieldOfView =
+                    normalizedFieldOfView;
+                attachedCamera.orthographicSize =
+                    normalizedHalfExtent;
+            }
+
+            return changed;
+        }
+
         private void Awake()
         {
             // 씬에서 직접 연결한 참조와 에디터가 생성한 설정을 모두 지원한다.
             Configure(target);
+            ConfigurePerspective(
+                referenceVerticalHalfExtent,
+                perspectiveFieldOfView);
             Subscribe();
             TryApplyZone(initialZone);
         }

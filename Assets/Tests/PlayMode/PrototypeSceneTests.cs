@@ -111,7 +111,20 @@ namespace GameSkill.Tests
             SideScrollerCamera sideScrollerCamera =
                 camera.GetComponent<SideScrollerCamera>();
             Assert.That(sideScrollerCamera, Is.Not.Null);
-            Assert.That(camera.orthographic, Is.True);
+            Assert.That(camera.orthographic, Is.False);
+            Assert.That(
+                camera.fieldOfView,
+                Is.EqualTo(35f).Within(0.001f));
+            Assert.That(
+                sideScrollerCamera.CameraDistance,
+                Is.EqualTo(16.4923f).Within(0.001f));
+            Assert.That(
+                sideScrollerCamera
+                    .ReferenceVerticalHalfExtent,
+                Is.EqualTo(5.2f).Within(0.001f));
+            Assert.That(
+                camera.transform.position.z,
+                Is.EqualTo(-16.4923f).Within(0.001f));
             Assert.That(
                 sideScrollerCamera.ActiveZoneId,
                 Is.EqualTo("start_hall"));

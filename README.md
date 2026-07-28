@@ -30,6 +30,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] CC0 캐릭터 및 프로토타입 에셋
 - [x] URP Main Scene과 플레이어 이동 프로토타입
 - [x] 횡스크롤 이동 및 측면 추적 카메라 프로토타입
+- [x] 정면 구도를 유지하는 약한 Perspective 카메라
 - [x] Kenney 캐릭터 및 이동·점프 애니메이션
 - [x] 지상 대시와 짧은 무적 시간
 - [x] 기본 공격·체력·훈련용 더미 프로토타입
@@ -70,6 +71,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [구역 연결과 영구 지름길](Docs/Features/WorldShortcuts.md)
 - [Additive 구역 Scene 스트리밍](Docs/Features/WorldStreaming.md)
 - [구역별 카메라 제한 영역](Docs/Features/CameraBounds.md)
+- [정면 원근 2.5D 카메라](Docs/Features/PerspectiveCamera.md)
 - [현재 위치와 방문 상태 지도 HUD](Docs/Features/WorldMap.md)
 - [능력 기반 백트래킹과 최대 체력 보상](Docs/Features/BacktrackRewards.md)
 - 시연 자료: [Media/README](Media/README.md)
