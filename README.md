@@ -80,6 +80,8 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [근거리 적과 탐지·추적·공격 상태 머신](Docs/Features/EnemyStateMachine.md)
 - [고정형 원거리 적과 직선 투사체](Docs/Features/RangedEnemy.md)
 - [방향 잠금 돌진 적과 상태 중단](Docs/Features/ChargeEnemy.md)
+- [능력 시험 보스와 독립 보스방](Docs/Features/AbilityTrialBoss.md)
+- [능력과 체크포인트 진행 저장](Docs/Features/ProgressSave.md)
 - [세 이동 능력을 시험하는 첫 보스](Docs/Features/AbilityTrialBoss.md)
 - 시연 자료: [Media/README](Media/README.md)
 

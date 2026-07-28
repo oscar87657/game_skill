@@ -1,5 +1,5 @@
 // GOLDEN STANDARD
-// 목적: Main Scene과 세 구역 콘텐츠 Scene의 실제 Additive 로드·언로드 흐름을 검증한다.
+// 목적: Main Scene과 네 구역 콘텐츠 Scene의 실제 Additive 로드·언로드 흐름을 검증한다.
 // 책임: 시작 구역 자동 로드, 다음 구역 전환, 이전 Scene 정리와 콘텐츠 루트를 확인한다.
 // 불변식: 테스트 종료 시 자신이 로드한 Additive Scene을 언로드해 다음 테스트에 상태를 남기지 않는다.
 // 선택 이유: 비동기 Scene API는 순수 상태 테스트만으로 검증할 수 없어 최소 통합 테스트를 별도로 둔다.
@@ -17,6 +17,8 @@ namespace GameSkill.Tests
             "Assets/Scenes/Zones/Zone_StartHall.unity";
         private const string TraversalScenePath =
             "Assets/Scenes/Zones/Zone_TraversalLab.unity";
+        private const string BossScenePath =
+            "Assets/Scenes/Zones/Zone_BossRoom.unity";
 
         [UnityTest]
         public IEnumerator MainScene_StreamsOneZoneContentSceneAtATime()
@@ -82,8 +84,40 @@ namespace GameSkill.Tests
                     "ZoneContent_TraversalLab"),
                 Is.Not.Null);
 
+            WorldZoneVolume bossVolume =
+                GameObject.Find("Zone_BossRoom")
+                    .GetComponent<WorldZoneVolume>();
+            Assert.That(bossVolume, Is.Not.Null);
+            Assert.That(
+                controller.RequestZone(bossVolume.Zone),
+                Is.True);
+
+            // 보스 전용 Scene까지 전환해 새 네 번째 바인딩이 실제 빌드 목록에서 로드되는지 확인한다.
+            for (int frame = 0;
+                 frame < 180
+                 && (controller.IsTransitioning
+                    || controller.LoadedZoneId
+                        != "boss_room");
+                 frame++)
+            {
+                yield return null;
+            }
+
+            Assert.That(
+                controller.LoadedZoneId,
+                Is.EqualTo("boss_room"));
+            Assert.That(traversalScene.isLoaded, Is.False);
+            Scene bossScene =
+                SceneManager.GetSceneByPath(BossScenePath);
+            Assert.That(bossScene.isLoaded, Is.True);
+            Assert.That(
+                FindRoot(
+                    bossScene,
+                    "ZoneContent_BossRoom"),
+                Is.Not.Null);
+
             AsyncOperation cleanup =
-                SceneManager.UnloadSceneAsync(traversalScene);
+                SceneManager.UnloadSceneAsync(bossScene);
             // 테스트가 로드한 콘텐츠를 완전히 제거한 뒤 다음 테스트에 제어권을 넘긴다.
             while (cleanup != null && !cleanup.isDone)
             {

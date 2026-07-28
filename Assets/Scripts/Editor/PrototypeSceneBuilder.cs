@@ -35,6 +35,8 @@ namespace GameSkill.Editor
             WorldZoneFolderPath + "/WorldZone_StartHall.asset";
         private const string TraversalLabZonePath =
             WorldZoneFolderPath + "/WorldZone_TraversalLab.asset";
+        private const string BossRoomZonePath =
+            WorldZoneFolderPath + "/WorldZone_BossRoom.asset";
         private const string ShaftReturnShortcutId =
             "shortcut_shaft_return";
         private const string ShaftHealthRewardId =
@@ -47,12 +49,16 @@ namespace GameSkill.Editor
             ZoneSceneFolderPath + "/Zone_StartHall.unity";
         private const string TraversalLabScenePath =
             ZoneSceneFolderPath + "/Zone_TraversalLab.unity";
+        private const string BossRoomScenePath =
+            ZoneSceneFolderPath + "/Zone_BossRoom.unity";
         private const string BacktrackBackdropMaterialPath =
             "Assets/Materials/ZoneBackdrop_Backtrack.mat";
         private const string StartBackdropMaterialPath =
             "Assets/Materials/ZoneBackdrop_Start.mat";
         private const string TraversalBackdropMaterialPath =
             "Assets/Materials/ZoneBackdrop_Traversal.mat";
+        private const string BossBackdropMaterialPath =
+            "Assets/Materials/ZoneBackdrop_Boss.mat";
         private const float CameraVerticalHalfExtent = 5.2f;
         private const float CameraPerspectiveFieldOfView = 35f;
         private const float DashMovementDuration = 0.2f;
@@ -210,6 +216,15 @@ namespace GameSkill.Editor
                     "wall_traversal",
                     "벽 잡기",
                     "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+            GameProgressSaveController saveController =
+                player.AddComponent<GameProgressSaveController>();
+            saveController.Configure(
+                new[]
+                {
+                    doubleJumpAbility,
+                    airDashAbility,
+                    wallTraversalAbility
+                });
             SideScrollerMotor motor =
                 player.AddComponent<SideScrollerMotor>();
             motor.ConfigureAbilityRequirements(
@@ -502,9 +517,15 @@ namespace GameSkill.Editor
                 changed = true;
             }
 
+            if (EnsureGameProgressSavePrototype(player))
+            {
+                // M6 저장 제어기와 능력 카탈로그가 보완되면 플레이어 구성을 Main에 저장한다.
+                changed = true;
+            }
+
             if (EnsureWorldZonePrototype(player, grayboxRoot))
             {
-                // 세 구역 정의·방문 상태·Trigger 중 하나라도 보완되면 씬을 저장한다.
+                // 네 구역 정의·방문 상태·Trigger 중 하나라도 보완되면 씬을 저장한다.
                 changed = true;
             }
 
@@ -526,7 +547,7 @@ namespace GameSkill.Editor
 
             if (EnsureCameraBoundsPrototype(player))
             {
-                // 세 구역 카메라 중심점 경계가 추가·변경되면 Main Camera 구성을 저장한다.
+                // 네 구역 카메라 중심점 경계가 추가·변경되면 Main Camera 구성을 저장한다.
                 changed = true;
             }
 
@@ -542,6 +563,63 @@ namespace GameSkill.Editor
                 EditorSceneManager.MarkSceneDirty(scene);
                 EditorSceneManager.SaveScene(scene, ScenePath);
                 AssetDatabase.SaveAssets();
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureGameProgressSavePrototype(
+            GameObject player)
+        {
+            // 능력·체크포인트 상태가 있는 플레이어에만 저장 경계를 추가해 불완전한 구성을 피한다.
+            if (player == null
+                || player.GetComponent<PlayerAbilityState>()
+                    == null
+                || player.GetComponent<PlayerCheckpointState>()
+                    == null)
+            {
+                return false;
+            }
+
+            AbilityDefinition doubleJumpAbility =
+                GetOrCreateAbilityDefinition(
+                    DoubleJumpAbilityPath,
+                    "double_jump",
+                    "2단 점프",
+                    "공중에서 한 번 더 점프한다.");
+            AbilityDefinition airDashAbility =
+                GetOrCreateAbilityDefinition(
+                    AirDashAbilityPath,
+                    "air_dash",
+                    "공중 대시",
+                    "공중에서 수평 대시를 한 번 사용한다.");
+            AbilityDefinition wallTraversalAbility =
+                GetOrCreateAbilityDefinition(
+                    WallTraversalAbilityPath,
+                    "wall_traversal",
+                    "벽 잡기",
+                    "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+            GameProgressSaveController controller =
+                player.GetComponent<GameProgressSaveController>();
+            bool changed = false;
+            if (controller == null)
+            {
+                // 이전 Main 씬은 플레이어를 재생성하지 않고 저장 컴포넌트만 마이그레이션한다.
+                controller =
+                    player.AddComponent<GameProgressSaveController>();
+                changed = true;
+            }
+
+            if (controller.Configure(
+                new[]
+                {
+                    doubleJumpAbility,
+                    airDashAbility,
+                    wallTraversalAbility
+                }))
+            {
+                EditorUtility.SetDirty(controller);
+                changed = true;
             }
 
             return changed;
@@ -600,6 +678,12 @@ namespace GameSkill.Editor
                     "traversal_lab",
                     "이동 실험실",
                     "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+            WorldZoneDefinition bossRoom =
+                GetOrCreateWorldZoneDefinition(
+                    BossRoomZonePath,
+                    "boss_room",
+                    "능력 시험실",
+                    "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.");
 
             bool changed = false;
             GameObject hud = GameObject.Find("WorldMapHUD");
@@ -654,11 +738,13 @@ namespace GameSkill.Editor
                 ref changed);
 
             Vector2 shaftPosition =
-                new(-105f, 15f);
+                new(-115f, 20f);
             Vector2 startPosition =
-                new(-20f, -35f);
+                new(-45f, -35f);
             Vector2 labPosition =
-                new(105f, -35f);
+                new(55f, -35f);
+            Vector2 bossPosition =
+                new(115f, 20f);
             Image shaftStartLine = EnsureMapConnection(
                 "MapConnection_ShaftStart",
                 panel.transform,
@@ -670,6 +756,12 @@ namespace GameSkill.Editor
                 panel.transform,
                 startPosition,
                 labPosition,
+                ref changed);
+            Image labBossLine = EnsureMapConnection(
+                "MapConnection_LabBoss",
+                panel.transform,
+                labPosition,
+                bossPosition,
                 ref changed);
 
             WorldMapNodeView shaftNode = EnsureMapNode(
@@ -693,6 +785,13 @@ namespace GameSkill.Editor
                 "LAB",
                 labPosition,
                 ref changed);
+            WorldMapNodeView bossNode = EnsureMapNode(
+                "MapNode_BossRoom",
+                panel.transform,
+                bossRoom,
+                "BOSS",
+                bossPosition,
+                ref changed);
 
             WorldMapPresenter presenter =
                 hud.GetComponent<WorldMapPresenter>();
@@ -707,7 +806,8 @@ namespace GameSkill.Editor
             {
                 shaftNode,
                 startNode,
-                labNode
+                labNode,
+                bossNode
             };
             var connections =
                 new List<WorldMapConnectionView>
@@ -719,7 +819,11 @@ namespace GameSkill.Editor
                     new(
                         startHall,
                         traversalLab,
-                        startLabLine)
+                        startLabLine),
+                    new(
+                        traversalLab,
+                        bossRoom,
+                        labBossLine)
                 };
             if (presenter.Configure(
                 worldState,
@@ -917,6 +1021,12 @@ namespace GameSkill.Editor
                     "traversal_lab",
                     "이동 실험실",
                     "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+            WorldZoneDefinition bossRoom =
+                GetOrCreateWorldZoneDefinition(
+                    BossRoomZonePath,
+                    "boss_room",
+                    "능력 시험실",
+                    "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.");
 
             var bounds = new List<CameraZoneBounds>
             {
@@ -934,7 +1044,12 @@ namespace GameSkill.Editor
                 new(
                     traversalLab,
                     new Vector2(10f, 3f),
-                    new Vector2(32f, 7.2f))
+                    new Vector2(24f, 7.2f)),
+                // 보스방은 플레이어 추적을 멈추고 아레나 전체를 읽을 수 있는 한 시점으로 고정한다.
+                new(
+                    bossRoom,
+                    new Vector2(32f, 5.4f),
+                    new Vector2(32f, 5.4f))
             };
 
             bool changed = false;
@@ -1009,6 +1124,9 @@ namespace GameSkill.Editor
             Material traversalMaterial = GetOrCreateMaterial(
                 TraversalBackdropMaterialPath,
                 new Color(0.24f, 0.16f, 0.06f));
+            Material bossMaterial = GetOrCreateMaterial(
+                BossBackdropMaterialPath,
+                new Color(0.18f, 0.035f, 0.045f));
 
             bool changed = false;
             changed |= EnsureZoneContentScene(
@@ -1026,9 +1144,15 @@ namespace GameSkill.Editor
             changed |= EnsureZoneContentScene(
                 TraversalLabScenePath,
                 "ZoneContent_TraversalLab",
-                new Vector3(15.5f, 4f, 2.4f),
-                new Vector3(18f, 10f, 0.2f),
+                new Vector3(16.25f, 4f, 2.4f),
+                new Vector3(19.5f, 10f, 0.2f),
                 traversalMaterial);
+            changed |= EnsureZoneContentScene(
+                BossRoomScenePath,
+                "ZoneContent_BossRoom",
+                new Vector3(32f, 5.4f, 2.4f),
+                new Vector3(12f, 10.8f, 0.2f),
+                bossMaterial);
 
             if (EnsureZoneScenesInBuildSettings())
             {
@@ -1053,6 +1177,12 @@ namespace GameSkill.Editor
                     "traversal_lab",
                     "이동 실험실",
                     "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+            WorldZoneDefinition bossRoom =
+                GetOrCreateWorldZoneDefinition(
+                    BossRoomZonePath,
+                    "boss_room",
+                    "능력 시험실",
+                    "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.");
 
             GameObject streamingObject =
                 GameObject.Find("WorldZoneStreaming");
@@ -1077,7 +1207,8 @@ namespace GameSkill.Editor
             {
                 new(backtrackShaft, BacktrackShaftScenePath),
                 new(startHall, StartHallScenePath),
-                new(traversalLab, TraversalLabScenePath)
+                new(traversalLab, TraversalLabScenePath),
+                new(bossRoom, BossRoomScenePath)
             };
             if (controller.Configure(
                 worldState,
@@ -1142,7 +1273,8 @@ namespace GameSkill.Editor
                 ScenePath,
                 BacktrackShaftScenePath,
                 StartHallScenePath,
-                TraversalLabScenePath
+                TraversalLabScenePath,
+                BossRoomScenePath
             };
             var scenes =
                 new List<EditorBuildSettingsScene>(
@@ -1388,8 +1520,14 @@ namespace GameSkill.Editor
                     "traversal_lab",
                     "이동 실험실",
                     "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+            WorldZoneDefinition bossRoom =
+                GetOrCreateWorldZoneDefinition(
+                    BossRoomZonePath,
+                    "boss_room",
+                    "능력 시험실",
+                    "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.");
 
-            // 경계가 맞닿는 세 Trigger로 현재 Graybox를 수직·중앙·수평 구역으로 명시한다.
+            // 경계가 맞닿는 네 Trigger로 탐험 동선과 독립 보스 아레나를 명시한다.
             changed |= EnsureWorldZoneVolume(
                 grayboxRoot.transform,
                 "Zone_BacktrackShaft",
@@ -1405,9 +1543,15 @@ namespace GameSkill.Editor
             changed |= EnsureWorldZoneVolume(
                 grayboxRoot.transform,
                 "Zone_TraversalLab",
-                new Vector3(22f, 4f, 0f),
-                new Vector3(32f, 10f, 3.5f),
+                new Vector3(16.25f, 4f, 0f),
+                new Vector3(19.5f, 10f, 3.5f),
                 traversalLab);
+            changed |= EnsureWorldZoneVolume(
+                grayboxRoot.transform,
+                "Zone_BossRoom",
+                new Vector3(32f, 5.4f, 0f),
+                new Vector3(12f, 10.8f, 3.5f),
+                bossRoom);
             return changed;
         }
 

@@ -17,15 +17,16 @@
 Main.unity                         항상 유지
 ├── Player
 ├── WorldZoneStreaming
-├── WorldZoneVolume × 3
+├── WorldZoneVolume × 4
 └── 게임플레이 지형·능력·전투
 
 Zones/Zone_BacktrackShaft.unity    현재 구역일 때만 로드
 Zones/Zone_StartHall.unity         현재 구역일 때만 로드
 Zones/Zone_TraversalLab.unity      현재 구역일 때만 로드
+Zones/Zone_BossRoom.unity          보스방 구역일 때만 로드
 ```
 
-세 구역 Scene은 Build Settings에 등록되어 에디터와 빌드에서 같은 경로로
+네 구역 Scene은 Build Settings에 등록되어 에디터와 빌드에서 같은 경로로
 로드된다.
 
 ## 구현 후보 비교
@@ -70,8 +71,9 @@ WorldZoneStreamController.RequestZone
 - [x] 구역 ID와 Scene 경로 바인딩 검증
 - [x] 시작 홀 콘텐츠 자동 Additive 로드
 - [x] 이동 실험실 콘텐츠 로드 후 시작 홀 콘텐츠 언로드
+- [x] 능력 시험실 콘텐츠 로드 후 이동 실험실 콘텐츠 언로드
 - [x] 전환 뒤 목표 Scene의 콘텐츠 루트 확인
-- [ ] 실제 빌드에서 세 구역 장시간 왕복 테스트
+- [ ] 실제 빌드에서 네 구역 장시간 왕복 테스트
 
 ## 수동 시연 방법
 
@@ -81,6 +83,7 @@ WorldZoneStreamController.RequestZone
 4. Console에서 `구역 Scene 전환 완료: traversal_lab`을 확인한다.
 5. 시작 홀과 백트래킹 샤프트를 왕복하며 전환 로그와 끊김을 확인한다.
 6. Hierarchy에서 현재 구역 Scene 하나만 Main 옆에 로드되는지 확인한다.
+7. 보스방 입장 시 붉은 전용 배경 Scene으로 전환되는지 확인한다.
 
 ## 다음 단계
 

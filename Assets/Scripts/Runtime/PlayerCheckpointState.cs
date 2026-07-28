@@ -53,6 +53,31 @@ namespace GameSkill
             return true;
         }
 
+        public bool RestoreCheckpoint(
+            string checkpointId,
+            Vector3 respawnPosition)
+        {
+            // 저장 복원은 체크포인트 접촉 효과인 체력 회복과 활성화 이벤트를 다시 발생시키지 않는다.
+            if (string.IsNullOrWhiteSpace(checkpointId)
+                || !IsFinite(respawnPosition))
+            {
+                return false;
+            }
+
+            HasCheckpoint = true;
+            LastCheckpointId = checkpointId.Trim();
+            LastRespawnPosition = respawnPosition;
+            return true;
+        }
+
+        public void ClearCheckpoint()
+        {
+            // 체크포인트가 없는 새 저장 데이터를 적용할 때 이전 런타임 값을 남기지 않는다.
+            HasCheckpoint = false;
+            LastCheckpointId = string.Empty;
+            LastRespawnPosition = Vector3.zero;
+        }
+
         private static bool IsFinite(Vector3 position)
         {
             // NaN이나 무한대 좌표를 저장하면 다음 단계의 재시작 이동이 영구적으로 깨질 수 있다.

@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 03c94fdd5b02b405ab1073dc0ed1f40f, type: 3}
+  m_Name: WorldZone_BossRoom
+  m_EditorClassIdentifier: GameSkill.Runtime::GameSkill.WorldZoneDefinition
+  id: boss_room
+  displayName: "\uB2A5\uB825 \uC2DC\uD5D8\uC2E4"
+  description: "\uD68D\uB4DD\uD55C \uC774\uB3D9 \uB2A5\uB825\uC744 \uC870\uD569\uD574
+    \uBCF4\uC2A4 \uD328\uD134\uC744 \uB3CC\uD30C\uD558\uB294 \uB3C5\uB9BD \uC804\uD22C
+    \uAD6C\uC5ED."

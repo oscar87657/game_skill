@@ -17,5 +17,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Zones/Zone_TraversalLab.unity
     guid: b777d81347e0949569b91c8b2cd06bd7
+  - enabled: 1
+    path: Assets/Scenes/Zones/Zone_BossRoom.unity
+    guid: 73c73e8bd14274d779e526999fb7ed12
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}

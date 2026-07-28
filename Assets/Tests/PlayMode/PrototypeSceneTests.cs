@@ -82,6 +82,12 @@ namespace GameSkill.Tests
             PlayerCheckpointState checkpointState =
                 player.GetComponent<PlayerCheckpointState>();
             Assert.That(checkpointState, Is.Not.Null);
+            GameProgressSaveController saveController =
+                player.GetComponent<GameProgressSaveController>();
+            Assert.That(saveController, Is.Not.Null);
+            Assert.That(
+                saveController.CaptureJson(),
+                Does.Contain("\"version\": 1"));
             PlayerWorldState worldState =
                 player.GetComponent<PlayerWorldState>();
             Assert.That(worldState, Is.Not.Null);
@@ -94,15 +100,18 @@ namespace GameSkill.Tests
             WorldMapPresenter mapPresenter =
                 worldMapHud.GetComponent<WorldMapPresenter>();
             Assert.That(mapPresenter, Is.Not.Null);
-            Assert.That(mapPresenter.NodeCount, Is.EqualTo(3));
+            Assert.That(mapPresenter.NodeCount, Is.EqualTo(4));
             Assert.That(
                 mapPresenter.ConnectionCount,
-                Is.EqualTo(2));
+                Is.EqualTo(3));
             Assert.That(
                 mapPresenter.GetNodeState("start_hall"),
                 Is.EqualTo(WorldMapVisualState.Current));
             Assert.That(
                 mapPresenter.GetNodeState("traversal_lab"),
+                Is.EqualTo(WorldMapVisualState.Hidden));
+            Assert.That(
+                mapPresenter.GetNodeState("boss_room"),
                 Is.EqualTo(WorldMapVisualState.Hidden));
             PlayerRespawnController respawnController =
                 player.GetComponent<PlayerRespawnController>();
@@ -213,7 +222,7 @@ namespace GameSkill.Tests
             Assert.That(backtrackReward.Collect(), Is.False);
             Assert.That(playerHealth.MaxHealth, Is.EqualTo(5));
 
-            // 세 Graybox 구역의 맞닿는 Trigger와 영구 ID 기반 방문 흐름을 실제 씬에서 검증한다.
+            // 네 Graybox 구역의 맞닿는 Trigger와 영구 ID 기반 방문 흐름을 실제 씬에서 검증한다.
             WorldZoneVolume startHall =
                 GameObject.Find("Zone_StartHall")
                     .GetComponent<WorldZoneVolume>();
@@ -223,9 +232,13 @@ namespace GameSkill.Tests
             WorldZoneVolume backtrackShaft =
                 GameObject.Find("Zone_BacktrackShaft")
                     .GetComponent<WorldZoneVolume>();
+            WorldZoneVolume bossRoom =
+                GameObject.Find("Zone_BossRoom")
+                    .GetComponent<WorldZoneVolume>();
             Assert.That(startHall, Is.Not.Null);
             Assert.That(traversalLab, Is.Not.Null);
             Assert.That(backtrackShaft, Is.Not.Null);
+            Assert.That(bossRoom, Is.Not.Null);
             Assert.That(startHall.Zone.Id, Is.EqualTo("start_hall"));
             Assert.That(
                 traversalLab.Zone.Id,
@@ -234,6 +247,9 @@ namespace GameSkill.Tests
                 backtrackShaft.Zone.Id,
                 Is.EqualTo("backtrack_shaft"));
             Assert.That(
+                bossRoom.Zone.Id,
+                Is.EqualTo("boss_room"));
+            Assert.That(
                 startHall.GetComponent<Collider>().isTrigger,
                 Is.True);
             worldState.ConfigureInitialZones(null);
@@ -241,8 +257,17 @@ namespace GameSkill.Tests
             Assert.That(startHall.Enter(worldState), Is.True);
             Assert.That(startHall.Enter(worldState), Is.False);
             Assert.That(traversalLab.Enter(worldState), Is.True);
+            Assert.That(bossRoom.Enter(worldState), Is.True);
+            Assert.That(
+                sideScrollerCamera.ActiveZoneId,
+                Is.EqualTo("boss_room"));
+            Assert.That(
+                sideScrollerCamera.ConstrainPosition(
+                    new Vector3(100f, -100f, -9f)),
+                Is.EqualTo(
+                    new Vector3(32f, 5.4f, -9f)));
             Assert.That(backtrackShaft.Enter(worldState), Is.True);
-            Assert.That(worldState.VisitedCount, Is.EqualTo(3));
+            Assert.That(worldState.VisitedCount, Is.EqualTo(4));
             Assert.That(
                 sideScrollerCamera.ActiveZoneId,
                 Is.EqualTo("backtrack_shaft"));
@@ -259,6 +284,9 @@ namespace GameSkill.Tests
                 Is.EqualTo(WorldMapVisualState.Visited));
             Assert.That(
                 mapPresenter.GetNodeState("traversal_lab"),
+                Is.EqualTo(WorldMapVisualState.Visited));
+            Assert.That(
+                mapPresenter.GetNodeState("boss_room"),
                 Is.EqualTo(WorldMapVisualState.Visited));
             Assert.That(
                 GameObject.Find("Shortcut_ShaftLanding"),

@@ -7,7 +7,7 @@
 | 월드 | 체크포인트·회복 | 기본 구현 완료 | [Checkpoint](Features/Checkpoint.md) |
 | 생존 | 사망·마지막 체크포인트 재시작 | 기본 구현 완료 | [Respawn](Features/Respawn.md) |
 | 진행 | 능력 해금·보유 상태·게이트 | 구현 중 | [Abilities & Gates](Features/AbilitiesAndGates.md) |
-| 월드 | 세 구역·방문 상태 | 기본 구현 완료 | [World Zones](Features/WorldZones.md) |
+| 월드 | 네 구역·방문 상태 | 기본 구현 완료 | [World Zones](Features/WorldZones.md) |
 | 월드 | 구역 연결·영구 지름길 | 기본 구현 완료 | [World Shortcuts](Features/WorldShortcuts.md) |
 | 월드 | Additive 구역 스트리밍 | 기본 구현 완료 | [World Streaming](Features/WorldStreaming.md) |
 | 카메라 | 구역별 중심점 제한 | 기본 구현 완료 | [Camera Bounds](Features/CameraBounds.md) |
@@ -18,6 +18,6 @@
 | AI | 고정형 원거리 적·직선 투사체 | 기본 구현 완료 | [Ranged Enemy](Features/RangedEnemy.md) |
 | AI | 방향 잠금 돌진 적·발판 끝 중단 | 기본 구현 완료 | [Charge Enemy](Features/ChargeEnemy.md) |
 | 보스 | 세 이동 능력을 시험하는 순환 패턴 보스 | 기본 구현 완료 | [Ability Trial Boss](Features/AbilityTrialBoss.md) |
-| 저장 | 세이브·로드 | 예정 | — |
+| 저장 | 능력·체크포인트 버전형 JSON | 기본 구현 완료 | [Progress Save](Features/ProgressSave.md) |
 
 새 기능은 구현 전에 이 표에 추가하고, 완료 후 상태와 시연 링크를 갱신한다.

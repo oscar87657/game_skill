@@ -96,9 +96,9 @@ namespace GameSkill
             return IsLocked;
         }
 
-        private void HandleAbilityUnlocked(AbilityDefinition unlockedAbility)
+        private void HandleAbilityStateChanged()
         {
-            // 어떤 능력이 해금돼도 현재 요구 조건을 다시 계산하면 동일 ID 정의도 올바르게 처리된다.
+            // 해금과 세이브 전체 복원 모두 요구 조건을 다시 계산해 능력 제거 시에도 게이트를 잠근다.
             RefreshLockState();
         }
 
@@ -110,7 +110,8 @@ namespace GameSkill
                 return;
             }
 
-            playerState.AbilityUnlocked += HandleAbilityUnlocked;
+            playerState.AbilityStateChanged +=
+                HandleAbilityStateChanged;
             isSubscribed = true;
         }
 
@@ -123,7 +124,8 @@ namespace GameSkill
                 return;
             }
 
-            playerState.AbilityUnlocked -= HandleAbilityUnlocked;
+            playerState.AbilityStateChanged -=
+                HandleAbilityStateChanged;
             isSubscribed = false;
         }
 
