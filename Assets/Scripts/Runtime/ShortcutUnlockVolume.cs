@@ -15,6 +15,7 @@ namespace GameSkill
         [SerializeField] private Renderer visualRenderer;
 
         private Collider triggerCollider;
+        private bool isSubscribed;
 
         public WorldShortcutGate Gate => gate;
         public bool IsActivated { get; private set; }
@@ -27,12 +28,26 @@ namespace GameSkill
             visualRenderer ??= GetComponentInChildren<Renderer>();
         }
 
+        private void OnEnable()
+        {
+            // 활성 장치만 연결 게이트의 잠금 전환을 구독해 복원 뒤 표현을 즉시 동기화한다.
+            Subscribe();
+            RefreshActivationState();
+        }
+
+        private void OnDisable()
+        {
+            // 비활성화된 장치가 게이트 이벤트 참조로 남지 않도록 생명주기에서 구독을 해제한다.
+            Unsubscribe();
+        }
+
         public bool Configure(
             WorldShortcutGate shortcutGate,
             Renderer renderer)
         {
             bool changed = gate != shortcutGate
                 || visualRenderer != renderer;
+            Unsubscribe();
             gate = shortcutGate;
             visualRenderer = renderer;
             triggerCollider ??= GetComponent<Collider>();
@@ -42,6 +57,8 @@ namespace GameSkill
                 triggerCollider.isTrigger = true;
             }
 
+            Subscribe();
+            RefreshActivationState();
             return changed;
         }
 
@@ -71,6 +88,48 @@ namespace GameSkill
             {
                 Activate(worldState);
             }
+        }
+
+        public bool RefreshActivationState()
+        {
+            // 저장 복원으로 이미 열린 게이트라면 활성 장치도 소비된 상태로 맞춘다.
+            IsActivated = gate != null
+                && !gate.IsLocked;
+            SetPresentation(!IsActivated);
+            return IsActivated;
+        }
+
+        private void HandleGateLockChanged(bool isLocked)
+        {
+            // 게이트가 다시 잠기는 다른 세이브를 적용한 경우 활성 장치도 재사용 가능하게 복구한다.
+            RefreshActivationState();
+        }
+
+        private void Subscribe()
+        {
+            // Configure와 OnEnable이 연속 호출돼도 같은 게이트 이벤트는 한 번만 구독한다.
+            if (isSubscribed || gate == null)
+            {
+                return;
+            }
+
+            gate.LockStateChanged +=
+                HandleGateLockChanged;
+            isSubscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            // 게이트가 없거나 이미 해제된 경우에도 비활성화를 안전하게 처리한다.
+            if (!isSubscribed || gate == null)
+            {
+                isSubscribed = false;
+                return;
+            }
+
+            gate.LockStateChanged -=
+                HandleGateLockChanged;
+            isSubscribed = false;
         }
 
         private void SetPresentation(bool visible)

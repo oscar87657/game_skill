@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 능력과 체크포인트 진행 상태를 Unity 오브젝트 참조 없는 버전형 JSON 데이터로 표현한다.
-// 책임: 현재 상태 캡처, JSON 왕복, 알려진 능력 정의를 통한 안전한 복원을 제공한다.
+// 목적: 플레이어 진행 상태를 Unity 오브젝트 참조 없는 버전형 JSON 데이터로 표현한다.
+// 책임: 능력·체크포인트·월드 ID의 캡처, JSON 왕복과 안전한 복원을 제공한다.
 // 불변식: 저장 데이터는 영구 ID와 유한한 좌표만 포함하며 ScriptableObject·GameObject 참조를 포함하지 않는다.
 // 선택 이유: 순수 DTO와 Codec을 분리하면 파일 저장·클라우드 저장·테스트가 같은 직렬화 계약을 재사용한다.
 using System;
@@ -21,6 +21,9 @@ namespace GameSkill
         public float respawnX;
         public float respawnY;
         public float respawnZ;
+        public List<string> visitedZoneIds = new();
+        public List<string> unlockedShortcutIds = new();
+        public List<string> collectedRewardIds = new();
     }
 
     public static class GameProgressSaveCodec
@@ -33,7 +36,8 @@ namespace GameSkill
 
         public static GameProgressSaveData Capture(
             PlayerAbilityState abilityState,
-            PlayerCheckpointState checkpointState)
+            PlayerCheckpointState checkpointState,
+            PlayerWorldState worldState = null)
         {
             // 누락된 컴포넌트는 예외 대신 해당 진행 항목이 비어 있는 유효한 기본 데이터로 기록한다.
             var data = new GameProgressSaveData();
@@ -55,6 +59,17 @@ namespace GameSkill
                 data.respawnX = position.x;
                 data.respawnY = position.y;
                 data.respawnZ = position.z;
+            }
+
+            if (worldState != null)
+            {
+                // 월드 진행도 내부 HashSet이 아닌 정렬된 영구 ID 복사본만 DTO에 기록한다.
+                data.visitedZoneIds =
+                    worldState.CopyVisitedZoneIds();
+                data.unlockedShortcutIds =
+                    worldState.CopyUnlockedShortcutIds();
+                data.collectedRewardIds =
+                    worldState.CopyCollectedRewardIds();
             }
 
             return data;
@@ -107,6 +122,12 @@ namespace GameSkill
                 parsed.unlockedAbilityIds ??=
                     new List<string>();
                 parsed.checkpointId ??= string.Empty;
+                parsed.visitedZoneIds ??=
+                    new List<string>();
+                parsed.unlockedShortcutIds ??=
+                    new List<string>();
+                parsed.collectedRewardIds ??=
+                    new List<string>();
                 data = parsed;
                 return true;
             }
@@ -121,7 +142,9 @@ namespace GameSkill
             GameProgressSaveData data,
             PlayerAbilityState abilityState,
             PlayerCheckpointState checkpointState,
-            IEnumerable<AbilityDefinition> knownAbilities)
+            IEnumerable<AbilityDefinition> knownAbilities,
+            PlayerWorldState worldState = null,
+            IEnumerable<WorldZoneDefinition> knownZones = null)
         {
             // 현재 버전과 필수 상태 컴포넌트가 모두 확인된 뒤에만 복원을 시작한다.
             if (data == null
@@ -129,6 +152,8 @@ namespace GameSkill
                     != GameProgressSaveData.CurrentVersion
                 || abilityState == null
                 || checkpointState == null
+                || (worldState != null
+                    && knownZones == null)
                 || (data.hasCheckpoint
                     && (string.IsNullOrWhiteSpace(
                             data.checkpointId)
@@ -146,15 +171,24 @@ namespace GameSkill
             if (!data.hasCheckpoint)
             {
                 checkpointState.ClearCheckpoint();
-                return true;
             }
-
-            return checkpointState.RestoreCheckpoint(
+            else if (!checkpointState.RestoreCheckpoint(
                 data.checkpointId,
                 new Vector3(
                     data.respawnX,
                     data.respawnY,
-                    data.respawnZ));
+                    data.respawnZ)))
+            {
+                return false;
+            }
+
+            // 월드 상태가 제공된 통합 경로에서만 방문·지름길·보상 ID를 한 번에 교체한다.
+            return worldState == null
+                || worldState.RestoreProgress(
+                    knownZones,
+                    data.visitedZoneIds,
+                    data.unlockedShortcutIds,
+                    data.collectedRewardIds);
         }
 
         private static bool IsFinite(

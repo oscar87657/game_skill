@@ -50,7 +50,6 @@ namespace GameSkill.Tests
                         json,
                         out GameProgressSaveData loaded),
                     Is.True);
-
                 PlayerAbilityState restoredAbilities =
                     destination
                         .AddComponent<PlayerAbilityState>();
@@ -267,6 +266,195 @@ namespace GameSkill.Tests
             }
         }
 
+        [Test]
+        public void WorldRoundTrip_RefreshesGateRewardAndMap()
+        {
+            // 월드 ID 복원이 데이터 집합뿐 아니라 게이트·보상 효과·지도 표현까지 갱신하는지 확인한다.
+            WorldZoneDefinition startZone =
+                CreateZone("start_hall");
+            WorldZoneDefinition bossZone =
+                CreateZone("boss_room");
+            AbilityDefinition wallTraversal =
+                CreateAbility("wall_traversal");
+            var source =
+                new GameObject("WorldSaveSource");
+            var destination =
+                new GameObject("WorldSaveDestination");
+            GameObject gateObject =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Cube);
+            GameObject activatorObject =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Sphere);
+            GameObject rewardObject =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Sphere);
+            var mapObject =
+                new GameObject("WorldSaveMap");
+            try
+            {
+                PlayerAbilityState sourceAbilities =
+                    source.AddComponent<PlayerAbilityState>();
+                PlayerCheckpointState sourceCheckpoint =
+                    source.AddComponent<PlayerCheckpointState>();
+                PlayerWorldState sourceWorld =
+                    source.AddComponent<PlayerWorldState>();
+                Assert.That(
+                    sourceWorld.TryVisit(startZone),
+                    Is.True);
+                Assert.That(
+                    sourceWorld.TryVisit(bossZone),
+                    Is.True);
+                Assert.That(
+                    sourceWorld.TryUnlockShortcut(
+                        "shortcut_shaft_return"),
+                    Is.True);
+                Assert.That(
+                    sourceWorld.TryCollectReward(
+                        "reward_shaft_health_fragment"),
+                    Is.True);
+
+                string json =
+                    GameProgressSaveCodec.ToJson(
+                        GameProgressSaveCodec.Capture(
+                            sourceAbilities,
+                            sourceCheckpoint,
+                            sourceWorld));
+                Assert.That(
+                    GameProgressSaveCodec.TryFromJson(
+                        json,
+                        out GameProgressSaveData loaded),
+                    Is.True);
+                loaded.visitedZoneIds.Add(
+                    "removed_zone");
+
+                Health destinationHealth =
+                    destination.AddComponent<Health>();
+                destinationHealth.Configure(5);
+                PlayerAbilityState destinationAbilities =
+                    destination.AddComponent<PlayerAbilityState>();
+                PlayerCheckpointState destinationCheckpoint =
+                    destination.AddComponent<PlayerCheckpointState>();
+                PlayerWorldState destinationWorld =
+                    destination.AddComponent<PlayerWorldState>();
+                WorldShortcutGate gate =
+                    gateObject.AddComponent<WorldShortcutGate>();
+                gate.Configure(
+                    "shortcut_shaft_return",
+                    destinationWorld,
+                    gateObject.GetComponent<Renderer>());
+                ShortcutUnlockVolume activator =
+                    activatorObject
+                        .AddComponent<ShortcutUnlockVolume>();
+                activator.Configure(
+                    gate,
+                    activatorObject.GetComponent<Renderer>());
+                BacktrackRewardPickup reward =
+                    rewardObject
+                        .AddComponent<BacktrackRewardPickup>();
+                reward.Configure(
+                    "reward_shaft_health_fragment",
+                    1,
+                    wallTraversal,
+                    destinationWorld,
+                    destinationAbilities,
+                    destinationHealth,
+                    rewardObject.GetComponent<Renderer>());
+
+                WorldMapPresenter map =
+                    mapObject.AddComponent<WorldMapPresenter>();
+                map.Configure(
+                    destinationWorld,
+                    startZone,
+                    new[]
+                    {
+                        new WorldMapNodeView(
+                            startZone,
+                            "START",
+                            null,
+                            null),
+                        new WorldMapNodeView(
+                            bossZone,
+                            "BOSS",
+                            null,
+                            null)
+                    },
+                    System.Array.Empty<WorldMapConnectionView>());
+
+                Assert.That(
+                    GameProgressSaveCodec.Apply(
+                        loaded,
+                        destinationAbilities,
+                        destinationCheckpoint,
+                        new[]
+                        {
+                            wallTraversal
+                        },
+                        destinationWorld,
+                        new[]
+                        {
+                            startZone,
+                            bossZone
+                        }),
+                    Is.True);
+                Assert.That(
+                    destinationWorld.HasVisited(
+                        bossZone),
+                    Is.True);
+                Assert.That(
+                    destinationWorld.HasVisitedId(
+                        "removed_zone"),
+                    Is.False);
+                Assert.That(gate.IsLocked, Is.False);
+                Assert.That(activator.IsActivated, Is.True);
+                Assert.That(reward.IsCollected, Is.True);
+                Assert.That(
+                    destinationHealth.MaxHealth,
+                    Is.EqualTo(6));
+                Assert.That(
+                    map.GetNodeState("boss_room"),
+                    Is.EqualTo(
+                        WorldMapVisualState.Visited));
+
+                var emptyWorldData =
+                    new GameProgressSaveData();
+                Assert.That(
+                    GameProgressSaveCodec.Apply(
+                        emptyWorldData,
+                        destinationAbilities,
+                        destinationCheckpoint,
+                        new[]
+                        {
+                            wallTraversal
+                        },
+                        destinationWorld,
+                        new[]
+                        {
+                            startZone,
+                            bossZone
+                        }),
+                    Is.True);
+                Assert.That(gate.IsLocked, Is.True);
+                Assert.That(activator.IsActivated, Is.False);
+                Assert.That(reward.IsCollected, Is.False);
+                Assert.That(
+                    destinationHealth.MaxHealth,
+                    Is.EqualTo(5));
+            }
+            finally
+            {
+                Object.DestroyImmediate(mapObject);
+                Object.DestroyImmediate(rewardObject);
+                Object.DestroyImmediate(activatorObject);
+                Object.DestroyImmediate(gateObject);
+                Object.DestroyImmediate(source);
+                Object.DestroyImmediate(destination);
+                Object.DestroyImmediate(wallTraversal);
+                Object.DestroyImmediate(startZone);
+                Object.DestroyImmediate(bossZone);
+            }
+        }
+
         private static AbilityDefinition CreateAbility(
             string id)
         {
@@ -276,6 +464,17 @@ namespace GameSkill.Tests
                     .CreateInstance<AbilityDefinition>();
             ability.Configure(id, id, string.Empty);
             return ability;
+        }
+
+        private static WorldZoneDefinition CreateZone(
+            string id)
+        {
+            // 테스트용 구역 정의는 프로젝트 에셋과 분리해 저장 카탈로그 필터를 독립 검증한다.
+            WorldZoneDefinition zone =
+                ScriptableObject
+                    .CreateInstance<WorldZoneDefinition>();
+            zone.Configure(id, id, string.Empty);
+            return zone;
         }
     }
 }

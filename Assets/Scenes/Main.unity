@@ -5411,6 +5411,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: f043fffb9a672400a8a35629e6af8ffe, type: 2}
   - {fileID: 11400000, guid: 80c960008b4b34d46b1e133993b012d9, type: 2}
   - {fileID: 11400000, guid: e695cc21de6984e73be4c8f1a2d7f4f3, type: 2}
+  worldZoneCatalog:
+  - {fileID: 11400000, guid: d3ecd595130444ab5839b0e473dd17ca, type: 2}
+  - {fileID: 11400000, guid: 7af8572be5674438ca9ec0b838497bb8, type: 2}
+  - {fileID: 11400000, guid: 37d2b24a8733b4106966f6f46de937b2, type: 2}
+  - {fileID: 11400000, guid: e6e746dc611e946c782d913e0f4f8a91, type: 2}
   saveFileName: game_skill_save_v1.json
 --- !u!1 &1627469596
 GameObject:

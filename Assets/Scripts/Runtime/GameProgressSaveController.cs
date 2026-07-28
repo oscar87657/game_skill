@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 플레이어 진행 스냅샷과 로컬 JSON 파일 사이의 명시적인 저장·불러오기 경계를 제공한다.
-// 책임: 저장 경로 계산, 능력 카탈로그 구성, 파일 입출력과 Codec 적용 결과를 관리한다.
+// 책임: 저장 경로 계산, 능력·구역 카탈로그, 파일 입출력과 Codec 적용 결과를 관리한다.
 // 불변식: 자동 저장이나 자동 불러오기를 수행하지 않으며 성공한 전체 JSON만 런타임 상태에 적용한다.
 // 선택 이유: 명시적 API부터 제공하면 테스트와 UI가 저장 시점을 통제하고 개발 중 세이브 덮어쓰기를 피할 수 있다.
 using System;
@@ -13,20 +13,28 @@ namespace GameSkill
     [DisallowMultipleComponent]
     [RequireComponent(typeof(PlayerAbilityState))]
     [RequireComponent(typeof(PlayerCheckpointState))]
+    [RequireComponent(typeof(PlayerWorldState))]
     public sealed class GameProgressSaveController : MonoBehaviour
     {
         [SerializeField]
         private List<AbilityDefinition> abilityCatalog = new();
         [SerializeField]
+        private List<WorldZoneDefinition> worldZoneCatalog = new();
+        [SerializeField]
         private string saveFileName = "game_skill_save_v1.json";
 
         private PlayerAbilityState abilityState;
         private PlayerCheckpointState checkpointState;
+        private PlayerWorldState worldState;
 
         public string SavePath =>
             Path.Combine(
                 Application.persistentDataPath,
                 saveFileName);
+        public int AbilityCatalogCount =>
+            abilityCatalog.Count;
+        public int WorldZoneCatalogCount =>
+            worldZoneCatalog.Count;
 
         private void Awake()
         {
@@ -35,10 +43,13 @@ namespace GameSkill
                 GetComponent<PlayerAbilityState>();
             checkpointState =
                 GetComponent<PlayerCheckpointState>();
+            worldState =
+                GetComponent<PlayerWorldState>();
         }
 
         public bool Configure(
             IEnumerable<AbilityDefinition> knownAbilities,
+            IEnumerable<WorldZoneDefinition> knownZones = null,
             string fileName = "game_skill_save_v1.json")
         {
             // 파일명은 디렉터리 탈출을 막기 위해 마지막 경로 요소만 허용한다.
@@ -66,14 +77,36 @@ namespace GameSkill
                 }
             }
 
+            var requestedZoneCatalog =
+                new List<WorldZoneDefinition>();
+            if (knownZones != null)
+            {
+                // null·미설정·중복 구역 정의를 제외해 저장 복원 카탈로그를 결정적으로 유지한다.
+                foreach (WorldZoneDefinition zone in knownZones)
+                {
+                    if (zone != null
+                        && zone.IsConfigured
+                        && !requestedZoneCatalog.Contains(zone))
+                    {
+                        requestedZoneCatalog.Add(zone);
+                    }
+                }
+            }
+
             bool changed =
                 saveFileName != normalizedFileName
                 || !CatalogMatches(
                     abilityCatalog,
-                    requestedCatalog);
+                    requestedCatalog)
+                || !CatalogMatches(
+                    worldZoneCatalog,
+                    requestedZoneCatalog);
             saveFileName = normalizedFileName;
             abilityCatalog.Clear();
             abilityCatalog.AddRange(requestedCatalog);
+            worldZoneCatalog.Clear();
+            worldZoneCatalog.AddRange(
+                requestedZoneCatalog);
             return changed;
         }
 
@@ -85,7 +118,8 @@ namespace GameSkill
             return GameProgressSaveCodec.ToJson(
                 GameProgressSaveCodec.Capture(
                     abilityState,
-                    checkpointState),
+                    checkpointState,
+                    worldState),
                 prettyPrint);
         }
 
@@ -100,7 +134,9 @@ namespace GameSkill
                     data,
                     abilityState,
                     checkpointState,
-                    abilityCatalog);
+                    abilityCatalog,
+                    worldState,
+                    worldZoneCatalog);
         }
 
         public bool SaveNow()
@@ -153,11 +189,14 @@ namespace GameSkill
                 GetComponent<PlayerAbilityState>();
             checkpointState ??=
                 GetComponent<PlayerCheckpointState>();
+            worldState ??=
+                GetComponent<PlayerWorldState>();
         }
 
-        private static bool CatalogMatches(
-            IReadOnlyList<AbilityDefinition> current,
-            IReadOnlyList<AbilityDefinition> requested)
+        private static bool CatalogMatches<T>(
+            IReadOnlyList<T> current,
+            IReadOnlyList<T> requested)
+            where T : UnityEngine.Object
         {
             // 개수가 다르면 동일한 복원 카탈로그가 될 수 없으므로 항목 비교를 생략한다.
             if (current.Count != requested.Count)

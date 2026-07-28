@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: 플레이어의 구역 방문·현재 위치·영구 지름길·수집 보상을 단일 런타임 원본으로 관리한다.
-// 책임: 구역 방문, 지름길 해금과 보상 ID의 조회·초기화·최초 변경 이벤트를 제공한다.
+// 책임: 구역 방문, 지름길·보상 ID의 조회·복사·전체 복원과 변경 이벤트를 제공한다.
 // 불변식: 같은 진행 ID는 한 번만 기록하며 중복 변경은 상태와 이벤트를 바꾸지 않는다.
 // 선택 이유: HashSet 기반 ID 상태는 지도·월드 게이트·저장 데이터에 동일한 계약을 제공한다.
 using System;
@@ -30,6 +30,7 @@ namespace GameSkill
         public event Action<WorldZoneDefinition> ZoneEntered;
         public event Action<string> ShortcutUnlocked;
         public event Action<string> RewardCollected;
+        public event Action WorldStateRestored;
 
         public int VisitedCount => visitedZoneIds.Count;
         public int UnlockedShortcutCount => unlockedShortcutIds.Count;
@@ -197,6 +198,74 @@ namespace GameSkill
                     collectedRewardIds.Add(rewardId.Trim());
                 }
             }
+
+            WorldStateRestored?.Invoke();
+        }
+
+        public List<string> CopyVisitedZoneIds()
+        {
+            // 저장 계층이 내부 방문 집합을 수정하지 못하도록 정렬된 새 목록을 반환한다.
+            return CopySortedIds(visitedZoneIds);
+        }
+
+        public List<string> CopyUnlockedShortcutIds()
+        {
+            // 지름길 ID도 결정적인 JSON과 테스트 비교를 위해 사전순으로 복사한다.
+            return CopySortedIds(unlockedShortcutIds);
+        }
+
+        public List<string> CopyCollectedRewardIds()
+        {
+            // 보상 ID의 HashSet 순서를 저장 형식에 노출하지 않도록 정렬된 복사본을 만든다.
+            return CopySortedIds(collectedRewardIds);
+        }
+
+        public bool RestoreProgress(
+            IEnumerable<WorldZoneDefinition> knownZones,
+            IEnumerable<string> savedVisitedZoneIds,
+            IEnumerable<string> savedShortcutIds,
+            IEnumerable<string> savedRewardIds)
+        {
+            // 구역은 현재 빌드의 정의 카탈로그와 대조해 제거된 ID가 지도 상태에 남지 않게 한다.
+            if (knownZones == null)
+            {
+                return false;
+            }
+
+            var knownZoneIds =
+                new HashSet<string>(StringComparer.Ordinal);
+            // 중복 에셋 정의가 있어도 영구 ID 하나만 복원 후보로 사용한다.
+            foreach (WorldZoneDefinition zone in knownZones)
+            {
+                if (zone != null && zone.IsConfigured)
+                {
+                    knownZoneIds.Add(zone.Id);
+                }
+            }
+
+            visitedZoneIds.Clear();
+            unlockedShortcutIds.Clear();
+            collectedRewardIds.Clear();
+            RestoreKnownIds(
+                visitedZoneIds,
+                savedVisitedZoneIds,
+                knownZoneIds);
+            RestoreNormalizedIds(
+                unlockedShortcutIds,
+                savedShortcutIds);
+            RestoreNormalizedIds(
+                collectedRewardIds,
+                savedRewardIds);
+
+            // 불러오기 중인 실제 플레이어 위치는 바꾸지 않고 현재 구역이 있다면 방문 상태와 일치시킨다.
+            if (CurrentZone != null
+                && CurrentZone.IsConfigured)
+            {
+                visitedZoneIds.Add(CurrentZone.Id);
+            }
+
+            WorldStateRestored?.Invoke();
+            return true;
         }
 
         public void ConfigureInitialZones(
@@ -248,6 +317,60 @@ namespace GameSkill
             }
 
             RebuildInitialState();
+        }
+
+        private static List<string> CopySortedIds(
+            IEnumerable<string> source)
+        {
+            // 호출자에게 내부 컬렉션을 노출하지 않고 모든 저장 목록에 같은 정렬 규칙을 적용한다.
+            var copiedIds = new List<string>(source);
+            copiedIds.Sort(StringComparer.Ordinal);
+            return copiedIds;
+        }
+
+        private static void RestoreKnownIds(
+            ISet<string> destination,
+            IEnumerable<string> savedIds,
+            ISet<string> knownIds)
+        {
+            // 저장에 남아 있어도 현재 빌드 카탈로그에 없는 구역 ID는 안전하게 건너뛴다.
+            if (savedIds == null)
+            {
+                return;
+            }
+
+            foreach (string savedId in savedIds)
+            {
+                if (string.IsNullOrWhiteSpace(savedId))
+                {
+                    continue;
+                }
+
+                string normalizedId = savedId.Trim();
+                if (knownIds.Contains(normalizedId))
+                {
+                    destination.Add(normalizedId);
+                }
+            }
+        }
+
+        private static void RestoreNormalizedIds(
+            ISet<string> destination,
+            IEnumerable<string> savedIds)
+        {
+            // 별도 정의 에셋이 없는 지름길·보상은 공백 제거와 중복 방지만 적용해 확장 ID를 보존한다.
+            if (savedIds == null)
+            {
+                return;
+            }
+
+            foreach (string savedId in savedIds)
+            {
+                if (!string.IsNullOrWhiteSpace(savedId))
+                {
+                    destination.Add(savedId.Trim());
+                }
+            }
         }
     }
 }

@@ -20,6 +20,8 @@ namespace GameSkill
         [SerializeField] private Renderer visualRenderer;
 
         private Collider triggerCollider;
+        private bool maximumBonusApplied;
+        private bool isSubscribed;
 
         public string RewardId => rewardId;
         public int MaximumHealthBonus => maximumHealthBonus;
@@ -39,10 +41,22 @@ namespace GameSkill
             visualRenderer ??= GetComponentInChildren<Renderer>();
         }
 
+        private void OnEnable()
+        {
+            // 활성 픽업만 월드 전체 복원 이벤트를 받아 저장된 효과와 표현을 재구성한다.
+            Subscribe();
+        }
+
         private void Start()
         {
-            // 세이브 상태가 Awake 이후 복원돼도 첫 프레임에 이미 획득한 보상 표현을 숨긴다.
-            RefreshPresentation();
+            // 세이브가 픽업보다 먼저 복원된 실행 순서도 첫 프레임에 영구 효과까지 재구성한다.
+            RefreshRestoredState();
+        }
+
+        private void OnDisable()
+        {
+            // 비활성 픽업이 플레이어 월드 상태를 계속 참조하지 않도록 구독을 해제한다.
+            Unsubscribe();
         }
 
         public bool Configure(
@@ -64,6 +78,7 @@ namespace GameSkill
                 || playerHealth != health
                 || visualRenderer != renderer;
 
+            Unsubscribe();
             rewardId = normalizedId;
             maximumHealthBonus = normalizedBonus;
             requiredAbility = abilityRequirement;
@@ -78,6 +93,7 @@ namespace GameSkill
                 triggerCollider.isTrigger = true;
             }
 
+            Subscribe();
             RefreshPresentation();
             return changed;
         }
@@ -113,6 +129,7 @@ namespace GameSkill
                 return false;
             }
 
+            maximumBonusApplied = true;
             IsCollected = true;
             SetPresentation(false);
             Debug.Log(
@@ -130,6 +147,35 @@ namespace GameSkill
             return IsCollected;
         }
 
+        public bool RefreshRestoredState()
+        {
+            // 저장된 수집 여부와 이 인스턴스가 적용한 최대 체력 효과의 차이만 보정한다.
+            bool shouldBeCollected =
+                playerWorldState != null
+                && playerWorldState.IsRewardCollected(
+                    rewardId);
+            if (shouldBeCollected
+                && !maximumBonusApplied
+                && playerHealth != null
+                && playerHealth.TryIncreaseMaximum(
+                    maximumHealthBonus))
+            {
+                maximumBonusApplied = true;
+            }
+            else if (!shouldBeCollected
+                && maximumBonusApplied
+                && playerHealth != null
+                && playerHealth.TryDecreaseMaximum(
+                    maximumHealthBonus))
+            {
+                maximumBonusApplied = false;
+            }
+
+            IsCollected = shouldBeCollected;
+            SetPresentation(!IsCollected);
+            return IsCollected;
+        }
+
         private void OnTriggerEnter(Collider other)
         {
             // 구성된 플레이어의 루트나 자식 Collider만 보상 획득 요청으로 인정한다.
@@ -139,6 +185,41 @@ namespace GameSkill
             {
                 Collect();
             }
+        }
+
+        private void HandleWorldStateRestored()
+        {
+            // 개별 획득 이벤트와 달리 전체 복원은 효과 추가와 제거를 모두 허용한다.
+            RefreshRestoredState();
+        }
+
+        private void Subscribe()
+        {
+            // Configure와 OnEnable이 이어져도 월드 복원 이벤트는 한 번만 구독한다.
+            if (isSubscribed
+                || playerWorldState == null)
+            {
+                return;
+            }
+
+            playerWorldState.WorldStateRestored +=
+                HandleWorldStateRestored;
+            isSubscribed = true;
+        }
+
+        private void Unsubscribe()
+        {
+            // 상태가 없거나 이미 해제된 경우에도 생명주기 종료를 안전하게 처리한다.
+            if (!isSubscribed
+                || playerWorldState == null)
+            {
+                isSubscribed = false;
+                return;
+            }
+
+            playerWorldState.WorldStateRestored -=
+                HandleWorldStateRestored;
+            isSubscribed = false;
         }
 
         private void SetPresentation(bool visible)

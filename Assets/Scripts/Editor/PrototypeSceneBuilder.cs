@@ -224,6 +224,29 @@ namespace GameSkill.Editor
                     doubleJumpAbility,
                     airDashAbility,
                     wallTraversalAbility
+                },
+                new[]
+                {
+                    GetOrCreateWorldZoneDefinition(
+                        BacktrackShaftZonePath,
+                        "backtrack_shaft",
+                        "백트래킹 샤프트",
+                        "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역."),
+                    GetOrCreateWorldZoneDefinition(
+                        StartHallZonePath,
+                        "start_hall",
+                        "시작 홀",
+                        "체크포인트와 첫 능력 단서를 제공하는 중앙 구역."),
+                    GetOrCreateWorldZoneDefinition(
+                        TraversalLabZonePath,
+                        "traversal_lab",
+                        "이동 실험실",
+                        "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역."),
+                    GetOrCreateWorldZoneDefinition(
+                        BossRoomZonePath,
+                        "boss_room",
+                        "능력 시험실",
+                        "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.")
                 });
             SideScrollerMotor motor =
                 player.AddComponent<SideScrollerMotor>();
@@ -599,6 +622,30 @@ namespace GameSkill.Editor
                     "wall_traversal",
                     "벽 잡기",
                     "벽에 잠시 붙고 미끄러지며 반대편으로 점프한다.");
+            WorldZoneDefinition backtrackShaft =
+                GetOrCreateWorldZoneDefinition(
+                    BacktrackShaftZonePath,
+                    "backtrack_shaft",
+                    "백트래킹 샤프트",
+                    "벽 잡기 해금 후 시작 홀로 되돌아와 오르는 수직 구역.");
+            WorldZoneDefinition startHall =
+                GetOrCreateWorldZoneDefinition(
+                    StartHallZonePath,
+                    "start_hall",
+                    "시작 홀",
+                    "체크포인트와 첫 능력 단서를 제공하는 중앙 구역.");
+            WorldZoneDefinition traversalLab =
+                GetOrCreateWorldZoneDefinition(
+                    TraversalLabZonePath,
+                    "traversal_lab",
+                    "이동 실험실",
+                    "계단과 높은 발판에서 2단 점프와 공중 대시를 익히는 구역.");
+            WorldZoneDefinition bossRoom =
+                GetOrCreateWorldZoneDefinition(
+                    BossRoomZonePath,
+                    "boss_room",
+                    "능력 시험실",
+                    "획득한 이동 능력을 조합해 보스 패턴을 돌파하는 독립 전투 구역.");
             GameProgressSaveController controller =
                 player.GetComponent<GameProgressSaveController>();
             bool changed = false;
@@ -616,6 +663,13 @@ namespace GameSkill.Editor
                     doubleJumpAbility,
                     airDashAbility,
                     wallTraversalAbility
+                },
+                new[]
+                {
+                    backtrackShaft,
+                    startHall,
+                    traversalLab,
+                    bossRoom
                 }))
             {
                 EditorUtility.SetDirty(controller);

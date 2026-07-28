@@ -18,6 +18,8 @@ namespace GameSkill
         private Collider blockingCollider;
         private bool isSubscribed;
 
+        public event System.Action<bool> LockStateChanged;
+
         public string ShortcutId => shortcutId;
         public bool IsLocked { get; private set; } = true;
 
@@ -88,6 +90,7 @@ namespace GameSkill
         public bool RefreshLockState()
         {
             // 구성 오류는 진행 순서를 우회하지 않도록 실패 시 잠기는 정책으로 처리한다.
+            bool wasLocked = IsLocked;
             IsLocked = string.IsNullOrWhiteSpace(shortcutId)
                 || playerState == null
                 || !playerState.IsShortcutUnlocked(shortcutId);
@@ -102,6 +105,12 @@ namespace GameSkill
             {
                 // 열린 지름길은 게이트 형상을 숨겨 통과 가능 상태를 명확히 보여 준다.
                 visualRenderer.enabled = IsLocked;
+            }
+
+            if (wasLocked != IsLocked)
+            {
+                // 활성 장치 같은 연결 표현은 잠금 상태가 실제로 바뀐 순간에만 갱신한다.
+                LockStateChanged?.Invoke(IsLocked);
             }
 
             return IsLocked;
@@ -119,6 +128,12 @@ namespace GameSkill
             }
         }
 
+        private void HandleWorldStateRestored()
+        {
+            // 세이브 전체 복원은 개별 해금 이벤트를 만들지 않으므로 현재 ID를 다시 조회한다.
+            RefreshLockState();
+        }
+
         private void Subscribe()
         {
             // Configure와 OnEnable이 연속 호출돼도 이벤트는 한 번만 구독한다.
@@ -128,6 +143,8 @@ namespace GameSkill
             }
 
             playerState.ShortcutUnlocked += HandleShortcutUnlocked;
+            playerState.WorldStateRestored +=
+                HandleWorldStateRestored;
             isSubscribed = true;
         }
 
@@ -141,6 +158,8 @@ namespace GameSkill
             }
 
             playerState.ShortcutUnlocked -= HandleShortcutUnlocked;
+            playerState.WorldStateRestored -=
+                HandleWorldStateRestored;
             isSubscribed = false;
         }
     }

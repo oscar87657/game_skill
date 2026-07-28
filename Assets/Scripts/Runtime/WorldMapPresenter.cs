@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
-// 목적: 플레이어 월드 진행 상태를 항상 표시되는 세 구역 지도 HUD에 반영한다.
-// 책임: 방문·진입 이벤트를 구독하고 노드와 연결 View를 한 번씩 갱신한다.
+// 목적: 플레이어 월드 진행 상태를 항상 표시되는 네 구역 지도 HUD에 반영한다.
+// 책임: 방문·진입·세이브 복원 이벤트를 구독하고 노드와 연결 View를 갱신한다.
 // 불변식: Presenter는 진행 상태를 변경하지 않으며 현재 구역은 지도 노드 하나에만 표시한다.
 // 선택 이유: 이벤트 기반 Presenter는 매 프레임 UI를 다시 그리지 않고 지도 아트와 도메인 상태를 분리한다.
 using System;
@@ -157,6 +157,12 @@ namespace GameSkill
             RefreshMap();
         }
 
+        private void HandleWorldStateRestored()
+        {
+            // 여러 ID가 한 번에 교체되는 세이브 복원은 전체 지도를 한 번만 다시 그린다.
+            RefreshMap();
+        }
+
         private void Subscribe()
         {
             // OnEnable과 Configure가 연속 호출돼도 두 이벤트는 각각 한 번만 구독한다.
@@ -167,6 +173,8 @@ namespace GameSkill
 
             playerWorldState.ZoneVisited += HandleZoneChanged;
             playerWorldState.ZoneEntered += HandleZoneChanged;
+            playerWorldState.WorldStateRestored +=
+                HandleWorldStateRestored;
             isSubscribed = true;
         }
 
@@ -181,6 +189,8 @@ namespace GameSkill
 
             playerWorldState.ZoneVisited -= HandleZoneChanged;
             playerWorldState.ZoneEntered -= HandleZoneChanged;
+            playerWorldState.WorldStateRestored -=
+                HandleWorldStateRestored;
             isSubscribed = false;
         }
 

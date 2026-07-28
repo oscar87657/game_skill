@@ -52,6 +52,24 @@ namespace GameSkill
             return true;
         }
 
+        public bool TryDecreaseMaximum(int amount)
+        {
+            // 복원된 보상 목록이 줄어들 때도 최대 체력을 1 아래로 만들지 않는 범위에서만 회수한다.
+            if (amount <= 0
+                || maxHealth - amount < 1)
+            {
+                return false;
+            }
+
+            maxHealth -= amount;
+            CurrentHealth = Mathf.Min(
+                CurrentHealth,
+                MaxHealth);
+            // 최대치가 줄어든 경우도 UI가 같은 상태 이벤트로 현재·최대 값을 다시 읽게 한다.
+            Restored?.Invoke(CurrentHealth, MaxHealth);
+            return true;
+        }
+
         public bool TakeDamage(int amount)
         {
             // 잘못된 데미지나 사망 후 데미지는 무시하여 중복 피격 콜백에도 안전하게 만든다.

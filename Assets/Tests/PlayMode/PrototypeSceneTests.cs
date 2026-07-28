@@ -86,8 +86,17 @@ namespace GameSkill.Tests
                 player.GetComponent<GameProgressSaveController>();
             Assert.That(saveController, Is.Not.Null);
             Assert.That(
+                saveController.AbilityCatalogCount,
+                Is.EqualTo(3));
+            Assert.That(
+                saveController.WorldZoneCatalogCount,
+                Is.EqualTo(4));
+            Assert.That(
                 saveController.CaptureJson(),
                 Does.Contain("\"version\": 1"));
+            Assert.That(
+                saveController.CaptureJson(),
+                Does.Contain("\"visitedZoneIds\""));
             PlayerWorldState worldState =
                 player.GetComponent<PlayerWorldState>();
             Assert.That(worldState, Is.Not.Null);
