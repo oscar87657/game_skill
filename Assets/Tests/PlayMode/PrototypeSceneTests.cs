@@ -325,6 +325,79 @@ namespace GameSkill.Tests
                 Is.Zero.Within(0.0001f));
             Vector3 meleeEnemySpawnPosition =
                 meleeEnemyObject.transform.position;
+            GameObject rangedEnemyObject =
+                GameObject.Find("RangedEnemy_Sentry");
+            Assert.That(rangedEnemyObject, Is.Not.Null);
+            Assert.That(
+                rangedEnemyObject.layer,
+                Is.EqualTo(
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer));
+            RangedEnemyController rangedEnemy =
+                rangedEnemyObject
+                    .GetComponent<RangedEnemyController>();
+            Assert.That(rangedEnemy, Is.Not.Null);
+            Health rangedEnemyHealth =
+                rangedEnemyObject.GetComponent<Health>();
+            Assert.That(rangedEnemyHealth, Is.Not.Null);
+            Assert.That(
+                rangedEnemyHealth.MaxHealth,
+                Is.EqualTo(3));
+            Assert.That(
+                rangedEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            CapsuleCollider rangedBody =
+                rangedEnemyObject
+                    .GetComponent<CapsuleCollider>();
+            Assert.That(rangedBody, Is.Not.Null);
+            Assert.That(rangedBody.isTrigger, Is.False);
+            Transform rangedVisual =
+                rangedEnemyObject.transform.Find(
+                    "RangedEnemy_Visual");
+            Assert.That(rangedVisual, Is.Not.Null);
+            Assert.That(
+                rangedVisual.localPosition.y,
+                Is.EqualTo(0.9f).Within(0.001f));
+            Renderer rangedRenderer =
+                rangedVisual.GetComponent<Renderer>();
+            Assert.That(rangedRenderer, Is.Not.Null);
+            Renderer rangedMuzzleRenderer =
+                rangedEnemyObject.transform
+                    .Find("RangedEnemy_Muzzle")
+                    .GetComponent<Renderer>();
+            Assert.That(
+                rangedMuzzleRenderer.enabled,
+                Is.False);
+            Vector3 rangedEnemySpawnPosition =
+                rangedEnemyObject.transform.position;
+
+            // 실제 Main 참조로 선딜·투사체 생성·초기화까지 원거리 공격 한 사이클을 검증한다.
+            Vector3 initialPlayerPosition =
+                player.transform.position;
+            motor.Teleport(
+                rangedEnemySpawnPosition
+                + new Vector3(-2f, 0f, 0f));
+            rangedEnemy.Tick(0.01f);
+            Assert.That(
+                rangedEnemy.CurrentState,
+                Is.EqualTo(EnemyState.AttackWindup));
+            Assert.That(
+                rangedMuzzleRenderer.enabled,
+                Is.True);
+            rangedEnemy.Tick(0.61f);
+            Assert.That(
+                rangedEnemy.CurrentState,
+                Is.EqualTo(EnemyState.AttackRecovery));
+            Assert.That(
+                rangedEnemy.FiredProjectileCount,
+                Is.EqualTo(1));
+            Assert.That(
+                rangedEnemy.ActiveProjectileCount,
+                Is.EqualTo(1));
+            rangedEnemy.ResetToSpawn();
+            Assert.That(
+                rangedEnemy.ActiveProjectileCount,
+                Is.Zero);
+            motor.Teleport(initialPlayerPosition);
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
 
             // 실제 픽업을 순서대로 소비해 보유 상태·이동 잠금·백트래킹 게이트를 함께 검증한다.
@@ -420,6 +493,15 @@ namespace GameSkill.Tests
                 Is.EqualTo(EnemyState.Dead));
             meleeEnemyObject.transform.position +=
                 new Vector3(-2f, 1f, 0f);
+            Assert.That(
+                rangedEnemyHealth.TakeDamage(3),
+                Is.True);
+            Assert.That(rangedEnemyHealth.IsDead, Is.True);
+            Assert.That(
+                rangedEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Dead));
+            rangedEnemyObject.transform.position +=
+                new Vector3(2f, 1f, 0f);
             GameObject hazardObject = GameObject.Find("RespawnHazard");
             Assert.That(hazardObject, Is.Not.Null);
             DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
@@ -482,6 +564,21 @@ namespace GameSkill.Tests
                     .GetComponent<CharacterController>()
                     .enabled,
                 Is.True);
+            Assert.That(rangedEnemyHealth.IsDead, Is.False);
+            Assert.That(
+                rangedEnemyHealth.CurrentHealth,
+                Is.EqualTo(3));
+            Assert.That(
+                rangedEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                rangedEnemyObject.transform.position,
+                Is.EqualTo(rangedEnemySpawnPosition));
+            Assert.That(rangedRenderer.enabled, Is.True);
+            Assert.That(rangedBody.enabled, Is.True);
+            Assert.That(
+                rangedEnemy.ActiveProjectileCount,
+                Is.Zero);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

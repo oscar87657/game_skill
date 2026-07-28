@@ -47,7 +47,8 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [x] 벽 잡기로 다시 방문해 획득하는 최대 체력 조각
 - [x] 연결된 월드와 백트래킹
 - [x] 첫 근거리 적과 탐지·추적·공격 상태 머신
-- [ ] 원거리·돌진 적과 보스
+- [x] 고정형 원거리 적과 회피 가능한 직선 투사체
+- [ ] 비행·돌진 적과 보스
 - [ ] 세이브/로드
 - [ ] 보스와 수직 슬라이스 빌드
 
@@ -76,6 +77,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 - [현재 위치와 방문 상태 지도 HUD](Docs/Features/WorldMap.md)
 - [능력 기반 백트래킹과 최대 체력 보상](Docs/Features/BacktrackRewards.md)
 - [근거리 적과 탐지·추적·공격 상태 머신](Docs/Features/EnemyStateMachine.md)
+- [고정형 원거리 적과 직선 투사체](Docs/Features/RangedEnemy.md)
 - 시연 자료: [Media/README](Media/README.md)
 
 ## 프로젝트 열기

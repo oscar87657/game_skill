@@ -44,6 +44,122 @@ namespace GameSkill.Tests
         [TestCase(
             EnemyState.Idle,
             true,
+            9f,
+            0f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.Idle,
+            true,
+            7f,
+            0f,
+            EnemyState.AttackWindup)]
+        [TestCase(
+            EnemyState.AttackRecovery,
+            true,
+            9f,
+            0f,
+            EnemyState.AttackWindup)]
+        [TestCase(
+            EnemyState.AttackRecovery,
+            true,
+            10f,
+            0f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.AttackRecovery,
+            true,
+            6f,
+            4f,
+            EnemyState.Idle)]
+        [TestCase(
+            EnemyState.Dead,
+            true,
+            2f,
+            0f,
+            EnemyState.Dead)]
+        public void RangedDecision_UsesDetectionHysteresis(
+            EnemyState currentState,
+            bool targetAvailable,
+            float horizontalDistance,
+            float verticalDistance,
+            EnemyState expected)
+        {
+            // 실제 기본값인 탐지 8·해제 9.5·높이 3.8을 사용해 원거리 인지 경계를 검증한다.
+            EnemyState result =
+                RangedEnemyDecisionMath.ResolveAttackState(
+                    currentState,
+                    targetAvailable,
+                    horizontalDistance,
+                    verticalDistance,
+                    8f,
+                    9.5f,
+                    3.8f);
+
+            Assert.That(result, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void EnemyProjectile_IgnoresOwnerAndDamagesTargetOnce()
+        {
+            // 투사체가 발사자는 통과하고 지정된 Health에만 한 번 데미지를 적용하는지 확인한다.
+            var owner =
+                new GameObject("ProjectileTestOwner");
+            var target =
+                new GameObject("ProjectileTestTarget");
+            GameObject projectileObject =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Sphere);
+            try
+            {
+                Health targetHealth =
+                    target.AddComponent<Health>();
+                targetHealth.Configure(5);
+                projectileObject.AddComponent<Rigidbody>();
+                EnemyProjectile projectile =
+                    projectileObject
+                        .AddComponent<EnemyProjectile>();
+                projectile.Configure(
+                    owner.transform,
+                    targetHealth,
+                    Vector3.right,
+                    7f,
+                    2f,
+                    1,
+                    projectileObject.GetComponent<Renderer>());
+
+                Assert.That(
+                    projectile.TryResolveCollision(owner),
+                    Is.False);
+                Assert.That(
+                    projectile.TryResolveCollision(target),
+                    Is.True);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(4));
+                Assert.That(
+                    projectile.HasResolved,
+                    Is.True);
+                Assert.That(
+                    projectile.WasDamageApplied,
+                    Is.True);
+                Assert.That(
+                    projectile.TryResolveCollision(target),
+                    Is.False);
+                Assert.That(
+                    targetHealth.CurrentHealth,
+                    Is.EqualTo(4));
+            }
+            finally
+            {
+                Object.DestroyImmediate(projectileObject);
+                Object.DestroyImmediate(target);
+                Object.DestroyImmediate(owner);
+            }
+        }
+
+        [TestCase(
+            EnemyState.Idle,
+            true,
             7f,
             0f,
             EnemyState.Idle)]

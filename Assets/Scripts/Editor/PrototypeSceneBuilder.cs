@@ -116,6 +116,10 @@ namespace GameSkill.Editor
                 player,
                 GameObject.Find(GrayboxRootName),
                 accentMaterial);
+            EnsureRangedEnemyPrototype(
+                player,
+                GameObject.Find(GrayboxRootName),
+                accentMaterial);
             EnsureAbilityPrototype(
                 player,
                 GameObject.Find(GrayboxRootName),
@@ -425,6 +429,15 @@ namespace GameSkill.Editor
                 abilityMaterial))
             {
                 // 근거리 적의 상태 머신·체력·이동기 연결이 보완되면 Main 씬에 저장한다.
+                changed = true;
+            }
+
+            if (EnsureRangedEnemyPrototype(
+                player,
+                grayboxRoot,
+                abilityMaterial))
+            {
+                // 고정형 원거리 적·충전 표시·투사체 설정이 보완되면 Main 씬에 저장한다.
                 changed = true;
             }
 
@@ -2041,6 +2054,218 @@ namespace GameSkill.Editor
             {
                 // 씬 참조 변경만 Dirty로 표시해 멱등 빌더가 매 실행마다 씬을 수정하지 않게 한다.
                 EditorUtility.SetDirty(enemyController);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        private static bool EnsureRangedEnemyPrototype(
+            GameObject player,
+            GameObject parent,
+            Material material)
+        {
+            // 플레이어·배치 루트·공유 재질이 준비된 경우에만 원거리 전투 대상을 구성한다.
+            if (player == null || parent == null || material == null)
+            {
+                return false;
+            }
+
+            bool changed = false;
+            GameObject enemy =
+                GameObject.Find("RangedEnemy_Sentry");
+            if (enemy == null)
+            {
+                // 발 위치를 나타내는 빈 루트에 몸 Collider와 시각 자식을 분리해 조립한다.
+                enemy =
+                    new GameObject("RangedEnemy_Sentry");
+                enemy.transform.SetParent(parent.transform);
+                changed = true;
+            }
+
+            if (enemy.layer
+                != CharacterBodyCollisionPolicy.EnemyBodyLayer)
+            {
+                // 플레이어와 다른 적을 밀지 않으면서 공격 조회에는 남도록 EnemyBody를 사용한다.
+                enemy.layer =
+                    CharacterBodyCollisionPolicy.EnemyBodyLayer;
+                EditorUtility.SetDirty(enemy);
+                changed = true;
+            }
+
+            if (SetTransformIfDifferent(
+                enemy.transform,
+                new Vector3(18f, 3.55f, 0f),
+                Vector3.one))
+            {
+                changed = true;
+            }
+
+            CapsuleCollider bodyCollider =
+                enemy.GetComponent<CapsuleCollider>();
+            if (bodyCollider == null)
+            {
+                bodyCollider =
+                    enemy.AddComponent<CapsuleCollider>();
+                changed = true;
+            }
+
+            if (bodyCollider.center
+                    != new Vector3(0f, 0.9f, 0f)
+                || !Mathf.Approximately(
+                    bodyCollider.height,
+                    1.8f)
+                || !Mathf.Approximately(
+                    bodyCollider.radius,
+                    0.35f)
+                || bodyCollider.isTrigger)
+            {
+                // 몸 Collider는 발 기준 루트 위에 놓고 공격 Overlap이 찾을 수 있는 일반 Collider로 유지한다.
+                bodyCollider.center =
+                    new Vector3(0f, 0.9f, 0f);
+                bodyCollider.height = 1.8f;
+                bodyCollider.radius = 0.35f;
+                bodyCollider.isTrigger = false;
+                EditorUtility.SetDirty(bodyCollider);
+                changed = true;
+            }
+
+            Transform visualTransform =
+                enemy.transform.Find("RangedEnemy_Visual");
+            if (visualTransform == null)
+            {
+                // 보라색 상태 표현을 받을 임시 캡슐 메시를 별도 자식으로 만든다.
+                GameObject visual =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Capsule);
+                visual.name = "RangedEnemy_Visual";
+                visual.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    visual.GetComponent<CapsuleCollider>());
+                visualTransform = visual.transform;
+                changed = true;
+            }
+
+            Vector3 visualLocalPosition =
+                new(0f, 0.9f, 0f);
+            Vector3 visualLocalScale =
+                new(0.65f, 0.9f, 0.65f);
+            if ((visualTransform.localPosition
+                    - visualLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (visualTransform.localScale
+                    - visualLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 메시의 바닥을 루트 Y=0에 맞춰 발판 안으로 묻히지 않게 한다.
+                visualTransform.localPosition =
+                    visualLocalPosition;
+                visualTransform.localRotation =
+                    Quaternion.identity;
+                visualTransform.localScale =
+                    visualLocalScale;
+                EditorUtility.SetDirty(visualTransform);
+                changed = true;
+            }
+
+            MeshRenderer visualRenderer =
+                visualTransform.GetComponent<MeshRenderer>();
+            if (visualRenderer != null
+                && visualRenderer.sharedMaterial != material)
+            {
+                visualRenderer.sharedMaterial = material;
+                EditorUtility.SetDirty(visualRenderer);
+                changed = true;
+            }
+
+            Transform muzzleTransform =
+                enemy.transform.Find("RangedEnemy_Muzzle");
+            if (muzzleTransform == null)
+            {
+                // 선딜 동안만 나타나는 작은 구체를 발사 원점과 충전 표시로 함께 사용한다.
+                GameObject muzzle =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Sphere);
+                muzzle.name = "RangedEnemy_Muzzle";
+                muzzle.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    muzzle.GetComponent<SphereCollider>());
+                muzzleTransform = muzzle.transform;
+                changed = true;
+            }
+
+            Vector3 muzzleLocalPosition =
+                new(-0.85f, 1f, 0f);
+            Vector3 muzzleLocalScale =
+                Vector3.one * 0.28f;
+            if ((muzzleTransform.localPosition
+                    - muzzleLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (muzzleTransform.localScale
+                    - muzzleLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 기본 왼쪽 위치는 런타임에 바라보는 방향에 따라 좌우 반전된다.
+                muzzleTransform.localPosition =
+                    muzzleLocalPosition;
+                muzzleTransform.localRotation =
+                    Quaternion.identity;
+                muzzleTransform.localScale =
+                    muzzleLocalScale;
+                EditorUtility.SetDirty(muzzleTransform);
+                changed = true;
+            }
+
+            MeshRenderer muzzleRenderer =
+                muzzleTransform.GetComponent<MeshRenderer>();
+            if (muzzleRenderer != null)
+            {
+                if (muzzleRenderer.sharedMaterial != material)
+                {
+                    muzzleRenderer.sharedMaterial = material;
+                    changed = true;
+                }
+
+                // Play 전에는 숨기고 RangedEnemyController가 선딜 상태에서만 표시한다.
+                if (muzzleRenderer.enabled)
+                {
+                    muzzleRenderer.enabled = false;
+                    changed = true;
+                }
+
+                EditorUtility.SetDirty(muzzleRenderer);
+            }
+
+            Health health = enemy.GetComponent<Health>();
+            if (health == null)
+            {
+                health = enemy.AddComponent<Health>();
+                health.Configure(3);
+                changed = true;
+            }
+
+            RangedEnemyController controller =
+                enemy.GetComponent<RangedEnemyController>();
+            if (controller == null)
+            {
+                controller =
+                    enemy.AddComponent<RangedEnemyController>();
+                changed = true;
+            }
+
+            if (controller.Configure(
+                player.transform,
+                visualRenderer,
+                muzzleRenderer,
+                muzzleTransform,
+                material))
+            {
+                // 직렬화 참조가 달라진 경우에만 멱등 마이그레이션 결과를 저장한다.
+                EditorUtility.SetDirty(controller);
                 changed = true;
             }
 
