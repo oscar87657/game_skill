@@ -1795,32 +1795,36 @@ namespace GameSkill.Editor
             GameObject enemy = GameObject.Find("MeleeEnemy_Grunt");
             if (enemy == null)
             {
-                // 캡슐 프리미티브는 임시 모델 역할만 하고 충돌 이동은 CharacterController가 담당한다.
-                enemy =
-                    GameObject.CreatePrimitive(PrimitiveType.Capsule);
+                // 발 기준 이동 루트와 중심 기준 메시를 분리하기 위해 빈 루트를 먼저 만든다.
+                enemy = new GameObject("MeleeEnemy_Grunt");
                 enemy.name = "MeleeEnemy_Grunt";
                 enemy.transform.SetParent(parent.transform);
-                Object.DestroyImmediate(
-                    enemy.GetComponent<CapsuleCollider>());
                 changed = true;
             }
 
             if (SetTransformIfDifferent(
                 enemy.transform,
                 new Vector3(13.8f, 3.05f, 0f),
-                new Vector3(0.75f, 1f, 0.75f)))
+                Vector3.one))
             {
                 changed = true;
             }
 
-            MeshRenderer renderer =
+            MeshRenderer oldRootRenderer =
                 enemy.GetComponent<MeshRenderer>();
-            if (renderer != null
-                && renderer.sharedMaterial != material)
+            if (oldRootRenderer != null)
             {
-                // 첫 적은 포트폴리오 그레이박스의 강조색을 사용해 연습용 더미와 구분한다.
-                renderer.sharedMaterial = material;
-                EditorUtility.SetDirty(renderer);
+                // 이전 버전의 중심 기준 메시를 제거해 절반이 지면 아래로 묻히는 배치를 마이그레이션한다.
+                Object.DestroyImmediate(oldRootRenderer);
+                changed = true;
+            }
+
+            MeshFilter oldRootMesh =
+                enemy.GetComponent<MeshFilter>();
+            if (oldRootMesh != null)
+            {
+                // 렌더러와 함께 남은 루트 MeshFilter도 제거해 루트를 순수 이동 기준점으로 유지한다.
+                Object.DestroyImmediate(oldRootMesh);
                 changed = true;
             }
 
@@ -1831,6 +1835,123 @@ namespace GameSkill.Editor
                 // 중복 캡슐 충돌체는 CharacterController 이동과 접촉 판정을 흔들 수 있어 제거한다.
                 Object.DestroyImmediate(primitiveCollider);
                 changed = true;
+            }
+
+            Transform visualTransform =
+                enemy.transform.Find("MeleeEnemy_Visual");
+            if (visualTransform == null)
+            {
+                // 캡슐 중심을 발보다 0.9m 위에 둬 CharacterController와 같은 높이를 차지하게 한다.
+                GameObject visual =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Capsule);
+                visual.name = "MeleeEnemy_Visual";
+                visual.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    visual.GetComponent<CapsuleCollider>());
+                visualTransform = visual.transform;
+                changed = true;
+            }
+
+            Vector3 visualLocalPosition =
+                new(0f, 0.9f, 0f);
+            Vector3 visualLocalScale =
+                new(0.75f, 0.9f, 0.75f);
+            if ((visualTransform.localPosition
+                    - visualLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (visualTransform.localScale
+                    - visualLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 메시 바닥과 충돌체 바닥을 같은 Y=0에 맞추되 사람형에 가까운 비율을 유지한다.
+                visualTransform.localPosition =
+                    visualLocalPosition;
+                visualTransform.localRotation =
+                    Quaternion.identity;
+                visualTransform.localScale =
+                    visualLocalScale;
+                EditorUtility.SetDirty(visualTransform);
+                changed = true;
+            }
+
+            MeshRenderer renderer =
+                visualTransform.GetComponent<MeshRenderer>();
+            if (renderer != null
+                && renderer.sharedMaterial != material)
+            {
+                // 첫 적은 포트폴리오 그레이박스의 강조색을 사용해 연습용 더미와 구분한다.
+                renderer.sharedMaterial = material;
+                EditorUtility.SetDirty(renderer);
+                changed = true;
+            }
+
+            Transform indicatorTransform =
+                enemy.transform.Find(
+                    "MeleeEnemy_AttackIndicator");
+            if (indicatorTransform == null)
+            {
+                // 실제 VFX 전에는 작은 구체로 선딜·적중·무적 결과를 시각화한다.
+                GameObject indicator =
+                    GameObject.CreatePrimitive(
+                        PrimitiveType.Sphere);
+                indicator.name =
+                    "MeleeEnemy_AttackIndicator";
+                indicator.transform.SetParent(
+                    enemy.transform,
+                    false);
+                Object.DestroyImmediate(
+                    indicator.GetComponent<SphereCollider>());
+                indicatorTransform =
+                    indicator.transform;
+                changed = true;
+            }
+
+            Vector3 indicatorLocalPosition =
+                new(-1.05f, 0.9f, 0f);
+            Vector3 indicatorLocalScale =
+                Vector3.one * 0.42f;
+            if ((indicatorTransform.localPosition
+                    - indicatorLocalPosition).sqrMagnitude
+                    > 0.000001f
+                || (indicatorTransform.localScale
+                    - indicatorLocalScale).sqrMagnitude
+                    > 0.000001f)
+            {
+                // 표시 구체를 기본 왼쪽 공격 위치에 두고 런타임에는 바라보는 방향으로 반전한다.
+                indicatorTransform.localPosition =
+                    indicatorLocalPosition;
+                indicatorTransform.localRotation =
+                    Quaternion.identity;
+                indicatorTransform.localScale =
+                    indicatorLocalScale;
+                EditorUtility.SetDirty(indicatorTransform);
+                changed = true;
+            }
+
+            MeshRenderer indicatorRenderer =
+                indicatorTransform.GetComponent<MeshRenderer>();
+            if (indicatorRenderer != null)
+            {
+                if (indicatorRenderer.sharedMaterial
+                    != material)
+                {
+                    indicatorRenderer.sharedMaterial =
+                        material;
+                    changed = true;
+                }
+
+                // Play 전에는 숨기고 상태 머신이 선딜이나 결과가 있을 때만 켠다.
+                if (indicatorRenderer.enabled)
+                {
+                    indicatorRenderer.enabled = false;
+                    changed = true;
+                }
+
+                EditorUtility.SetDirty(
+                    indicatorRenderer);
             }
 
             CharacterController controller =
@@ -1877,7 +1998,8 @@ namespace GameSkill.Editor
 
             if (enemyController.Configure(
                 player.transform,
-                renderer))
+                renderer,
+                indicatorRenderer))
             {
                 // 씬 참조 변경만 Dirty로 표시해 멱등 빌더가 매 실행마다 씬을 수정하지 않게 한다.
                 EditorUtility.SetDirty(enemyController);

@@ -275,8 +275,31 @@ namespace GameSkill.Tests
                 meleeEnemy.CurrentState,
                 Is.EqualTo(EnemyState.Idle));
             Assert.That(
+                meleeEnemyObject.transform.localScale,
+                Is.EqualTo(Vector3.one));
+            Transform meleeEnemyVisual =
+                meleeEnemyObject.transform.Find(
+                    "MeleeEnemy_Visual");
+            Assert.That(meleeEnemyVisual, Is.Not.Null);
+            Assert.That(
+                meleeEnemyVisual.localPosition.y,
+                Is.EqualTo(0.9f).Within(0.001f));
+            Renderer meleeEnemyRenderer =
+                meleeEnemyVisual.GetComponent<Renderer>();
+            Assert.That(meleeEnemyRenderer, Is.Not.Null);
+            Transform attackIndicator =
+                meleeEnemyObject.transform.Find(
+                    "MeleeEnemy_AttackIndicator");
+            Assert.That(attackIndicator, Is.Not.Null);
+            Assert.That(
+                attackIndicator
+                    .GetComponent<Renderer>().enabled,
+                Is.False);
+            Assert.That(
                 meleeEnemyObject.transform.position.z,
                 Is.Zero.Within(0.0001f));
+            Vector3 meleeEnemySpawnPosition =
+                meleeEnemyObject.transform.position;
             Assert.That(player.transform.position.z, Is.EqualTo(0f).Within(0.001f));
 
             // 실제 픽업을 순서대로 소비해 보유 상태·이동 잠금·백트래킹 게이트를 함께 검증한다.
@@ -363,6 +386,15 @@ namespace GameSkill.Tests
             Assert.That(checkpoint.IsActivated, Is.True);
 
             // 실제 위험 지대의 즉사 데미지로 사망 이벤트부터 체크포인트 재시작까지 통합 검증한다.
+            Assert.That(
+                meleeEnemyHealth.TakeDamage(3),
+                Is.True);
+            Assert.That(meleeEnemyHealth.IsDead, Is.True);
+            Assert.That(
+                meleeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Dead));
+            meleeEnemyObject.transform.position +=
+                new Vector3(-2f, 1f, 0f);
             GameObject hazardObject = GameObject.Find("RespawnHazard");
             Assert.That(hazardObject, Is.Not.Null);
             DamageVolume hazard = hazardObject.GetComponent<DamageVolume>();
@@ -407,6 +439,24 @@ namespace GameSkill.Tests
                 worldState.CollectedRewardCount,
                 Is.EqualTo(1));
             Assert.That(playerHealth.MaxHealth, Is.EqualTo(6));
+            Assert.That(meleeEnemyHealth.IsDead, Is.False);
+            Assert.That(
+                meleeEnemyHealth.CurrentHealth,
+                Is.EqualTo(3));
+            Assert.That(
+                meleeEnemy.CurrentState,
+                Is.EqualTo(EnemyState.Idle));
+            Assert.That(
+                meleeEnemyObject.transform.position,
+                Is.EqualTo(meleeEnemySpawnPosition));
+            Assert.That(
+                meleeEnemyRenderer.enabled,
+                Is.True);
+            Assert.That(
+                meleeEnemyObject
+                    .GetComponent<CharacterController>()
+                    .enabled,
+                Is.True);
 
             // 더미 가까이에서 실제 물리 탐색을 실행해 씬의 콜라이더와 자동 조준 연결을 검증한다.
             motor.Teleport(new Vector3(

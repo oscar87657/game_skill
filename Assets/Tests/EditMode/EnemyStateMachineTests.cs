@@ -174,5 +174,75 @@ namespace GameSkill.Tests
                 Object.DestroyImmediate(ground);
             }
         }
+
+        [Test]
+        public void MeleeEnemy_ResetToSpawn_RestoresDeadEnemy()
+        {
+            // 플레이어 재시작에서 사용할 공개 초기화가 사망한 적의 위치·체력·상태·표현을 함께 복원하는지 검증한다.
+            var target =
+                new GameObject("EnemyResetTestTarget");
+            GameObject enemy =
+                GameObject.CreatePrimitive(
+                    PrimitiveType.Capsule);
+            try
+            {
+                target.AddComponent<Health>()
+                    .Configure(5);
+                enemy.transform.position =
+                    new Vector3(2f, 0.05f, 0f);
+                Vector3 spawnPosition =
+                    enemy.transform.position;
+                Object.DestroyImmediate(
+                    enemy.GetComponent<CapsuleCollider>());
+                CharacterController characterController =
+                    enemy.AddComponent<CharacterController>();
+                Health enemyHealth =
+                    enemy.AddComponent<Health>();
+                enemyHealth.Configure(3);
+                Renderer renderer =
+                    enemy.GetComponent<Renderer>();
+                MeleeEnemyController controller =
+                    enemy.AddComponent<MeleeEnemyController>();
+                controller.Configure(
+                    target.transform,
+                    renderer);
+
+                Assert.That(
+                    enemyHealth.TakeDamage(3),
+                    Is.True);
+                // EditMode에서는 MonoBehaviour 이벤트 생명주기가 재생되지 않으므로 한 틱으로 Health 사망을 상태에 반영한다.
+                controller.Tick(0f);
+                Assert.That(enemyHealth.IsDead, Is.True);
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.Dead));
+                Assert.That(
+                    characterController.enabled,
+                    Is.False);
+                enemy.transform.position =
+                    new Vector3(9f, 4f, 0f);
+
+                controller.ResetToSpawn();
+
+                Assert.That(
+                    enemy.transform.position,
+                    Is.EqualTo(spawnPosition));
+                Assert.That(
+                    enemyHealth.CurrentHealth,
+                    Is.EqualTo(3));
+                Assert.That(
+                    controller.CurrentState,
+                    Is.EqualTo(EnemyState.Idle));
+                Assert.That(
+                    characterController.enabled,
+                    Is.True);
+                Assert.That(renderer.enabled, Is.True);
+            }
+            finally
+            {
+                Object.DestroyImmediate(enemy);
+                Object.DestroyImmediate(target);
+            }
+        }
     }
 }

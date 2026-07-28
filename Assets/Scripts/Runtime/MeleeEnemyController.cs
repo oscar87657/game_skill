@@ -19,6 +19,7 @@ namespace GameSkill
         [Header("Target")]
         [SerializeField] private Transform target;
         [SerializeField] private Renderer visualRenderer;
+        [SerializeField] private Renderer attackIndicatorRenderer;
 
         [Header("Decision")]
         [SerializeField, Min(0f)] private float detectionRange = 6f;
@@ -40,11 +41,18 @@ namespace GameSkill
         private Health ownHealth;
         private Health targetHealth;
         private SideScrollerMotor targetMotor;
+        private PlayerRespawnController targetRespawnController;
+        private Vector3 initialSpawnPosition;
         private float lockedDepth;
         private float verticalSpeed;
         private float stateTimer;
+        private float attackFeedbackTimer;
         private bool eventsSubscribed;
+        private bool targetEventsSubscribed;
+        private bool initialSpawnCaptured;
         private MaterialPropertyBlock visualProperties;
+        private MaterialPropertyBlock attackIndicatorProperties;
+        private Color attackFeedbackColor = Color.white;
 
         public event Action<EnemyState, EnemyState> StateChanged;
 
@@ -57,20 +65,23 @@ namespace GameSkill
         {
             // 필수 컴포넌트와 고정 깊이를 한 번 캐시해 매 프레임 탐색 비용을 없앤다.
             CacheComponents();
-            lockedDepth = transform.position.z;
+            CaptureInitialSpawn();
         }
 
         private void OnEnable()
         {
             // 비활성화 후 다시 켜지는 경우에도 Health 이벤트를 정확히 한 번만 연결한다.
             CacheComponents();
+            ResolveTargetComponents();
             SubscribeHealthEvents();
+            SubscribeTargetEvents();
         }
 
         private void Start()
         {
             // 씬 역직렬화가 끝난 뒤 대상의 체력과 이동기를 확정한다.
             ResolveTargetComponents();
+            SubscribeTargetEvents();
             ApplyStatePresentation(CurrentState);
         }
 
@@ -84,26 +95,76 @@ namespace GameSkill
         {
             // 파괴되거나 비활성화될 때 이벤트 연결을 해제해 유령 콜백을 막는다.
             UnsubscribeHealthEvents();
+            UnsubscribeTargetEvents();
         }
 
         public bool Configure(
             Transform targetTransform,
-            Renderer enemyRenderer)
+            Renderer enemyRenderer,
+            Renderer enemyAttackIndicator = null)
         {
             // 빌더와 테스트가 같은 구성 경로를 사용하도록 씬 참조 설정을 공개한다.
+            if (target != targetTransform)
+            {
+                // 런타임 대상 교체 시 이전 플레이어의 재시작 이벤트부터 끊는다.
+                UnsubscribeTargetEvents();
+            }
+
             bool changed = target != targetTransform
-                || visualRenderer != enemyRenderer;
+                || visualRenderer != enemyRenderer
+                || attackIndicatorRenderer
+                    != enemyAttackIndicator;
             target = targetTransform;
             visualRenderer = enemyRenderer;
+            attackIndicatorRenderer =
+                enemyAttackIndicator;
             CacheComponents();
+            CaptureInitialSpawn();
             ResolveTargetComponents();
+            SubscribeTargetEvents();
             return changed;
+        }
+
+        public void ResetToSpawn()
+        {
+            // 플레이어 재시작 시 적의 위치·체력·상태·표현을 최초 배치와 같은 원자적 상태로 복원한다.
+            CacheComponents();
+            if (characterController != null)
+            {
+                // CharacterController를 잠시 끄면 사망 중 비활성 상태와 충돌 보정에 관계없이 정확히 이동한다.
+                characterController.enabled = false;
+            }
+
+            transform.position = initialSpawnPosition;
+            lockedDepth = initialSpawnPosition.z;
+            if (characterController != null)
+            {
+                characterController.enabled = true;
+            }
+
+            verticalSpeed = 0f;
+            stateTimer = 0f;
+            attackFeedbackTimer = 0f;
+            SuccessfulAttackCount = 0;
+            FacingDirection = -1;
+            ownHealth?.RestoreFullHealth();
+
+            EnemyState previousState = CurrentState;
+            CurrentState = EnemyState.Idle;
+            ApplyStatePresentation(CurrentState);
+            if (previousState != CurrentState)
+            {
+                StateChanged?.Invoke(
+                    previousState,
+                    CurrentState);
+            }
         }
 
         public void Tick(float deltaTime)
         {
             // 음수 시간은 상태 타이머를 역행시키므로 0으로 제한한다.
             float safeDeltaTime = Mathf.Max(0f, deltaTime);
+            TickAttackFeedback(safeDeltaTime);
             if (ownHealth == null || ownHealth.IsDead)
             {
                 EnterState(EnemyState.Dead, 0f);
@@ -219,18 +280,28 @@ namespace GameSkill
                     attackRange,
                     verticalTolerance))
             {
+                // 회색 표시는 선딜 중 대상이 빠져나가 공격이 빗나갔음을 임시로 알려준다.
+                BeginAttackFeedback(
+                    new Color(0.45f, 0.45f, 0.45f, 1f));
                 return;
             }
 
             bool isInvulnerable =
                 targetMotor != null && targetMotor.IsInvulnerable;
-            if (DamageRules.TryApply(
-                    targetHealth,
-                    isInvulnerable,
-                    attackDamage))
+            bool damageApplied = DamageRules.TryApply(
+                targetHealth,
+                isInvulnerable,
+                attackDamage);
+            if (damageApplied)
             {
                 SuccessfulAttackCount++;
             }
+
+            // 노랑은 적중, 청록은 대시 무적으로 막힌 공격을 나타내 실제 이펙트 전에도 결과를 구분한다.
+            BeginAttackFeedback(
+                damageApplied
+                    ? new Color(1f, 0.9f, 0.16f, 1f)
+                    : new Color(0.1f, 0.85f, 1f, 1f));
         }
 
         private void ApplyMovement(
@@ -297,6 +368,19 @@ namespace GameSkill
             ownHealth ??= GetComponent<Health>();
         }
 
+        private void CaptureInitialSpawn()
+        {
+            // Awake가 실행되지 않는 EditMode 구성에서도 최초 한 번만 배치 기준점을 기록한다.
+            if (initialSpawnCaptured)
+            {
+                return;
+            }
+
+            initialSpawnPosition = transform.position;
+            lockedDepth = initialSpawnPosition.z;
+            initialSpawnCaptured = true;
+        }
+
         private void ResolveTargetComponents()
         {
             // 대상 루트에서 공통 전투 계약을 캐시해 공격 시 반복 탐색하지 않는다.
@@ -305,6 +389,9 @@ namespace GameSkill
                 : null;
             targetMotor = target != null
                 ? target.GetComponent<SideScrollerMotor>()
+                : null;
+            targetRespawnController = target != null
+                ? target.GetComponent<PlayerRespawnController>()
                 : null;
         }
 
@@ -334,6 +421,35 @@ namespace GameSkill
             eventsSubscribed = false;
         }
 
+        private void SubscribeTargetEvents()
+        {
+            // 플레이어 재시작 완료 이벤트를 한 번만 구독해 여러 적 초기화 호출이 겹치지 않게 한다.
+            if (targetEventsSubscribed
+                || targetRespawnController == null)
+            {
+                return;
+            }
+
+            targetRespawnController.Respawned +=
+                HandleTargetRespawned;
+            targetEventsSubscribed = true;
+        }
+
+        private void UnsubscribeTargetEvents()
+        {
+            // 대상 교체·씬 종료 뒤 이전 플레이어가 적을 초기화하지 못하도록 이벤트를 해제한다.
+            if (!targetEventsSubscribed
+                || targetRespawnController == null)
+            {
+                targetEventsSubscribed = false;
+                return;
+            }
+
+            targetRespawnController.Respawned -=
+                HandleTargetRespawned;
+            targetEventsSubscribed = false;
+        }
+
         private void HandleDamaged(
             int currentHealth,
             int maximumHealth)
@@ -349,6 +465,13 @@ namespace GameSkill
         {
             // 사망 이벤트를 받는 즉시 이동과 렌더링을 중단한다.
             EnterState(EnemyState.Dead, 0f);
+        }
+
+        private void HandleTargetRespawned(
+            Vector3 respawnPosition)
+        {
+            // 플레이어 도착 위치와 무관하게 이 적은 자신이 기록한 최초 배치로 돌아간다.
+            ResetToSpawn();
         }
 
         private void EnterState(
@@ -388,6 +511,7 @@ namespace GameSkill
             // 공유 Material을 복제하지 않고 이 적의 상태만 색으로 표시해 프로토타입 판독성을 높인다.
             if (visualRenderer == null)
             {
+                RefreshAttackIndicator();
                 return;
             }
 
@@ -395,6 +519,7 @@ namespace GameSkill
                 state != EnemyState.Dead;
             if (state == EnemyState.Dead)
             {
+                RefreshAttackIndicator();
                 return;
             }
 
@@ -407,6 +532,69 @@ namespace GameSkill
                 ResolveStateColor(state));
             visualRenderer.SetPropertyBlock(
                 visualProperties);
+            RefreshAttackIndicator();
+        }
+
+        private void TickAttackFeedback(
+            float deltaTime)
+        {
+            // 짧은 결과 표시 시간이 끝난 프레임에 공격 표시기를 현재 상태에 맞춰 갱신한다.
+            if (attackFeedbackTimer <= 0f)
+            {
+                return;
+            }
+
+            attackFeedbackTimer = Mathf.Max(
+                0f,
+                attackFeedbackTimer - deltaTime);
+            RefreshAttackIndicator();
+        }
+
+        private void BeginAttackFeedback(
+            Color feedbackColor)
+        {
+            // 임시 구체를 0.14초만 보여 실제 VFX가 들어오기 전 적중·회피 결과를 읽게 한다.
+            attackFeedbackColor = feedbackColor;
+            attackFeedbackTimer = 0.14f;
+            RefreshAttackIndicator();
+        }
+
+        private void RefreshAttackIndicator()
+        {
+            // 빨간 구체는 공격 범위의 선딜, 결과 색 구체는 적중·무적·빗나감을 의미한다.
+            if (attackIndicatorRenderer == null)
+            {
+                return;
+            }
+
+            bool isWindup =
+                CurrentState == EnemyState.AttackWindup;
+            bool hasResult =
+                attackFeedbackTimer > 0f;
+            attackIndicatorRenderer.enabled =
+                CurrentState != EnemyState.Dead
+                && (isWindup || hasResult);
+            if (!attackIndicatorRenderer.enabled)
+            {
+                return;
+            }
+
+            attackIndicatorRenderer.transform.localPosition =
+                new Vector3(
+                    FacingDirection * 1.05f,
+                    0.9f,
+                    0f);
+            attackIndicatorProperties ??=
+                new MaterialPropertyBlock();
+            attackIndicatorRenderer.GetPropertyBlock(
+                attackIndicatorProperties);
+            attackIndicatorProperties.SetColor(
+                BaseColorId,
+                hasResult
+                    ? attackFeedbackColor
+                    : new Color(1f, 0.05f, 0.03f, 1f));
+            attackIndicatorRenderer.SetPropertyBlock(
+                attackIndicatorProperties);
         }
 
         private static Color ResolveStateColor(
