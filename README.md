@@ -7,7 +7,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 
 - 엔진: Unity 6.5 (`6000.5.5f1`)
 - 에디터 아키텍처: macOS ARM64 권장
-- 렌더 파이프라인: URP 예정
+- 렌더 파이프라인: URP
 - 언어: C#
 - 대상 플랫폼: PC 우선
 - 저장소: `oscar87657/game_skill`
@@ -24,78 +24,60 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 
 ## 진행 현황
 
-- [x] Git 및 Unity 프로젝트 기본 구조
-- [x] 개발 계획서
-- [x] 2.5D 횡스크롤 메트로배니아 장르와 수직 슬라이스 범위 확정
-- [x] CC0 캐릭터 및 프로토타입 에셋
-- [x] URP Main Scene과 플레이어 이동 프로토타입
-- [x] 횡스크롤 이동 및 측면 추적 카메라 프로토타입
-- [x] 정면 구도를 유지하는 약한 Perspective 카메라
-- [x] Kenney 캐릭터 및 이동·점프 애니메이션
-- [x] 지상 대시와 짧은 무적 시간
-- [x] 기본 공격·체력·훈련용 더미 프로토타입
-- [x] 3단 기본 공격 콤보와 입력 버퍼
-- [x] 상호작용 및 체크포인트
-- [x] 체력, 데미지 및 전투
-- [x] ScriptableObject 기반 이동 능력 해금 및 첫 능력 게이트
-- [x] 짧은 벽 잡기·벽 미끄러짐·벽 점프 능력
-- [x] 세 구역 Graybox와 ID 기반 방문 상태
-- [x] 백트래킹 샤프트에서 시작 홀로 돌아오는 영구 지름길
-- [x] 세 구역 Additive Scene 비동기 스트리밍
-- [x] 구역 진입 이벤트 기반 카메라 제한 영역
-- [x] 현재 위치와 방문 구역을 표시하는 지도 HUD
-- [x] 벽 잡기로 다시 방문해 획득하는 최대 체력 조각
-- [x] 연결된 월드와 백트래킹
-- [x] 첫 근거리 적과 탐지·추적·공격 상태 머신
-- [x] 고정형 원거리 적과 회피 가능한 직선 투사체
-- [x] 방향을 잠그고 발판 끝에서 멈추는 돌진 적
-- [x] 세 이동 능력을 활용하게 만드는 순환 패턴 보스
-- [x] 능력·체크포인트·월드 상태 세이브/로드
-- [x] 체력·능력·저장 상태 HUD
-- [x] 일시정지·저장 메뉴와 마스터 음량 옵션
-- [x] 보스 처치 저장과 세이브 데이터 `v1 → v2` 마이그레이션
-- [x] 이벤트 기반 대시·공격·명중·피격·능력 획득 VFX와 임시 SFX
-- [x] 진행 기반 목표 HUD·조작 튜토리얼과 재사용 월드 비콘
-- [x] 프레임·GC·드로우 콜 성능 기준선과 재측정 Probe
-- [x] 전체 플레이 회귀 테스트와 macOS Development Build 실행 확인
-- [ ] README 시연 자료와 `v0.1.0` Release
+1. **M0 기반 구성 — 완료**
+   Unity 6.5, URP, Input System, Git LFS, CC0 프로토타입 에셋과 2.5D 장르
+   범위를 고정했습니다.
+2. **M1 이동과 카메라 — 완료**
+   CharacterController 이동, 경사·계단, 점프 보정, 달리기, 곡선 대시,
+   무적, 2단 점프, 공중 대시, 벽 이동과 Humanoid 애니메이션을 연결했습니다.
+3. **M2 전투와 생존 — 완료**
+   3단 콤보, 입력 버퍼, 공중 공격, 자동 조준, 공통 체력·데미지 계약,
+   체크포인트와 사망 재시작을 구현했습니다.
+4. **M3 능력과 게이트 — 완료**
+   ScriptableObject 능력 정의, ID 기반 보유 상태와 2단 점프·공중 대시·벽
+   잡기 게이트를 구현했습니다.
+5. **M4 연결된 월드 — 완료**
+   영구 구역 ID, 지름길, Additive Scene 스트리밍, 카메라 경계, 지도,
+   백트래킹 체력 보상과 정면 Perspective 구도를 구현했습니다.
+6. **M5 적과 보스 — 완료**
+   판단 계산과 실행 Controller를 분리한 근거리·원거리·돌진 적, 세 이동
+   능력을 시험하는 보스와 독립 아레나를 구현했습니다.
+7. **M6 저장과 UI — 완료**
+   능력·체크포인트·구역·지름길·보상·보스 상태의 JSON 저장, `v1 → v2`
+   마이그레이션, HUD와 Pause·음량 옵션을 구현했습니다.
+8. **M7 공개 준비 — 진행 중**
+   이벤트 기반 VFX·SFX, 진행형 튜토리얼, 성능 기준선과 macOS Development
+   Build 검증을 완료했고, README 시연 자료와 `v0.1.0` Release를 남겼습니다.
 
 자세한 내용은 [게임 디자인](Docs/GAME_DESIGN.md)과
 [프로젝트 계획서](Docs/PROJECT_PLAN.md)를 참고하세요.
 
 ## 포트폴리오 문서
 
-이 저장소는 하나의 게임을 완성하면서 기능별 구현 방식과 선택 근거를
-비교·기록하는 포트폴리오로 운영합니다.
+이 저장소의 중심은 기능 개수가 아니라, 플레이 문제를 코드 책임으로 나누고
+Unity에서 동작하는 결과까지 연결한 과정입니다. 문서는 알파벳순이 아니라 실제
+구현 순서인 `01 → 23`으로 읽습니다.
 
 - [포트폴리오 운영 계획](Docs/PORTFOLIO_PLAN.md)
-- [기능 문서 인덱스](Docs/FEATURE_INDEX.md)
+- [기능 구현 인덱스 — 문제·핵심 코드·선택 이유·화면 결과](Docs/FEATURE_INDEX.md)
 - [아키텍처 규칙](Docs/ARCHITECTURE.md)
 - [기능 문서 템플릿](Docs/FEATURE_TEMPLATE.md)
-- [이동 시스템](Docs/Features/Movement.md)
-- [전투 시스템](Docs/Features/Combat.md)
-- [체크포인트 시스템](Docs/Features/Checkpoint.md)
-- [사망과 재시작](Docs/Features/Respawn.md)
-- [능력 해금과 게이트](Docs/Features/AbilitiesAndGates.md)
-- [월드 구역과 방문 상태](Docs/Features/WorldZones.md)
-- [구역 연결과 영구 지름길](Docs/Features/WorldShortcuts.md)
-- [Additive 구역 Scene 스트리밍](Docs/Features/WorldStreaming.md)
-- [구역별 카메라 제한 영역](Docs/Features/CameraBounds.md)
-- [정면 원근 2.5D 카메라](Docs/Features/PerspectiveCamera.md)
-- [현재 위치와 방문 상태 지도 HUD](Docs/Features/WorldMap.md)
-- [능력 기반 백트래킹과 최대 체력 보상](Docs/Features/BacktrackRewards.md)
-- [근거리 적과 탐지·추적·공격 상태 머신](Docs/Features/EnemyStateMachine.md)
-- [고정형 원거리 적과 직선 투사체](Docs/Features/RangedEnemy.md)
-- [방향 잠금 돌진 적과 상태 중단](Docs/Features/ChargeEnemy.md)
-- [능력 시험 보스와 독립 보스방](Docs/Features/AbilityTrialBoss.md)
-- [플레이어 진행 저장](Docs/Features/ProgressSave.md)
-- [체력·능력·저장 상태 HUD](Docs/Features/ProgressHud.md)
-- [일시정지와 옵션 메뉴](Docs/Features/PauseAndOptions.md)
-- [이벤트 기반 플레이어 VFX·SFX](Docs/Features/PlayerFeedback.md)
-- [진행 기반 길 찾기와 튜토리얼](Docs/Features/GuidanceAndTutorial.md)
-- [수직 슬라이스 성능 기준선](Docs/Features/PerformanceProfiling.md)
-- [macOS 데스크톱 빌드](Docs/Features/DesktopBuild.md)
 - 시연 자료: [Media/README](Media/README.md)
+
+### 구현 흐름 한눈에 보기
+
+| 구현 단계 | 사용한 코드 구조 | 구현한 동작 |
+|---|---|---|
+| [01 이동](Docs/Features/01-Movement.md) | `SideScrollerMotor`는 Unity 충돌 실행, `MovementMath`는 순수 계산을 담당 | 가속 이동, 코요테 타임, 점프 버퍼, 곡선 대시, 2단 점프, 벽 이동 |
+| [02 전투](Docs/Features/02-Combat.md) | `PlayerCombat`의 공격 타이밍과 `TargetingMath`의 대상 선택을 분리 | 이동 가능한 3단 콤보, 공중 공격, 높이 차 자동 조준 |
+| [03~05 생존·능력](Docs/Features/03-Checkpoint.md) | 상태 객체, 이벤트, ScriptableObject 정의와 ID 집합 사용 | 체크포인트, 재시작, 능력 획득과 게이트 |
+| [06~12 연결된 월드](Docs/Features/06-WorldZones.md) | 영구 구역 ID, Additive Scene, 상태 기반 지도와 카메라 경계 | 구역 전환, 지름길, 스트리밍, 지도, 백트래킹 보상, 2.5D 원근 |
+| [13~16 적과 보스](Docs/Features/13-EnemyStateMachine.md) | 판단용 순수 `*DecisionMath`와 실행용 Controller 분리 | 근거리·원거리·돌진 AI와 세 이동 능력 시험 보스 |
+| [17~21 저장·UI·UX](Docs/Features/17-ProgressSave.md) | 버전형 JSON DTO와 변경 이벤트 구독 | 진행 저장, HUD, Pause, 피드백, 단계형 튜토리얼 |
+| [22~23 검증·배포](Docs/Features/22-PerformanceProfiling.md) | 측정 Probe와 코드 기반 Build Pipeline | 성능 예산 검증과 재현 가능한 macOS 빌드 |
+
+세부 인덱스에서는 23개 기능마다 해결한 문제, 핵심 클래스, 선택한 구현 방식,
+화면에서 확인할 결과를 같은 순서로 연결합니다.
 
 ## 프로젝트 열기
 
@@ -103,7 +85,7 @@ Unity 기능을 작은 단위로 직접 구현하면서 완성하는 2.5D 횡스
 2. `Add project from disk`를 선택합니다.
 3. 이 저장소의 루트 폴더를 선택합니다.
 4. Unity가 패키지와 `Library` 폴더 생성을 마칠 때까지 기다립니다.
-5. `Assets/Scenes`에 첫 Scene을 만들고 실행합니다.
+5. `Assets/Scenes/Main.unity`를 열고 Play합니다.
 
 ## 현재 조작
 
