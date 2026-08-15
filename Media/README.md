@@ -13,12 +13,13 @@ Media/
 권장 GIF 길이는 5~10초이며 파일명은 `NN-기능-상황.gif` 형식을 사용한다.
 
 ```text
-01-movement-dash-curve.gif
-02-combat-air-combo.gif
+01-02-dash-curve.gif
+02-02-air-combat.gif
 13-melee-state-machine.gif
-17-progress-save-round-trip.gif
+17-save-load-round-trip.gif
 ```
 
 각 GIF는 단순한 플레이 장면이 아니라 문서의 핵심 코드 설명을 증명해야 한다.
-예를 들어 대시 GIF에는 시작·가속·감속 곡선과 무적 통과가 함께 보여야 하며,
-설명에는 `MovementMath`와 `SideScrollerMotor`의 역할을 연결한다.
+예를 들어 대시 곡선 GIF는 정상 속도와 느린 재생으로 속도 변화를 보여주고,
+대시 무적 GIF는 같은 공격을 일반 이동과 대시로 각각 통과해 판정 차이를
+보여준다. 설명에는 화면의 결과와 `SideScrollerMotor`의 상태 타이머를 연결한다.
