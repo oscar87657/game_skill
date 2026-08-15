@@ -70,9 +70,18 @@ Input System의 A/D·Space·Shift
 | Rigidbody | 물리 상호작용이 자연스러움 | 정밀한 횡스크롤 제어가 어려움 | 비교 대상 |
 | CharacterController | 충돌과 직접 제어의 균형 | 물리 기반 반응은 별도 구현 | 현재 사용 |
 
-## 시연 계획
+## 시연 자료
 
-- `01-movement-flow.gif`: 가속 이동 → 점프 → 2단 점프 → 공중 대시 → 착지
+![기본 이동 흐름](../../Media/GIF/01-01-movement-flow.gif)
+
+`SideScrollerMotor`가 입력 버퍼와 현재 이동 상태를 갱신하고,
+`MovementMath`가 입력 방향과 점프 초기 속도를 계산한다. 영상에서는 가속
+이동 뒤 지상 대시와 달리기가 연결되고, 1차 점프가 낙하로 전환된 뒤 2단
+점프로 다시 상승한다. 이어서 청록 Trail이 표시되는 공중 대시와 착지까지
+하나의 흐름으로 확인할 수 있다.
+
+### 추가 촬영 계획
+
 - `01-dash-curve.gif`: 일반 달리기와 시작·중앙·종료 속도가 다른 곡선 대시
 - `01-wall-traversal.gif`: 벽 잡기 → 미끄러짐 → 연속 벽 점프
 - `01-movement-architecture.png`: 입력 → 순수 계산 → Motor → Animator 의존 흐름
