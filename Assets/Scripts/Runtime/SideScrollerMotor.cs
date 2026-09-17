@@ -51,6 +51,8 @@ namespace GameSkill
         [Header("Dash")]
         [FormerlySerializedAs("dodgeSpeed")]
         [SerializeField, Min(0f)] private float dashSpeed = 8f;
+        [SerializeField, Range(0f, 1f)]
+        private float dashEdgeSpeedMultiplier = 0.72f;
         [FormerlySerializedAs("dodgeDuration")]
         [SerializeField, Min(0.01f)] private float dashDuration = 0.2f;
         [FormerlySerializedAs("dodgeCooldown")]
@@ -256,8 +258,10 @@ namespace GameSkill
                 float dashProgress = dashDuration <= Mathf.Epsilon
                     ? 1f
                     : Mathf.Clamp01(dashElapsed / dashDuration);
-                float curveMultiplier = 0.72f
-                    + 0.28f * Mathf.Sin(dashProgress * Mathf.PI);
+                // 곡선 자체는 순수 계산에 위임해 이동 거리 조정과 경계값을 씬 없이 검증한다.
+                float curveMultiplier = MovementMath.DashSpeedMultiplier(
+                    dashProgress,
+                    dashEdgeSpeedMultiplier);
                 horizontalSpeed = dashDirection * dashSpeed * curveMultiplier;
                 dashElapsed += deltaTime;
                 UpdateFacing(dashDirection, deltaTime);

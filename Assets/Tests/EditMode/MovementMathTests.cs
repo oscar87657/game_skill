@@ -59,6 +59,39 @@ namespace GameSkill.Tests
                 Is.EqualTo(expectedDirection));
         }
 
+        [TestCase(0f, 0.72f)]
+        [TestCase(0.5f, 1f)]
+        [TestCase(1f, 0.72f)]
+        public void DashSpeedMultiplier_PreservesEdgesAndPeaksAtCenter(
+            float progress,
+            float expectedMultiplier)
+        {
+            // 대시가 출발·종료에서 멈추지 않고 중앙에서만 최고 속도에 도달하는 감각 계약을 고정한다.
+            float multiplier = MovementMath.DashSpeedMultiplier(
+                progress,
+                0.72f);
+
+            Assert.That(
+                multiplier,
+                Is.EqualTo(expectedMultiplier).Within(0.0001f));
+        }
+
+        [TestCase(-1f, 0.72f)]
+        [TestCase(2f, 0.72f)]
+        [TestCase(0.5f, -1f)]
+        [TestCase(0.5f, 2f)]
+        public void DashSpeedMultiplier_ClampsInvalidTuningValues(
+            float progress,
+            float edgeMultiplier)
+        {
+            // 런타임 계산은 Inspector 범위를 우회한 입력에도 음수 속도나 과속 배율을 만들지 않아야 한다.
+            float multiplier = MovementMath.DashSpeedMultiplier(
+                progress,
+                edgeMultiplier);
+
+            Assert.That(multiplier, Is.InRange(0f, 1f));
+        }
+
         [Test]
         public void JumpSpeed_ReturnsExpectedBallisticSpeed()
         {

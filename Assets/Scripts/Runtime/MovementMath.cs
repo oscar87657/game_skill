@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: MonoBehaviour 상태와 분리된 결정적 이동 수식을 보관한다.
-// 책임: 입력 정규화, 바라보는 방향, 대시 방향, 포물선 점프 속도를 계산한다.
+// 책임: 입력 정규화, 바라보는 방향, 대시 방향·속도 곡선, 포물선 점프 속도를 계산한다.
 // 불변식: 잘못된 물리 매개변수에는 NaN이나 Infinity 대신 안전한 값을 반환한다.
 // 선택 이유: 순수 함수는 단위 테스트가 쉽고 다른 이동 컨트롤러에서도 재사용할 수 있다.
 using UnityEngine;
@@ -35,6 +35,20 @@ namespace GameSkill
             }
 
             return facingDirection < 0f ? -1f : 1f;
+        }
+
+        public static float DashSpeedMultiplier(
+            float normalizedProgress,
+            float edgeSpeedMultiplier)
+        {
+            // 진행률과 양 끝 속도를 안전한 범위로 제한해 잘못된 Inspector 값도 예측 가능한 곡선으로 만든다.
+            float progress = Mathf.Clamp01(normalizedProgress);
+            float edgeMultiplier = Mathf.Clamp01(edgeSpeedMultiplier);
+
+            // 사인 곡선은 시작·끝 속도를 유지하면서 중앙에서만 최고 속도에 도달하게 한다.
+            return edgeMultiplier
+                + (1f - edgeMultiplier)
+                * Mathf.Sin(progress * Mathf.PI);
         }
 
         public static float JumpSpeed(float jumpHeight, float gravity)
