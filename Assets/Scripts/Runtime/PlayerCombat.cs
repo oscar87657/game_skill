@@ -202,6 +202,7 @@ namespace GameSkill
                     CombatMath.DamageForComboStep(
                         damage,
                         ComboStep,
+                        comboLength,
                         finisherDamageBonus)))
                 {
                     // 실제 Health가 데미지를 승인한 위치에서만 타격 피드백을 한 번 발생시킨다.

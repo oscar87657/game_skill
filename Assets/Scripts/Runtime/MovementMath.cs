@@ -1,6 +1,6 @@
 // GOLDEN STANDARD
 // 목적: MonoBehaviour 상태와 분리된 결정적 이동 수식을 보관한다.
-// 책임: 입력 정규화, 바라보는 방향, 대시 방향·속도 곡선, 포물선 점프 속도를 계산한다.
+// 책임: 입력 정규화, 바라보는 방향, 대시 방향·속도 곡선, 점프 속도와 짧은 체공 요청을 계산한다.
 // 불변식: 잘못된 물리 매개변수에는 NaN이나 Infinity 대신 안전한 값을 반환한다.
 // 선택 이유: 순수 함수는 단위 테스트가 쉽고 다른 이동 컨트롤러에서도 재사용할 수 있다.
 using UnityEngine;
@@ -60,6 +60,17 @@ namespace GameSkill
             }
 
             return Mathf.Sqrt(jumpHeight * -2f * gravity);
+        }
+
+        public static float AirAttackHoverDuration(
+            float requestedDuration,
+            float maximumDuration)
+        {
+            // 전투 설정이 잘못되어도 공격 한 번이 허용된 최대 체공 시간을 넘기지 않게 한다.
+            return Mathf.Clamp(
+                requestedDuration,
+                0f,
+                Mathf.Max(0f, maximumDuration));
         }
     }
 }

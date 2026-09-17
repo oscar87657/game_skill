@@ -20,12 +20,14 @@ namespace GameSkill
         public static int DamageForComboStep(
             int baseDamage,
             int comboStep,
+            int comboLength,
             int finisherBonus)
         {
-            // 마지막 단계 판정은 호출부 데이터와 분리하고, 데미지는 항상 1 이상으로 제한한다.
+            // 설정된 콤보 길이의 마지막 타격만 강화해 3타가 아닌 콤보도 같은 규칙을 유지한다.
             int safeBaseDamage = Mathf.Max(1, baseDamage);
             int safeStep = Mathf.Max(1, comboStep);
-            return safeStep >= 3
+            int safeLength = Mathf.Max(1, comboLength);
+            return safeStep >= safeLength
                 ? safeBaseDamage + Mathf.Max(0, finisherBonus)
                 : safeBaseDamage;
         }

@@ -356,10 +356,9 @@ namespace GameSkill
             // 전투는 짧은 수직 보정만 요청하고 수평 이동은 계속 Motor가 소유한다.
             if (!IsGrounded && !IsDashing)
             {
-                airAttackHoverTimer = Mathf.Clamp(
+                airAttackHoverTimer = MovementMath.AirAttackHoverDuration(
                     duration,
-                    0f,
-                    Mathf.Max(duration, maximumDuration));
+                    maximumDuration);
             }
         }
 
