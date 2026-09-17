@@ -1,52 +1,135 @@
-# 기능 구현 인덱스
+# 메트로배니아 시스템 연구 인덱스
 
-이 문서는 기능 이름을 알파벳순으로 나열하지 않는다. 실제 프로젝트에 처음
-통합한 순서대로 `01`부터 번호를 붙여, 앞 단계의 코드가 다음 시스템으로 어떻게
-확장됐는지 읽을 수 있게 구성한다.
+이 문서는 기능 목록이 아니라 연구 질문을 찾는 지도다. 주제별 경로에서는 서로
+연관된 장르 시스템을 함께 읽고, 구현 순서 경로에서는 `01 → 23`으로 코드 계약의
+발전 과정을 읽는다.
 
-각 기능 문서는 다음 질문에 답하는 기술 기록이다.
+문서 상태 표기:
 
-1. 어떤 플레이 문제를 해결하려 했는가?
-2. 어떤 코드가 입력·판단·상태·표현을 담당하는가?
-3. 여러 구현 방식 중 왜 현재 방식을 골랐는가?
-4. 화면에서는 어떤 동작으로 확인할 수 있는가?
-5. 테스트와 시연 자료가 그 설명을 어떻게 증명하는가?
+- `기존`: 구현 기록은 있으나 새 비교 템플릿으로 개편하기 전
+- `개편 중`: 연구 질문과 비교 기준을 보강하는 중
+- `연구 완료`: 코드·대안·전환 기준·증거가 모두 정리됨
 
-## 구현 순서
+## 1. 연구 축별 읽기
 
-| 순서 | 단계 | 해결한 문제 | 핵심 코드 | 사용한 구조와 선택 이유 | 화면에서 확인할 결과 | 문서 |
-|---:|---|---|---|---|---|---|
-| 01 | M1 | 정밀한 2.5D 이동, 점프, 대시, 경사·벽 이동 | `SideScrollerMotor`, `MovementMath`, `WallTraversalMath` | `CharacterController`로 물리 충돌과 직접 제어를 결합하고 계산은 순수 함수로 분리 | 가속 이동, 코요테 타임, 점프 버퍼, 곡선 대시, 2단 점프, 벽 점프 | [이동 시스템](Features/01-Movement.md) |
-| 02 | M2 | 이동을 막지 않는 지상·공중 콤보와 높이 차 공격 | `PlayerCombat`, `CombatMath`, `TargetingMath`, `SideScrollerTargeting` | `OverlapBox` 판정과 NonAlloc 자동 조준을 분리해 공격 타이밍과 대상 선택을 독립 검증 | 3단 콤보, 입력 버퍼, 공중 공격 체공, 정면·상하 자동 조준 | [전투 시스템](Features/02-Combat.md) |
-| 03 | M2 | 체크포인트 표현과 플레이어 진행 상태의 결합 제거 | `Checkpoint`, `PlayerCheckpointState`, `Health` | Trigger는 활성 요청만 하고 ID·부활 좌표와 체력은 각 상태 객체가 소유 | 체크포인트 활성화, 완전 회복, 재시작 위치 갱신 | [체크포인트](Features/03-Checkpoint.md) |
-| 04 | M2 | 사망 뒤 이동·전투·체력을 일관된 순서로 복구 | `PlayerRespawnController`, `RespawnMath`, `DamageVolume` | 사망 이벤트 이후의 복구 순서를 하나의 오케스트레이터에 집중 | 조작 잠금, 체크포인트 이동, 체력 회복, 적 상태 초기화 | [사망과 재시작](Features/04-Respawn.md) |
-| 05 | M3 | 능력 수가 늘어도 플레이어와 저장 코드를 계속 수정하는 문제 | `AbilityDefinition`, `PlayerAbilityState`, `AbilityPickup`, `AbilityGate` | ScriptableObject 정의와 ID `HashSet`으로 데이터와 플레이어 보유 상태를 분리 | 2단 점프·공중 대시·벽 잡기 획득, 요구 게이트 개방 | [능력 해금과 게이트](Features/05-AbilitiesAndGates.md) |
-| 06 | M4 | 구역·지도·저장이 서로 다른 위치 식별자를 사용하는 문제 | `WorldZoneDefinition`, `WorldZoneVolume`, `PlayerWorldState`, `WorldZoneBoundaryMath` | 영구 ID 정의와 경계 히스테리시스로 방문 상태와 물리 Trigger를 분리 | 네 구역 방문, 경계에서 카메라 판정이 흔들리지 않는 전환 | [월드 구역](Features/06-WorldZones.md) |
-| 07 | M4 | 백트래킹이 같은 길을 반복하게 되는 문제 | `WorldShortcutGate`, `ShortcutUnlockVolume`, `PlayerWorldState` | 지름길 ID를 영구 진행 상태로 기록하고 월드 표현은 이벤트로 복원 | 샤프트 정상에서 시작 홀 귀환 통로가 영구 개방 | [영구 지름길](Features/07-WorldShortcuts.md) |
-| 08 | M4 | 하나의 큰 Scene에 모든 구역을 계속 유지하는 문제 | `WorldZoneStreamController`, `WorldZoneSceneBinding` | 영구 시스템은 Main에 두고 구역 표현만 Additive 비동기 로드 | 현재 구역과 이웃 구역을 로딩 화면 없이 교체 | [Scene 스트리밍](Features/08-WorldStreaming.md) |
-| 09 | M4 | 구역 밖이나 빈 공간을 비추는 추적 카메라 | `CameraZoneBounds`, `CameraBoundsMath`, `SideScrollerCamera` | 원하는 카메라 위치를 구역별 허용 범위로 제한 | 구역 전환 중 플레이어를 놓치지 않는 중심점 추적 | [카메라 제한 영역](Features/09-CameraBounds.md) |
-| 10 | M4 | 방문 여부와 현재 위치를 플레이어가 파악하기 어려운 문제 | `WorldMapPresenter`, `WorldMapNodeView`, `WorldMapConnectionView` | 월드 상태 이벤트를 지도 시각 상태로 투영 | 미발견·방문·현재 구역이 다른 상태로 표시 | [월드 지도](Features/10-WorldMap.md) |
-| 11 | M4 | 새 이동 능력을 얻어도 이전 구역을 다시 찾을 이유가 부족한 문제 | `BacktrackRewardPickup`, `PlayerWorldState`, `Health` | 수집 ID와 최대 체력 효과를 분리해 저장 복원도 결정적으로 처리 | 벽 이동으로 샤프트를 올라 체력 조각 획득 | [백트래킹 보상](Features/11-BacktrackRewards.md) |
-| 12 | M1 보강 | 완전한 정면 2D 구도의 입체감 부족 | `CameraPerspectiveMath`, `SideScrollerCamera` | 정면 회전은 고정하고 FOV와 거리만 계산하는 Perspective 카메라 사용 | 화면 가장자리에서 배경과 오브젝트 옆면이 드러나는 2.5D 구도 | [원근 카메라](Features/12-PerspectiveCamera.md) |
-| 13 | M5 | 공격 경계에서 상태가 떨리고 선딜 회피가 무시되는 근거리 AI | `EnemyDecisionMath`, `MeleeEnemyController`, `DamageRules` | 판단은 순수 상태 계산, 실행은 MonoBehaviour로 분리하고 탐지 히스테리시스 적용 | 탐지·추적·선딜·재검사·공격·후딜·피격 상태 | [근거리 적 상태 머신](Features/13-EnemyStateMachine.md) |
-| 14 | M5 | 원거리 공격이 회피 무적과 충돌 생명주기를 구분하지 못하는 문제 | `RangedEnemyDecisionMath`, `RangedEnemyController`, `EnemyProjectile` | 발사 판단과 투사체 이동·충돌을 별도 객체로 분리 | 충전 예고, 직선 탄환, 대시 중 통과 후 계속 날아가는 투사체 | [원거리 적](Features/14-RangedEnemy.md) |
-| 15 | M5 | 돌진 중 방향 변경과 발판 이탈로 패턴이 읽히지 않는 문제 | `ChargeEnemyDecisionMath`, `ChargeEnemyController` | 선딜 순간 방향을 잠그고 벽·피격·발판 끝을 명시적 중단 조건으로 처리 | 방향 예고, 직선 돌진, 회피 뒤 명확한 후딜 | [돌진 적](Features/15-ChargeEnemy.md) |
-| 16 | M5 | 획득한 세 이동 능력을 전투에서 사용할 이유가 부족한 문제 | `AbilityTrialBossController`, `BossPatternDecisionMath`, `BossPattern` | 패턴 선택 계산과 실제 생성·연출을 분리한 순환 패턴 | 점프·공중 대시·벽 잡기를 요구하는 세 보스 패턴 | [능력 시험 보스](Features/16-AbilityTrialBoss.md) |
-| 17 | M6 | Unity 참조와 Scene 구조에 묶인 진행 저장 | `GameProgressSaveData`, `GameProgressSaveCodec`, `GameProgressSaveController` | 버전형 DTO와 영구 ID JSON으로 저장하고 v1을 v2로 명시적 마이그레이션 | 능력·체크포인트·구역·지름길·보상·보스 상태 왕복 | [진행 저장](Features/17-ProgressSave.md) |
-| 18 | M6 | 체력·능력·저장 결과가 Console에서만 보이는 문제 | `GameProgressHud`, `AbilityHudSlot` | 상태를 매 프레임 조회하지 않고 변경 이벤트를 구독 | 체력, 해금 능력, 저장·불러오기 결과 HUD | [진행 HUD](Features/18-ProgressHud.md) |
-| 19 | M6 | 정지 중 시간·입력·오디오 상태가 따로 움직이는 문제 | `PauseMenuController` | Pause 상태를 한 컴포넌트가 소유하고 시간 배율과 AudioMixer를 함께 제어 | 재개·저장·불러오기·마스터 음량 조절 | [일시정지와 옵션](Features/19-PauseAndOptions.md) |
-| 20 | M7 | 판정 코드에 VFX·SFX 호출이 섞이는 문제 | `PlayerFeedbackController`, `PrototypeAudioSynth` | 게임플레이의 확정 이벤트를 표현 계층이 구독 | 대시 Trail, 공격·명중·피격·능력 획득 파티클과 임시 음향 | [플레이어 피드백](Features/20-PlayerFeedback.md) |
-| 21 | M7 | 안내 오브젝트가 늘고 실제 진행과 튜토리얼이 어긋나는 문제 | `GuidanceProgression`, `PlayerGuidanceController`, `WorldGuidanceMarker` | 진행 상태를 순수 규칙으로 계산하고 하나의 비콘을 목적지 사이에서 재사용 | 조작 성공에 따라 목표·힌트·월드 비콘이 단계적으로 변경 | [길 찾기와 튜토리얼](Features/21-GuidanceAndTutorial.md) |
-| 22 | M7 | 최적화 여부를 느낌으로 판단하는 문제 | `PerformanceStatistics`, `RuntimePerformanceProbe` | 워밍업 뒤 정해진 창의 p95·최댓값을 측정하고 예산과 비교 | 프레임·GC·렌더 카운터의 Editor·Player 기준선 | [성능 기준선](Features/22-PerformanceProfiling.md) |
-| 23 | M7 | 수동 Build Settings에 따라 결과가 달라지는 문제 | `DesktopBuildPipeline` | Scene 순서·ARM64·Development 옵션을 코드로 고정하고 실행 스모크 수행 | 재현 가능한 macOS 앱 생성과 12초 실행 검증 | [데스크톱 빌드](Features/23-DesktopBuild.md) |
+### A. 이동 범위와 공간 전달
 
-## 문서와 촬영 자료 연결 규칙
+핵심 질문: 조작 반응성과 충돌 안정성, 획득 능력에 따른 이동 범위, 2.5D 공간의
+가독성을 어떻게 함께 유지할 것인가?
 
-- 기능 문서 번호와 촬영 파일 번호를 동일하게 사용한다.
-- GIF는 플레이어가 보는 결과를 증명하고, 스크린샷은 핵심 코드나 상태 흐름과
-  나란히 배치할 장면을 남긴다.
-- README에는 대표 기능만 짧게 보여주고, 구현 판단과 대안 비교는 각 기능
-  문서에서 설명한다.
-- 실제 미디어가 준비되면 `Media/GIF/01-...`, `Media/Screenshots/01-...`
-  형식으로 저장한다.
-- 새 기능은 마지막 번호 다음에 추가한다. 파일명 알파벳순으로 다시 섞지 않는다.
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [01 이동 시스템](Features/01-Movement.md) | `CharacterController` 실행 + 순수 계산 + 명시적 상태 타이머 | Rigidbody 기반 이동, Root Motion, 단일 거대 Controller |
+| [09 카메라 제한 영역](Features/09-CameraBounds.md) | 구역별 Bounds와 추적 위치 Clamp | Collider Confiner, 방 단위 고정 카메라 |
+| [12 원근 카메라](Features/12-PerspectiveCamera.md) | 정면 Perspective와 FOV·거리 계산 | Orthographic, Cinemachine 렌즈 전환 |
+
+연결해서 볼 항목: 능력 해금 `05`, 월드 구역 `06`, 벽 이동을 시험하는 보스
+`16`.
+
+### B. 전투와 이동 권한
+
+핵심 질문: 공격·회피·피격이 플레이어 이동을 과도하게 잠그지 않으면서 명확한
+위험과 대응 시간을 만들려면 책임을 어떻게 나눌 것인가?
+
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [02 전투 시스템](Features/02-Combat.md) | 코드 기반 콤보 상태·입력 버퍼·분리된 대상 선택 | Animator 상태 머신 중심, 데이터 기반 공격 에셋 |
+| [13 근거리 적](Features/13-EnemyStateMachine.md) | 순수 판단 계산 + 실행 Controller | MonoBehaviour 단일 FSM, Behavior Tree |
+| [14 원거리 적](Features/14-RangedEnemy.md) | 발사 판단과 독립 투사체 생명주기 | Raycast 즉발, 풀링된 투사체 |
+| [15 돌진 적](Features/15-ChargeEnemy.md) | 선딜 시 방향 고정과 명시적 중단 조건 | 지속 추적 돌진, NavMesh 이동 |
+| [20 플레이어 피드백](Features/20-PlayerFeedback.md) | 확정 이벤트를 표현 계층이 구독 | 판정 코드의 직접 효과 호출, 중앙 이벤트 버스 |
+
+### C. 능력 진행과 게이팅
+
+핵심 질문: 능력이 Boolean 열쇠에 머물지 않고 이동·전투·월드 재해석을 동시에
+바꾸게 하려면 데이터와 조건을 어떻게 표현할 것인가?
+
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [05 능력 해금과 게이트](Features/05-AbilitiesAndGates.md) | ScriptableObject 정의 + 영구 ID `HashSet` | 개별 Boolean, Enum 비트 플래그, 조건식 그래프 |
+| [11 백트래킹 보상](Features/11-BacktrackRewards.md) | 수집 ID와 영구 능력치 효과 분리 | 오브젝트 활성 상태 저장, 범용 퀘스트 플래그 |
+| [16 능력 시험 보스](Features/16-AbilityTrialBoss.md) | 이동 능력을 요구하는 순환 패턴 | 확률 가중 패턴, 체력 단계별 패턴 그래프 |
+
+### D. 연결된 월드와 백트래킹
+
+핵심 질문: 플레이어가 로딩과 경계 흔들림 없이 구역을 이동하고, 재방문 시
+현재 위치와 새 경로를 이해하게 하려면 무엇을 영구 상태로 관리할 것인가?
+
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [06 월드 구역](Features/06-WorldZones.md) | 영구 구역 ID + Trigger + 경계 히스테리시스 | Scene 이름 식별, 좌표 기반 판정 |
+| [07 영구 지름길](Features/07-WorldShortcuts.md) | 지름길 ID를 월드 상태에 저장 | Scene 오브젝트 자체 상태 저장, 능력 게이트 재사용 |
+| [08 Scene 스트리밍](Features/08-WorldStreaming.md) | Main의 영구 시스템 + Additive 표현 Scene | 단일 Scene, Addressables 기반 스트리밍 |
+| [10 월드 지도](Features/10-WorldMap.md) | 월드 상태를 노드 시각 상태로 투영 | 실제 지형 렌더, Tile 기반 지도 |
+
+카메라 경계 `09`, 원근 구도 `12`, 저장 `17`이 이 축의 결과를 플레이어 화면과
+다음 세션까지 연결한다.
+
+### E. 실패 복구와 영구 진행
+
+핵심 질문: 사망·Scene 전환·앱 종료처럼 실행 범위가 달라지는 사건에서 무엇을
+즉시 복구하고 무엇을 영구 보존해야 하는가?
+
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [03 체크포인트](Features/03-Checkpoint.md) | 표현 Trigger와 플레이어 체크포인트 상태 분리 | 정적 전역 매니저, Scene별 Spawn Point |
+| [04 사망과 재시작](Features/04-Respawn.md) | 사망 이벤트 뒤 중앙 복구 순서 실행 | Scene 전체 Reload, 시스템별 자율 복구 |
+| [17 진행 저장](Features/17-ProgressSave.md) | 버전형 JSON DTO + 영구 ID + 명시적 마이그레이션 | PlayerPrefs, Unity 참조 직렬화, 데이터베이스 |
+| [18 진행 HUD](Features/18-ProgressHud.md) | 변경 이벤트 구독 | 매 프레임 Polling, MVVM 바인딩 |
+| [19 일시정지와 옵션](Features/19-PauseAndOptions.md) | 한 소유자가 시간·입력·오디오 상태 조정 | 각 시스템 개별 Pause, 상태 스택 |
+
+### F. 학습 전달과 제작 검증
+
+핵심 질문: 플레이어에게 다음 행동을 가르치고, 개발자는 성능과 빌드 결과를
+반복해서 같은 방식으로 검증하려면 어떤 관찰 장치가 필요한가?
+
+| 문서 | 현재 선택 | 비교할 핵심 대안 |
+|---|---|---|
+| [21 길 찾기와 튜토리얼](Features/21-GuidanceAndTutorial.md) | 실제 성공 이벤트 기반 단계 진행 + 재사용 비콘 | 위치 Trigger만 사용하는 튜토리얼, 다수 표식 배치 |
+| [22 성능 기준선](Features/22-PerformanceProfiling.md) | 워밍업과 측정 창을 둔 런타임 Probe | Editor Profiler 수동 캡처, 자동 Performance Test |
+| [23 데스크톱 빌드](Features/23-DesktopBuild.md) | 코드로 Scene·플랫폼·옵션 고정 | 수동 Build Settings, CI 빌드 |
+
+## 2. 구현 순서와 연구 상태
+
+기존 번호는 구현 이력, Git 커밋, `Media/GIF/NN-*` 촬영 파일을 안정적으로
+연결하기 위해 유지한다.
+
+| 순서 | 기능 | 앞 단계에서 이어받은 계약 | 이번 단계가 추가한 장르 의미 | 상태 |
+|---:|---|---|---|---|
+| 01 | [이동](Features/01-Movement.md) | 입력과 물리 기반 | 탐험 가능한 거리와 조작 문법 | 개편 중 |
+| 02 | [전투](Features/02-Combat.md) | 이동 상태와 방향 | 이동을 유지하는 공격 리듬 | 기존 |
+| 03 | [체크포인트](Features/03-Checkpoint.md) | 체력과 위치 | 탐험 실패 비용의 기준점 | 기존 |
+| 04 | [사망·재시작](Features/04-Respawn.md) | 체크포인트 상태 | 실패 뒤 일관된 월드 복귀 | 기존 |
+| 05 | [능력·게이트](Features/05-AbilitiesAndGates.md) | 이동 능력과 영구 ID | 획득 전후 월드 해석 변화 | 기존 |
+| 06 | [월드 구역](Features/06-WorldZones.md) | 영구 ID와 플레이어 위치 | 연결된 장소의 정체성과 방문 상태 | 기존 |
+| 07 | [영구 지름길](Features/07-WorldShortcuts.md) | 월드 진행 상태 | 재방문의 이동 비용 감소 | 기존 |
+| 08 | [Scene 스트리밍](Features/08-WorldStreaming.md) | 현재·이웃 구역 | 연결감을 유지하는 콘텐츠 수명주기 | 기존 |
+| 09 | [카메라 경계](Features/09-CameraBounds.md) | 현재 구역 | 방 구도와 플레이어 가시성 | 기존 |
+| 10 | [월드 지도](Features/10-WorldMap.md) | 방문·현재 구역 | 백트래킹 중 위치 이해 | 기존 |
+| 11 | [백트래킹 보상](Features/11-BacktrackRewards.md) | 능력과 수집 상태 | 과거 장소의 새 가치 | 기존 |
+| 12 | [원근 카메라](Features/12-PerspectiveCamera.md) | 측면 추적 | 2.5D 공간의 깊이 전달 | 기존 |
+| 13 | [근거리 적](Features/13-EnemyStateMachine.md) | 전투·피격 계약 | 거리와 선딜을 읽는 조우 | 기존 |
+| 14 | [원거리 적](Features/14-RangedEnemy.md) | 무적·투사체 충돌 | 대시 타이밍 시험 | 기존 |
+| 15 | [돌진 적](Features/15-ChargeEnemy.md) | 예고·회피 계약 | 위치 선정과 직선 회피 시험 | 기존 |
+| 16 | [능력 시험 보스](Features/16-AbilityTrialBoss.md) | 세 이동 능력과 적 패턴 | 획득 능력의 종합 시험 | 기존 |
+| 17 | [진행 저장](Features/17-ProgressSave.md) | 모든 영구 ID | 세션을 넘는 장르 진행 | 기존 |
+| 18 | [진행 HUD](Features/18-ProgressHud.md) | 체력·능력·저장 이벤트 | 현재 상태의 즉시 전달 | 기존 |
+| 19 | [Pause·옵션](Features/19-PauseAndOptions.md) | 저장 제어와 입력 | 안전한 중단과 설정 유지 | 기존 |
+| 20 | [피드백](Features/20-PlayerFeedback.md) | 확정된 gameplay 이벤트 | 공격·회피 성공의 가독성 | 기존 |
+| 21 | [안내·튜토리얼](Features/21-GuidanceAndTutorial.md) | 진행 상태와 월드 위치 | 설명보다 행동으로 배우는 흐름 | 기존 |
+| 22 | [성능 측정](Features/22-PerformanceProfiling.md) | 통합 플레이 구간 | 규모 확장 전 기술 예산 | 기존 |
+| 23 | [데스크톱 빌드](Features/23-DesktopBuild.md) | Scene과 프로젝트 설정 | 재현 가능한 공개 결과 | 기존 |
+
+## 3. 문서와 미디어 연결 규칙
+
+- 기능 번호와 촬영 파일 번호는 동일하게 유지한다.
+- GIF는 단순 동작 나열보다 비교 조건이나 상태 전환 전후를 보여준다.
+- 스크린샷은 코드 책임, 상태 흐름, 월드 연결 중 화면만으로 보이지 않는 구조를
+  설명할 때 사용한다.
+- README에는 연구 축별 대표 결론만 두고, 자세한 비교와 실패 사례는 각 기능
+  문서에 둔다.
+- 새 기능은 기존 번호 뒤에 무조건 추가하지 않는다. 먼저 어느 연구 질문을
+  검증하는지 정하고, 독립된 연구 가치가 있을 때만 번호를 부여한다.
+
+비교 방법과 증거 수준은 [메트로배니아 개발 연구 계획](METROIDVANIA_STUDY.md),
+작성 형식은 [기능 문서 템플릿](FEATURE_TEMPLATE.md)을 따른다.
