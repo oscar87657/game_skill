@@ -75,6 +75,10 @@ namespace GameSkill.Tests
                 Animator animator = lab.GetComponentInChildren<Animator>();
                 Assert.That(animator, Is.Not.Null);
                 Assert.That(animator.runtimeAnimatorController, Is.Not.Null);
+                Assert.That(animator.avatar, Is.Not.Null);
+                Assert.That(animator.avatar.isValid && animator.avatar.isHuman, Is.True);
+                Assert.That(animator.GetBoneTransform(HumanBodyBones.Head), Is.Not.Null);
+                Assert.That(animator.GetBoneTransform(HumanBodyBones.LeftFoot), Is.Not.Null);
                 Assert.That(animator.applyRootMotion, Is.False);
             }
             finally

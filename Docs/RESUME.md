@@ -11,7 +11,7 @@
 
 - README·학습 계획·실험 방법·템플릿·장르 질문·코드 경계·미디어 지침 개편.
 - 이전 23개 분석은 `REFERENCE_INDEX.md`와 `Docs/Features`에 보존하고 과거 자료로 표시.
-- `Assets/Experiments/JumpLab/JumpLab.unity`: 공통 평지·천장·발판, 기존 CC0 캐릭터와 Animator.
+- `Assets/Experiments/JumpLab/JumpLab.unity`: 공통 평지·천장·발판, CC0 애니풍 여성 모델 Sendagaya Shino와 기존 Animator.
 - 세 후보: 일정 중력 / 해제 상승 제한 / 시간-높이 곡선.
 - 같은 클립의 수직 속도 기반 / 고정 시간 기반 전환 비교.
 - 후보 선택·초기화·높이·체공 시간·입력 유지 시간·착지 거리 계측.
@@ -66,3 +66,13 @@ PlayMode는 `-testPlatform PlayMode -testFilter GameSkill.Tests.JumpLabPlayModeT
 Main·CaptureStudio·기존 빌드 씬 목록·원본 에셋 Importer도 유지했다.
 이번 개편의 커밋 범위는 실험 코드·씬·테스트·문서·시작 화면 캡처다.
 촬영 재질·복구 파일과 Unity 실행 뒤 생긴 `Assets/Settings` 변경은 커밋에서 제외한다.
+
+## 캐릭터 교체 — 2026-09-21
+
+- JumpLab의 시각물을 CC0 VRoid Sendagaya Shino로 교체했다. Main·CaptureStudio는 기존 비교 기준을 유지한다.
+- Unity 기본 FBX/Humanoid와 URP Unlit을 사용하며 별도 VRM 패키지는 추가하지 않았다.
+- 메뉴 `Game Skill > Experiments > Apply Anime Character`로 본 매핑·재질·프리팹·씬 적용을 재현할 수 있다.
+- `Tools/convert_shino.py`와 모델 폴더의 README에 고정 원본·SHA-256·CC0 근거·변환 절차를 기록했다.
+- 모델 교체 후 JumpLab PlayMode 통과, Humanoid Avatar 유효성·머리·발 본 연결 확인.
+- 독립 앱에서 실제 키보드 이동과 점프 애니메이션 표시를 확인했다.
+- 머리카락·치마 전용 물리는 포함하지 않았다. 다른 클립의 의상 관통은 별도 비교 대상이다.

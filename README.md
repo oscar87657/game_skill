@@ -20,7 +20,7 @@
 
 ## 현재 상태
 
-- 준비된 실험: **J01 점프 제어** — 세 실행 후보, 공통 충돌·입력·지형, 기존 CC0 Humanoid 애니메이션, 계측 표시.
+- 준비된 실험: **J01 점프 제어** — 세 실행 후보, 공통 충돌·입력·지형, CC0 애니풍 여성 모델·Humanoid 애니메이션, 계측 표시.
 - 자료 조사: 1차 출처 목록과 읽기 질문 준비. 후보들은 직접 작성한 교육용 코드이며 상용 게임 내부 구현의 재현이라고 주장하지 않는다.
 - 아직 하지 않은 일: 사용자 비교 플레이, 다른 애니메이션 세트 실험, 능력 획득 전후 탐험 구간, 적용 조건의 최종 결론.
 - 이전 프로토타입과 23개 기능 문서는 비교 자료로 보존한다. 과거의 “연구 완료”는 새 실험 완료가 아니다.
@@ -49,4 +49,5 @@
 | `Docs/Experiments` | 가설·실행 방법·관찰·조건부 결론 |
 
 URP, Input System과 Unity Test Framework를 유지한다. 비교 변수와 무관한 엔진 업그레이드는 하지 않는다.
-기존 Kenney·Quaternius 에셋의 라이선스는 `Assets/Art/ThirdParty`에 보존한다.
+JumpLab은 [VRoid Sendagaya Shino](Assets/Art/ThirdParty/VRoid/SendagayaShino/README.md) 애니풍 여성 모델과 Quaternius 애니메이션을 사용한다.
+Kenney·Quaternius·해당 VRoid 모델의 라이선스는 `Assets/Art/ThirdParty`에 보존한다.

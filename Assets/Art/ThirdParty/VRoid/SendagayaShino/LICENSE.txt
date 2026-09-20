@@ -1,0 +1,10 @@
+Sendagaya Shino — pixiv Inc. / VRoid Project
+CC0 1.0 Universal
+https://creativecommons.org/publicdomain/zero/1.0/
+
+Official model-specific license statement:
+https://vroid.pixiv.help/hc/en-us/articles/360013482714-Sendagaya-Shino
+
+The source VRM metadata also declares licenseName: CC0.
+Converted FBX and extracted textures are derived from this model.
+The VRoid Studio application and other VRoid models are not covered by this statement.

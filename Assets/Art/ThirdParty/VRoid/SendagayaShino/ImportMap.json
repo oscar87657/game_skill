@@ -1,0 +1,409 @@
+{
+  "bones": [
+    {
+      "human": "Hips",
+      "bone": "J_Bip_C_Hips"
+    },
+    {
+      "human": "LeftUpperLeg",
+      "bone": "J_Bip_L_UpperLeg"
+    },
+    {
+      "human": "RightUpperLeg",
+      "bone": "J_Bip_R_UpperLeg"
+    },
+    {
+      "human": "LeftLowerLeg",
+      "bone": "J_Bip_L_LowerLeg"
+    },
+    {
+      "human": "RightLowerLeg",
+      "bone": "J_Bip_R_LowerLeg"
+    },
+    {
+      "human": "LeftFoot",
+      "bone": "J_Bip_L_Foot"
+    },
+    {
+      "human": "RightFoot",
+      "bone": "J_Bip_R_Foot"
+    },
+    {
+      "human": "Spine",
+      "bone": "J_Bip_C_Spine"
+    },
+    {
+      "human": "Chest",
+      "bone": "J_Bip_C_Chest"
+    },
+    {
+      "human": "Neck",
+      "bone": "J_Bip_C_Neck"
+    },
+    {
+      "human": "Head",
+      "bone": "J_Bip_C_Head"
+    },
+    {
+      "human": "LeftShoulder",
+      "bone": "J_Bip_L_Shoulder"
+    },
+    {
+      "human": "RightShoulder",
+      "bone": "J_Bip_R_Shoulder"
+    },
+    {
+      "human": "LeftUpperArm",
+      "bone": "J_Bip_L_UpperArm"
+    },
+    {
+      "human": "RightUpperArm",
+      "bone": "J_Bip_R_UpperArm"
+    },
+    {
+      "human": "LeftLowerArm",
+      "bone": "J_Bip_L_LowerArm"
+    },
+    {
+      "human": "RightLowerArm",
+      "bone": "J_Bip_R_LowerArm"
+    },
+    {
+      "human": "LeftHand",
+      "bone": "J_Bip_L_Hand"
+    },
+    {
+      "human": "RightHand",
+      "bone": "J_Bip_R_Hand"
+    },
+    {
+      "human": "LeftToes",
+      "bone": "J_Bip_L_ToeBase"
+    },
+    {
+      "human": "RightToes",
+      "bone": "J_Bip_R_ToeBase"
+    },
+    {
+      "human": "LeftEye",
+      "bone": "J_Adj_L_FaceEye"
+    },
+    {
+      "human": "RightEye",
+      "bone": "J_Adj_R_FaceEye"
+    },
+    {
+      "human": "Left Thumb Proximal",
+      "bone": "J_Bip_L_Thumb1"
+    },
+    {
+      "human": "Left Thumb Intermediate",
+      "bone": "J_Bip_L_Thumb2"
+    },
+    {
+      "human": "Left Thumb Distal",
+      "bone": "J_Bip_L_Thumb3"
+    },
+    {
+      "human": "Left Index Proximal",
+      "bone": "J_Bip_L_Index1"
+    },
+    {
+      "human": "Left Index Intermediate",
+      "bone": "J_Bip_L_Index2"
+    },
+    {
+      "human": "Left Index Distal",
+      "bone": "J_Bip_L_Index3"
+    },
+    {
+      "human": "Left Middle Proximal",
+      "bone": "J_Bip_L_Middle1"
+    },
+    {
+      "human": "Left Middle Intermediate",
+      "bone": "J_Bip_L_Middle2"
+    },
+    {
+      "human": "Left Middle Distal",
+      "bone": "J_Bip_L_Middle3"
+    },
+    {
+      "human": "Left Ring Proximal",
+      "bone": "J_Bip_L_Ring1"
+    },
+    {
+      "human": "Left Ring Intermediate",
+      "bone": "J_Bip_L_Ring2"
+    },
+    {
+      "human": "Left Ring Distal",
+      "bone": "J_Bip_L_Ring3"
+    },
+    {
+      "human": "Left Little Proximal",
+      "bone": "J_Bip_L_Little1"
+    },
+    {
+      "human": "Left Little Intermediate",
+      "bone": "J_Bip_L_Little2"
+    },
+    {
+      "human": "Left Little Distal",
+      "bone": "J_Bip_L_Little3"
+    },
+    {
+      "human": "Right Thumb Proximal",
+      "bone": "J_Bip_R_Thumb1"
+    },
+    {
+      "human": "Right Thumb Intermediate",
+      "bone": "J_Bip_R_Thumb2"
+    },
+    {
+      "human": "Right Thumb Distal",
+      "bone": "J_Bip_R_Thumb3"
+    },
+    {
+      "human": "Right Index Proximal",
+      "bone": "J_Bip_R_Index1"
+    },
+    {
+      "human": "Right Index Intermediate",
+      "bone": "J_Bip_R_Index2"
+    },
+    {
+      "human": "Right Index Distal",
+      "bone": "J_Bip_R_Index3"
+    },
+    {
+      "human": "Right Middle Proximal",
+      "bone": "J_Bip_R_Middle1"
+    },
+    {
+      "human": "Right Middle Intermediate",
+      "bone": "J_Bip_R_Middle2"
+    },
+    {
+      "human": "Right Middle Distal",
+      "bone": "J_Bip_R_Middle3"
+    },
+    {
+      "human": "Right Ring Proximal",
+      "bone": "J_Bip_R_Ring1"
+    },
+    {
+      "human": "Right Ring Intermediate",
+      "bone": "J_Bip_R_Ring2"
+    },
+    {
+      "human": "Right Ring Distal",
+      "bone": "J_Bip_R_Ring3"
+    },
+    {
+      "human": "Right Little Proximal",
+      "bone": "J_Bip_R_Little1"
+    },
+    {
+      "human": "Right Little Intermediate",
+      "bone": "J_Bip_R_Little2"
+    },
+    {
+      "human": "Right Little Distal",
+      "bone": "J_Bip_R_Little3"
+    },
+    {
+      "human": "UpperChest",
+      "bone": "J_Bip_C_UpperChest"
+    }
+  ],
+  "materials": [
+    {
+      "name": "F00_000_00_FaceMouth_00_FACE",
+      "texture": "Textures/00_F00_000_FaceMouth_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": false
+    },
+    {
+      "name": "F00_000_00_EyeWhite_00_EYE",
+      "texture": "Textures/04_F00_000_EyeWhite_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": false
+    },
+    {
+      "name": "F00_000_00_FaceEyeline_00_FACE",
+      "texture": "Textures/05_F00_000_FaceEyeline_00.png",
+      "color": [
+        0.165338323,
+        0.02223819,
+        0.02223819,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_00_FaceEyelash_00_FACE",
+      "texture": "Textures/07_F00_000_FaceEyelash_00.png",
+      "color": [
+        0.165338323,
+        0.02223819,
+        0.02223819,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_00_FaceBrow_00_FACE",
+      "texture": "Textures/08_F00_000_FaceBrow_00.png",
+      "color": [
+        0.0262412224,
+        0.036889445,
+        0.1714411,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_00_EyeIris_00_EYE",
+      "texture": "Textures/09_F00_000_EyeIris_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_00_EyeHighlight_00_EYE",
+      "texture": "Textures/10_F00_000_EyeHighlight_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_00_Face_00_SKIN",
+      "texture": "Textures/11_F00_000_Face_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": false
+    },
+    {
+      "name": "F00_000_00_EyeExtra_01_EYE",
+      "texture": "Textures/14_F00_000_00_EyeExtra_01.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_001_01_Body_00_SKIN",
+      "texture": "Textures/15_F00_000_Body_00.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_001_01_Tops_01_CLOTH",
+      "texture": "Textures/17_F00_001_Tops_01.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_001_01_AccessoryNeck_01_CLOTH",
+      "texture": "Textures/19_F00_001_Accessory_01.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_001_01_Bottoms_01_CLOTH",
+      "texture": "Textures/20_F00_001_Bottoms_01.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_001_01_Shoes_01_CLOTH",
+      "texture": "Textures/21_F00_001_Shoes_01.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_HairBack_00_HAIR",
+      "texture": "Textures/22_F00_000_HairBack_00.png",
+      "color": [
+        0.009721218,
+        0.01764196,
+        0.0395462364,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_Hair_00_HAIR_01",
+      "texture": "Textures/25_F00_000_Hair_00_01.png",
+      "color": [
+        0.009721218,
+        0.01764196,
+        0.0395462364,
+        1
+      ],
+      "alpha": true
+    },
+    {
+      "name": "F00_000_Hair_00_HAIR_02",
+      "texture": "Textures/28_F00_000_Hair_00_02.png",
+      "color": [
+        1,
+        1,
+        1,
+        1
+      ],
+      "alpha": true
+    }
+  ]
+}

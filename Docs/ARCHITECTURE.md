@@ -26,7 +26,7 @@ Root Motion과 충돌 실행 방식의 조합은 별도 실험 질문이다.
 
 - 기존 촬영 Material과 `_Recovery` 파일은 건드리지 않는다.
 - 실험 빌드는 Scene 목록을 명시적으로 전달한다. Main용 빌드 목록은 유지한다.
-- 캐릭터·클립은 기존 CC0 에셋을 재사용하되 원본 Importer를 실험 빌더에서 수정하지 않는다.
+- 캐릭터는 CC0 VRoid 모델, 클립은 기존 Quaternius 에셋을 사용한다. 새 FBX의 Humanoid 매핑은 `AnimeCharacterBuilder`가 준비하며 기존 Quaternius Importer는 변경하지 않는다.
 - C# 상단에 한글 목적·책임·경계를 쓰고 핵심 분기에는 의도를 기록한다.
 - 계산 계약은 EditMode, 충돌·입력 이후 실행은 PlayMode로 검증한다.
 - 자동 검증으로 확인하지 않은 손맛·장르 효과는 완료로 표시하지 않는다.

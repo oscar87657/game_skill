@@ -93,6 +93,10 @@ namespace GameSkill.Experiments.Editor
 
         private static Animator CopyReferenceVisual(Transform parent)
         {
+            // 준비된 실험 캐릭터를 우선 사용해 씬 재생성 후에도 선택한 시각물을 유지한다.
+            GameObject experimentModel = AssetDatabase.LoadAssetAtPath<GameObject>(AnimeCharacterBuilder.PrefabPath);
+            if (experimentModel != null)
+                return ((GameObject)PrefabUtility.InstantiatePrefab(experimentModel, parent)).GetComponent<Animator>();
             // 읽기 전용 Preview Scene에서 이미 보정된 CC0 시각물만 복제해 기존 빌더의 재임포트를 피한다.
             Scene reference = EditorSceneManager.OpenPreviewScene("Assets/Scenes/Main.unity");
             try

@@ -59,7 +59,9 @@ Main을 다시 Play하려면 Unity의 Play 시작 씬 설정을 해제한다. �
 
 ## 애니메이션
 
-기존 CC0 Quaternius Humanoid 모델과 `HumanoidPlayer.controller`를 재사용한다.
+CC0 VRoid Sendagaya Shino 여성 모델에 기존 Quaternius 클립과 `HumanoidPlayer.controller`를 연결한다.
+[모델 출처·변환과 표현 범위](../../Assets/Art/ThirdParty/VRoid/SendagayaShino/README.md).
+기본 URP Unlit으로 렌더링하며 머리카락·치마의 별도 물리 시뮬레이션은 적용하지 않았다.
 `Jump_Start`와 `Jump_Loop`의 공중 전환을 실제 수직 속도 또는 고정 0.5초 기준으로 비교한다.
 두 방식 모두 실제 접지 시 지상 상태로 복귀한다. Root Motion은 꺼져 있다.
 이는 **같은 클립의 연결 방식 비교**이며 다른 아트 스타일·착지 클립·Root Motion 적합성 검증을 완료한 것은 아니다.
@@ -97,3 +99,7 @@ Main을 다시 Play하려면 Unity의 Play 시작 씬 설정을 해제한다. �
 - 사람의 비교 플레이, 실제 게임패드, 다른 클립의 적합성은 아직 미검증이다.
 
 ![독립 macOS 앱의 JumpLab 시작 화면](../../Media/Screenshots/J01-lab-ready.png)
+
+![애니풍 모델에 기존 점프 클립을 연결한 실행 화면](../../Media/Screenshots/J01-shino-jump.png)
+
+이 화면은 모델 교체 후 애니메이션 연결 확인용이며 후보별 손맛 비교 결과는 아니다.
