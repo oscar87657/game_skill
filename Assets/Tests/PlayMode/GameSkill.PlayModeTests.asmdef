@@ -3,7 +3,8 @@
   "rootNamespace": "GameSkill.Tests",
   "references": [
     "GameSkill.Runtime",
-    "Unity.InputSystem"
+    "Unity.InputSystem",
+    "GameSkill.Experiments"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

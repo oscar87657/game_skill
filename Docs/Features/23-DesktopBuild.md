@@ -1,3 +1,5 @@
+> 이전 통합 프로토타입의 분석 기록입니다. 여기의 완료 상태는 새 비교 실험의 완료를 뜻하지 않습니다. 현재 진행은 [실험 인덱스](../FEATURE_INDEX.md)를 확인하세요.
+
 # 23. macOS 데스크톱 빌드
 
 > `DesktopBuildPipeline`이 Scene 순서·ARM64·Development 옵션을 코드로

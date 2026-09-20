@@ -1,155 +1,52 @@
-# game_skill
+# game_skill — 메트로배니아 개발 실험실
 
-플레이 가능한 2.5D 메트로배니아를 실험장으로 삼아, 장르 시스템의 구현 방식을
-분석하고 상황별 선택 기준을 기록하는 Unity 연구 프로젝트입니다.
+목표는 **새로운 플레이 요구와 애니메이션을 받았을 때 구현 방식을 선택하고 수정할 수 있는 개발력**이다.
+기능 개수나 문서 분량 대신 조사 → 서로 다른 구현 → 통제된 비교 → 애니메이션 결합 → 조건 변경 → 탐험 구간 적용으로 학습한다.
 
-이 저장소의 핵심 질문은 “무엇을 구현했는가?”에서 끝나지 않습니다.
+> Unity 임포트·EditMode 174개·JumpLab PlayMode·macOS 빌드와 앱 시작 화면 검증을 마쳤다. 비교 플레이와 학습 결론은 다음 단계다. 상세 상태는 [재개 지점](Docs/RESUME.md)을 따른다.
 
-- 왜 이 코드 구조가 현재 규모에 적합한가?
-- 같은 결과를 만드는 다른 방식은 무엇인가?
-- 플레이 감각, 레벨 디자인, 테스트와 확장 비용은 어떻게 달라지는가?
-- 요구사항이 바뀌면 언제 다른 구조로 전환해야 하는가?
+## 지금 시작하기
 
-현재 프로토타입은 이동 능력 획득, 게이트, 연결된 구역, 백트래킹, 적과 보스,
-체크포인트와 저장까지 하나의 루프로 검증하는 **Reference Implementation**입니다.
+1. Unity Hub에서 이 폴더를 Unity **6000.5.5f1 / macOS ARM64**로 연다.
+2. `Assets/Experiments/JumpLab/JumpLab.unity`를 열고 Play한다.
+3. `A/D` 또는 방향키로 이동, `Space`로 점프한다. 게임패드는 왼쪽 스틱과 South 버튼이다.
+4. `1/2/3` 또는 화면 버튼으로 고정 탄도 / 버튼 해제 제어 / 시간 곡선을 바꾼다. 전환 시 같은 출발점으로 초기화된다.
+5. `R`로 재시작, `F`로 속도 기반 / 고정 시간 기반 공중 애니메이션 전환을 비교한다.
+6. 화면의 높이·체공 시간·착지 거리와 실제 발판 결과를 [J01 실험 노트](Docs/Experiments/J01-Jump.md)에 기록한다.
 
-## 연구 안내
+씬이 없으면 `Game Skill > Experiments > Create Jump Lab`을 실행한다. 이미 있는 씬은 덮어쓰지 않고 연다.
+실험용 macOS 빌드는 `Game Skill > Experiments > Build Jump Lab macOS`를 사용한다.
+기존 `Game Skill > Build` 메뉴는 Main 프로토타입용이다.
 
-- [메트로배니아 개발 연구 계획](Docs/METROIDVANIA_STUDY.md) — 비교 기준과 증거 수준
-- [시스템 연구 인덱스](Docs/FEATURE_INDEX.md) — 연구 주제와 23개 구현 사례
-- [프로젝트 로드맵](Docs/PROJECT_PLAN.md) — 문서 개편과 비교 실험 순서
-- [포트폴리오 운영 계획](Docs/PORTFOLIO_PLAN.md) — 독자, 완료 기준, Git 단위
-- [아키텍처 규칙](Docs/ARCHITECTURE.md) — 코드 책임과 실험 경계
-- [게임 경험 기준](Docs/GAME_DESIGN.md) — 비교 결과를 평가할 플레이 목표
+## 현재 상태
 
-### 연구 축
+- 준비된 실험: **J01 점프 제어** — 세 실행 후보, 공통 충돌·입력·지형, 기존 CC0 Humanoid 애니메이션, 계측 표시.
+- 자료 조사: 1차 출처 목록과 읽기 질문 준비. 후보들은 직접 작성한 교육용 코드이며 상용 게임 내부 구현의 재현이라고 주장하지 않는다.
+- 아직 하지 않은 일: 사용자 비교 플레이, 다른 애니메이션 세트 실험, 능력 획득 전후 탐험 구간, 적용 조건의 최종 결론.
+- 이전 프로토타입과 23개 기능 문서는 비교 자료로 보존한다. 과거의 “연구 완료”는 새 실험 완료가 아니다.
 
-| 연구 축 | 핵심 질문 | 대표 문서 |
-|---|---|---|
-| 이동 범위와 공간 전달 | 직접 제어, 충돌 안정성, 능력별 이동 범위를 어떻게 함께 유지하는가? | [01 이동](Docs/Features/01-Movement.md), [09 카메라](Docs/Features/09-CameraBounds.md) |
-| 전투와 이동 권한 | 공격·회피·피격 중에도 자유로운 연계를 어떻게 보장하는가? | [02 전투](Docs/Features/02-Combat.md), [13 적 FSM](Docs/Features/13-EnemyStateMachine.md) |
-| 능력 진행과 게이팅 | 능력을 열쇠가 아니라 이동·전투·월드 변화로 만드는가? | [05 능력](Docs/Features/05-AbilitiesAndGates.md), [16 보스](Docs/Features/16-AbilityTrialBoss.md) |
-| 연결 월드와 백트래킹 | 재방문을 반복 이동이 아닌 새로운 판단으로 만드는가? | [06 구역](Docs/Features/06-WorldZones.md), [11 보상](Docs/Features/11-BacktrackRewards.md) |
-| 실패 복구와 영구 진행 | 사망, Scene 전환, 앱 종료에서 어떤 상태를 복원하는가? | [03 체크포인트](Docs/Features/03-Checkpoint.md), [17 저장](Docs/Features/17-ProgressSave.md) |
-| 제작 검증 | 손맛·성능·빌드를 어떤 증거로 반복 검증하는가? | [21 안내](Docs/Features/21-GuidanceAndTutorial.md), [22 성능](Docs/Features/22-PerformanceProfiling.md) |
+## 읽는 순서
 
-## 대표 구현 사례
+- [학습 계획](Docs/PROJECT_PLAN.md): 진행 순서와 완료 조건
+- [실험 방법](Docs/METROIDVANIA_STUDY.md): 조사·변수 통제·근거 구분
+- [실험 인덱스](Docs/FEATURE_INDEX.md): 현재 실험과 다음 질문
+- [출처 노트](Docs/SOURCES.md): 원문 링크, 읽은 범위, 실험으로 확인할 내용
+- [재개 지점](Docs/RESUME.md): 바로 다음 행동과 검증 상태
+- [코드 경계](Docs/ARCHITECTURE.md): 실험과 기존 구현의 분리
+- [장르 질문](Docs/GAME_DESIGN.md): 이동 실험을 탐험과 연결하는 기준
+- [기록 템플릿](Docs/FEATURE_TEMPLATE.md)
+- [이전 구현 인덱스](Docs/REFERENCE_INDEX.md)
 
-### 이동 상태와 순수 계산 분리
+## Unity 구성
 
-![이동·점프·2단 점프·공중 대시](Media/GIF/01-01-movement-flow.gif)
+| 위치 | 용도 |
+|---|---|
+| `Assets/Experiments/JumpLab` | 독립된 점프 후보와 비교 씬. 실험마다 필요한 최소 코드를 작성한다. |
+| `Assets/Scenes/Main.unity` | 기존 이동·전투·능력·월드·저장이 연결된 비교 기준 |
+| `Assets/Scenes/CaptureStudio.unity` | 기존 기능 촬영 환경 |
+| `Assets/Scripts/Runtime` | 기존 Reference Implementation |
+| `Assets/Tests` | 기존 회귀 테스트와 실험 계약 테스트 |
+| `Docs/Experiments` | 가설·실행 방법·관찰·조건부 결론 |
 
-`SideScrollerMotor`는 Unity 입력, 상태 타이머와 `CharacterController` 실행을
-담당하고 `MovementMath`와 `WallTraversalMath`는 Scene 없이 검증 가능한 계산을
-담당합니다. 이 선택은 정밀한 직접 제어와 경사면 대응에 유리하지만, 물리적
-상호작용을 자동으로 얻는 Rigidbody 방식보다 충돌 규칙을 직접 관리해야 합니다.
-
-자세한 적용 조건과 대안은 [01 이동 시스템](Docs/Features/01-Movement.md)에
-정리합니다.
-
-## 프로토타입 범위
-
-- 가속 이동, 코요테 타임, 점프 버퍼, 곡선 대시
-- 2단 점프, 공중 대시, 벽 잡기·벽 점프
-- 3단 콤보, 공중 공격, 높이 차 자동 조준, 회피 무적
-- 능력 획득과 게이트, 네 구역, 영구 지름길, 백트래킹 보상
-- Additive Scene 스트리밍, 구역 카메라, 지도와 2.5D Perspective
-- 근거리·원거리·돌진 적과 이동 능력 시험 보스
-- 체크포인트, 부활, 버전형 JSON 진행 저장
-- HUD, Pause, 피드백, 진행형 튜토리얼, 성능 측정과 macOS 빌드
-
-기능 수는 앞으로의 목표가 아닙니다. 이 범위는 장르 시스템 사이의 결합과 구현
-대안을 분석하기에 충분한 사례 집합으로 유지합니다.
-
-## 개발 환경
-
-- Unity 6.5 (`6000.5.5f1`)
-- macOS ARM64 Editor
-- Universal Render Pipeline
-- C# / Unity Input System / Unity Test Framework
-- PC 우선, Git LFS 사용
-
-## 프로젝트 실행
-
-1. Unity Hub에서 Unity `6000.5.5f1` macOS ARM64를 설치합니다.
-2. `Add project from disk`로 저장소 루트를 선택합니다.
-3. 패키지와 `Library` 임포트가 끝날 때까지 기다립니다.
-4. `Assets/Scenes/Main.unity`를 열고 Play합니다.
-
-이전 Editor가 비정상 종료되어 Scene 복구 창이 나타나면 먼저 `Yes`로 백업을
-보존하고, 원본 `Main`과 비교한 뒤 필요한 복구 파일만 사용합니다.
-
-## 조작
-
-| 행동 | 키보드 | 게임패드 |
-|---|---|---|
-| 이동 | `A/D` | 왼쪽 스틱 |
-| 점프 | `Space` | South 버튼 |
-| 대시·회피 | `Left Shift` | East 버튼 |
-| 대시 후 달리기 | 대시 키를 유지하며 이동 | East 버튼 유지 |
-| 공격 | `Enter` | West 버튼 |
-| 일시정지 | `Esc` | Start 버튼 |
-
-게임패드 액션 매핑은 구성되어 있지만 실제 장치 감각 조정은 연구 로드맵에 남아
-있습니다.
-
-## 코드와 검증 구조
-
-```text
-Assets/
-├── Scenes/
-│   ├── Main.unity              # 통합 장르 루프
-│   └── CaptureStudio.unity     # 단일 기능 실험·촬영
-├── Scripts/
-│   ├── Runtime/                # Reference Implementation
-│   └── Editor/                 # 빌드·제작 도구
-└── Tests/
-    ├── EditMode/               # 계산·상태·저장 계약
-    └── PlayMode/               # 물리·Scene 통합
-Docs/
-├── Features/                   # 구현 사례별 비교 연구
-├── METROIDVANIA_STUDY.md
-├── FEATURE_INDEX.md
-└── FEATURE_TEMPLATE.md
-Media/
-├── GIF/
-├── Screenshots/
-└── Diagrams/
-```
-
-기본 의존 방향은 다음과 같습니다.
-
-```text
-Input → Controller → 순수 규칙·런타임 상태 → Physics·World
-                                               ↓
-                                      Feedback·UI·Save
-```
-
-세부 원칙과 예외는 [아키텍처 규칙](Docs/ARCHITECTURE.md)에 기록합니다.
-
-## 현재 진행 상태
-
-- 플레이 가능한 Reference Implementation: 완료
-- 전체 동선 수동 회귀 테스트: 완료
-- macOS Development Build 스모크 테스트: 완료
-- 연구 방법과 중앙 문서 체계 개편: 진행 중
-- 기능 문서 23개의 비교 연구 형식 전환: 진행 중
-- 게임패드 실기와 Windows 빌드: 장비·모듈 준비 후 진행
-
-## 문서·코드 작업 규칙
-
-- 현재 동작을 테스트로 고정한 뒤 구조를 변경합니다.
-- 기능 문서 하나를 완료하면 관련 파일만 커밋하고 푸시합니다.
-- 새 기능보다 기존 선택의 분석과 유효한 비교 실험을 우선합니다.
-- C# 코드 상단에는 골든 스탠다드와 책임 경계를 작성합니다.
-- 함수, 조건과 반복문에는 결과가 아니라 의도를 설명하는 한글 주석을 둡니다.
-- `Library`, `Temp`, `Logs`, 빌드 결과와 Unity 복구 파일은 커밋하지 않습니다.
-
-## 참고 방향과 에셋
-
-`ENDER MAGNOLIA: Bloom in the Mist`의 횡스크롤 탐색, 수직 동선, 능력 기반
-백트래킹과 전투 가독성을 디자인 관찰 기준으로 사용합니다. 원작의 코드,
-캐릭터, 세계관, 맵과 시각 자산은 복제하지 않습니다.
-
-프로토타입은 Kenney와 Quaternius의 CC0 모델·애니메이션을 사용하며 원본
-라이선스는 `Assets/Art/ThirdParty` 아래에 보존합니다.
+URP, Input System과 Unity Test Framework를 유지한다. 비교 변수와 무관한 엔진 업그레이드는 하지 않는다.
+기존 Kenney·Quaternius 에셋의 라이선스는 `Assets/Art/ThirdParty`에 보존한다.

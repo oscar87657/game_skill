@@ -1,0 +1,5 @@
+{
+  "name": "GameSkill.Experiments",
+  "rootNamespace": "GameSkill.Experiments",
+  "references": ["Unity.InputSystem"]
+}

@@ -1,3 +1,5 @@
+> 이전 통합 프로토타입의 분석 기록입니다. 여기의 완료 상태는 새 비교 실험의 완료를 뜻하지 않습니다. 현재 진행은 [실험 인덱스](../FEATURE_INDEX.md)를 확인하세요.
+
 # 13. 근거리 적과 상태 머신
 
 > `EnemyDecisionMath`의 순수 상태 판단과 `MeleeEnemyController`의 Unity

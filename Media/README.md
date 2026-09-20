@@ -1,25 +1,8 @@
-# 포트폴리오 미디어
+# 실험 미디어
 
-기능별 시연 GIF와 스크린샷을 이 폴더에 저장한다. 파일 번호는
-[기능 구현 인덱스](../Docs/FEATURE_INDEX.md)의 실제 구현 순서와 일치시킨다.
+새 비교 자료는 `J01-A-tap`, `J01-B-ceiling`처럼 실험 ID·후보·조건으로 이름을 붙인다.
+GIF·Screenshots·Diagrams 폴더를 그대로 사용한다. 과거 01~23 파일은 이전 구현 자료로 보존한다.
 
-```text
-Media/
-├── GIF/
-├── Screenshots/
-└── Diagrams/
-```
-
-권장 GIF 길이는 5~10초이며 파일명은 `NN-기능-상황.gif` 형식을 사용한다.
-
-```text
-01-02-dash-curve.gif
-02-02-air-combat.gif
-13-melee-state-machine.gif
-17-save-load-round-trip.gif
-```
-
-각 GIF는 단순한 플레이 장면이 아니라 문서의 핵심 코드 설명을 증명해야 한다.
-예를 들어 대시 곡선 GIF는 정상 속도와 느린 재생으로 속도 변화를 보여주고,
-대시 무적 GIF는 같은 공격을 일반 이동과 대시로 각각 통과해 판정 차이를
-보여준다. 설명에는 화면의 결과와 `SideScrollerMotor`의 상태 타이머를 연결한다.
+캡처에는 후보·튜닝·입력·애니메이션 연결 방식을 함께 기록한다.
+같은 구도에서 성공뿐 아니라 실패와 어긋남도 남긴다. 영상 없이 촬영 완료라고 표시하지 않는다.
+상세 기록은 [실험 템플릿](../Docs/FEATURE_TEMPLATE.md)을 따른다.

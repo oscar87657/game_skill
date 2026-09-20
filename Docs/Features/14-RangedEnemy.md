@@ -1,3 +1,5 @@
+> 이전 통합 프로토타입의 분석 기록입니다. 여기의 완료 상태는 새 비교 실험의 완료를 뜻하지 않습니다. 현재 진행은 [실험 인덱스](../FEATURE_INDEX.md)를 확인하세요.
+
 # 14. 고정형 원거리 적과 투사체
 
 > `RangedEnemyDecisionMath`가 발사 시점을 결정하고 `EnemyProjectile`이

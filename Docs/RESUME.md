@@ -2,118 +2,67 @@
 
 마지막 갱신: 2026-09-21
 
-## 현재 방향
+## 현재 목표
 
-이 프로젝트는 기능 개수를 보여주는 수직 슬라이스에서, 플레이 가능한 2.5D
-메트로배니아를 Reference Implementation으로 사용해 구현 방식을 비교·분석하는
-연구형 포트폴리오로 전환했다.
+기존 기능을 차례로 설명하던 작업을 중단하고, 외부 조사와 서로 다른 실행 후보를 비교하는 개발 실험실로 전환했다.
+다음 문서는 `04-Respawn`이 아니다. **J01 점프 실험의 원문 조사와 사용자 비교 플레이**부터 시작한다.
 
-중앙 기준 문서:
+## 반영한 준비
 
-- `METROIDVANIA_STUDY.md`: 연구 질문, 비교 기준과 증거 수준
-- `PROJECT_PLAN.md`: S0~S6 연구 로드맵
-- `FEATURE_INDEX.md`: 연구 축과 23개 구현 사례 상태
-- `FEATURE_TEMPLATE.md`: 기능 문서 공통 형식
-- `ARCHITECTURE.md`: 코드 책임, 상태 소유권과 리팩터링 규칙
+- README·학습 계획·실험 방법·템플릿·장르 질문·코드 경계·미디어 지침 개편.
+- 이전 23개 분석은 `REFERENCE_INDEX.md`와 `Docs/Features`에 보존하고 과거 자료로 표시.
+- `Assets/Experiments/JumpLab/JumpLab.unity`: 공통 평지·천장·발판, 기존 CC0 캐릭터와 Animator.
+- 세 후보: 일정 중력 / 해제 상승 제한 / 시간-높이 곡선.
+- 같은 클립의 수직 속도 기반 / 고정 시간 기반 전환 비교.
+- 후보 선택·초기화·높이·체공 시간·입력 유지 시간·착지 거리 계측.
+- 독립 실험 Assembly, 씬 생성/열기 메뉴, Main과 별도의 macOS 빌드 메뉴.
+- EditMode 계산 계약과 PlayMode 실제 씬·천장·초기화 검사 추가.
+- 출처 노트와 J01 실행·관찰 기록지 준비.
 
-## 완료된 작업
+## 검증 결과
 
-| 범위 | 상태 | 마지막 커밋 |
-|---|---|---|
-| 중앙 문서와 README 전면 개편 | 완료 | `eba6837` |
-| 01 이동 시스템 연구 문서 | 연구 완료 | `91d7c0c` |
-| 02 전투 시스템 연구 문서 | 분석 완료, 촬영 대기 | `a8222d1` |
-| 03 체크포인트 연구 문서 | 분석 완료, 촬영 대기 | `fcd4e30` |
+로그인 후 Unity 라이선스 문제가 해소됐다. 현재 실행 차단은 없다.
 
-함께 반영한 코드·테스트 개선:
+- Unity `6000.5.5f1`에서 임포트·컴파일·JumpLab 씬 열기 성공.
+- 전체 EditMode **174/174 통과**: `/tmp/game_skill_lab_editmode.xml`.
+- JumpLab PlayMode **1/1 통과**: `/tmp/game_skill_lab_playmode.xml`.
+- 실제 천장 테스트의 시작 조건을 접지 완료 후 점프하도록 수정했다. 세 후보의 착지·짧은 점프·천장·초기화·Animator 연결 검증 완료.
+- macOS Development Build 성공: `Builds/JumpLab/JumpLab.app`.
+- 독립 앱 시작 화면의 캐릭터·지형·비교 UI·접지 표시 확인. 시작 로그에 예외 없음.
+- 캡처: `Media/Screenshots/J01-lab-ready.png`.
+- 기존 정적 컴파일·계산 실행·씬 참조·문서 링크 검사도 통과.
+- Unity가 자동 저장한 ProjectSettings 변경은 검토 후 이번 작업 전 상태로 복원했다.
 
-- 대시 곡선을 `MovementMath.DashSpeedMultiplier`로 분리하고 경계값 테스트 추가
-- 설정된 콤보 길이의 마지막 타격만 보너스를 받도록 수정
-- 공중 공격 체공 요청이 최대 시간을 넘지 않도록 수정
-- `CombatSystemTests`, `CheckpointSystemTests`로 기능별 테스트 책임 분리
-- 전체 EditMode 테스트 `171/171` 통과
+로그: `/tmp/game_skill_jumplab_retry.log`, `/tmp/game_skill_lab_editmode.log`, `/tmp/game_skill_lab_playmode.log`, `/tmp/game_skill_lab_build.log`, `/tmp/game_skill_lab_player.log`.
 
-## 다음 작업
+## 다음 행동
 
-첫 작업은 `Docs/Features/04-Respawn.md` 개편이다.
+1. `Assets/Experiments/JumpLab/JumpLab.unity` 또는 빌드된 앱을 연다.
+2. `Docs/Experiments/J01-Jump.md` 순서대로 탭·홀드·천장·발판을 직접 비교한다.
+3. 출처 원문과 공개 Player.cs를 읽고 자신의 예측·실제 관찰을 기록한다.
+4. F로 애니메이션 연결 방식을 바꿔 같은 클립이 어긋나는 조건을 찾는다.
+5. 비교 뒤 다른 클립·입력 보정·능력 획득 전후 작은 탐험 구간을 순서대로 실험한다.
 
-1. `PlayerRespawnController`, `RespawnMath`, `DamageVolume`과 관련 테스트를 읽는다.
-2. 다음 질문을 중심으로 현재 구현을 분석한다.
-   - Scene 전체 Reload와 상태별 복구 중 현재 방식이 적합한 이유는 무엇인가?
-   - 사망 시 이동·전투·체력·적·카메라를 어떤 순서로 복구해야 하는가?
-   - 런타임 상태와 영구 진행 중 무엇을 유지해야 하는가?
-3. 관련 테스트가 `MovementMathTests` 등에 섞여 있으면 `RespawnSystemTests`로
-   분리한다.
-4. 새 템플릿에 맞춰 대안, 적용 조건, 구조 전환 신호와 증거를 기록한다.
-5. 테스트 후 `Docs/FEATURE_INDEX.md` 상태를 갱신한다.
-6. `04` 관련 파일만 커밋하고 `origin/main`에 푸시한다.
+자동 테스트 통과를 손맛·학습 완료로 취급하지 않는다. 실제 게임패드와 다른 클립 조합도 아직 검증하지 않았다.
 
-이후 `05 → 23`을 같은 방식으로 한 문서씩 진행한다. 기존 번호와 미디어 파일명은
-링크 안정성을 위해 유지한다.
+메뉴 `Create Jump Lab`은 기존 실험 씬을 덮어쓰지 않는다. 현재 씬을 Additive로 열고 Play 시작 씬을 JumpLab으로 지정한다.
+기존 Main을 다시 실행하려면 `Game Skill > Experiments > Use Current Scene for Play`를 선택한다.
 
-## Git 상태와 주의할 파일
-
-현재 브랜치와 원격 기준:
-
-```text
-branch: main
-HEAD: fcd4e30
-origin/main: fcd4e30
-```
-
-아래 파일은 이번 연구 문서 작업 전부터 존재한 촬영·복구 변경이다. 내용을
-확인하기 전에는 수정, 삭제, Stage 또는 Commit하지 않는다.
-
-```text
-Assets/Materials/CaptureStudio_03.mat
-Assets/Materials/CaptureStudio_04.mat
-Assets/Materials/CaptureStudio_05.mat
-Assets/Materials/CaptureStudio_06.mat
-Assets/Materials/CaptureStudio_07.mat
-Assets/Materials/CaptureStudio_08.mat
-Assets/Materials/ZoneBackdrop_Backtrack.mat
-Assets/Materials/ZoneBackdrop_Boss.mat
-Assets/Materials/ZoneBackdrop_Start.mat
-Assets/Materials/ZoneBackdrop_Traversal.mat
-Assets/_Recovery.meta
-Assets/_Recovery/
-```
-
-항상 관련 파일을 명시적으로 `git add`하고 `git add .`는 사용하지 않는다.
-
-## 테스트 재개 명령
-
-Unity 실행 파일:
-
-```text
-/Applications/Unity/Hub/Editor/6000.5.5f1-arm64/Unity.app/Contents/MacOS/Unity
-```
-
-전체 EditMode 테스트 예시:
+명령행 테스트 (Unity Editor를 닫은 상태):
 
 ```bash
 /Applications/Unity/Hub/Editor/6000.5.5f1-arm64/Unity.app/Contents/MacOS/Unity \
-  -batchmode -nographics \
-  -projectPath /Users/rain/game_skill \
+  -batchmode -nographics -projectPath /Users/rain/game_skill \
   -runTests -testPlatform EditMode \
-  -testResults /tmp/game_skill_editmode_results.xml \
-  -logFile /tmp/game_skill_editmode_tests.log
+  -testResults /tmp/game_skill_lab_editmode.xml -logFile /tmp/game_skill_lab_editmode.log
 ```
 
-`-quit`를 함께 사용하면 현재 Test Framework에서 임포트 뒤 테스트 전에 종료될
-수 있으므로 붙이지 않는다.
+PlayMode는 `-testPlatform PlayMode -testFilter GameSkill.Tests.JumpLabPlayModeTests`로 실행하고 결과 경로도 구분한다.
+테스트에는 `-quit`를 붙이지 않는다. 화면 검증은 일반 Editor에서 따로 수행한다.
 
-Unity 배치 실행은 때때로 `ProjectSettings/DynamicsManager.asset`과
-`ProjectSettings/TimeManager.asset`을 자동 재직렬화한다. 테스트 후 `git status`와
-`git diff`를 확인하고 연구 범위와 무관한 자동 변경은 커밋하지 않는다.
+## 보존할 변경
 
-## 유지할 작업 규칙
-
-- 새 C# 파일 상단에 한글 `GOLDEN STANDARD`를 작성한다.
-- 함수·조건·반복문 주석은 문법이 아니라 의도와 경계를 한글로 설명한다.
-- 잘 동작하는 코드는 비교 문서를 위해 무조건 교체하지 않는다.
-- 실제 계약 오류나 테스트 불가능한 핵심 경계가 발견될 때만 작은 리팩터링을
-  함께 진행한다.
-- 기능 문서 하나를 완료할 때 관련 코드·테스트·문서만 커밋하고 푸시한다.
-- 시각 자료가 없으면 `분석 완료`, 코드·대안·테스트·시각 증거가 모두 있으면
-  `연구 완료`로 표시한다.
+작업 시작 전부터 있던 `Assets/Materials/CaptureStudio_03~08.mat`, `ZoneBackdrop_*.mat`, `Assets/_Recovery`는 이번 변경과 무관하며 건드리지 않았다.
+Main·CaptureStudio·기존 빌드 씬 목록·원본 에셋 Importer도 유지했다.
+이번 개편의 커밋 범위는 실험 코드·씬·테스트·문서·시작 화면 캡처다.
+촬영 재질·복구 파일과 Unity 실행 뒤 생긴 `Assets/Settings` 변경은 커밋에서 제외한다.

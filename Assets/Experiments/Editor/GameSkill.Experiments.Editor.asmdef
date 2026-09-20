@@ -1,0 +1,5 @@
+{
+  "name": "GameSkill.Experiments.Editor",
+  "references": ["GameSkill.Experiments"],
+  "includePlatforms": ["Editor"]
+}

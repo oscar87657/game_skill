@@ -1,3 +1,5 @@
+> 이전 통합 프로토타입의 분석 기록입니다. 여기의 완료 상태는 새 비교 실험의 완료를 뜻하지 않습니다. 현재 진행은 [실험 인덱스](../FEATURE_INDEX.md)를 확인하세요.
+
 # 08. Additive 구역 Scene 스트리밍
 
 > `WorldZoneStreamController`가 현재·인접 구역 Scene만 비동기로 관리하고
